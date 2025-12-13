@@ -88,13 +88,11 @@ interface MenuOption {
 }
 
 export default function WhatsApp() {
-  const [uazapToken, setUazapToken] = useState('');
-  const [adminToken, setAdminToken] = useState('');
-  const [uazapUrl, setUazapUrl] = useState('');
-  const [instanceName, setInstanceName] = useState('');
+  const [apiUrl, setApiUrl] = useState('');
+  const [instanceToken, setInstanceToken] = useState('');
   const [templates, setTemplates] = useState(mensagensTemplate);
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
-  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [isTesting, setIsTesting] = useState(false);
   
   // Menu de conversa
   const [menuAtivo, setMenuAtivo] = useState(false);
@@ -121,27 +119,26 @@ export default function WhatsApp() {
     ));
   };
 
-  const handleCreateInstance = async () => {
-    if (!adminToken || !instanceName || !uazapUrl) {
-      toast.error('Preencha todos os campos obrigatórios');
+  const handleTestConnection = async () => {
+    if (!apiUrl || !instanceToken) {
+      toast.error('Preencha a URL da API e o Token da Instância');
       return;
     }
 
+    setIsTesting(true);
     setConnectionStatus('connecting');
     
-    // Simula criação da instância e geração do QR Code
+    // Simula teste de conexão - em produção faria GET /instance/info
     setTimeout(() => {
-      // Em produção, aqui faria a chamada real para a API UAZAP
-      // POST /instance/create com { name: instanceName }
-      setQrCode('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAMAAABrrFhUAAAABlBMVEX///8AAABVwtN+AAADaElEQVR42u3dW47DIAwF0Oz/ozNSVSnNBOw4D+D0e9SS+QLGNsnPj+MsZ8k5cs7P53f/4fw8/yB/L/9SfiP/0v5m/UP9x/oH+sf7l/ZP9x/rP+q/3X/xc/5H/1n/wf95/8X/ef/J/3n/0f95/9H/ef/Z/3n/4f95/+n/ef/5/3H/hf95/wX/B/1X+y/4P+i/4v+g/5L/g/5r/g/6L/o/6L/q/6D/sv+D/uv+D/ov/B/0X/l/0H/p/0H/tf8H/Rf/H/Rf/X/Qf/n/Qf/1/wf9D/wf9D/xf9D/yP9B/6P/A/8n/Q/9n/Q/9n/U/+j/Wf9z/of+7/uf+7/wf/B/4v+5/8v/B/9P/l/8P/p/9P/t/9v/x/+P/2/+//4//j/+v/7//z//P/+//9f/9f/+v/+P/6f/8//8//8f/6//9//6v/9//6//9//6//9//7/7/3/wP/+P/5f/7//1f/6//9f/+f/5f/7f/5//9//6//9//6//9//5f/7f/5//9//6//9//6//9//5f/7f/5//9f/+v/+f/5f/7f/5//9f/+v/+f/5f/7f/5//8//6//9//6//9f/+f/5f/7//1//6//9f/+f/5f/7//1//6//9f/+f/5f/7f/5//9f/+v/+f/5f/7f/5//9f/+v/+f/5f/7f/5//9f/+v/+f/5f/7f/5//8//+v/+f/5f/7//1//6//9f/+f/5f/7//1//6//9f/+f/5f/7//1//6//9f/+f/5f/7//1//6//9f/+f/5f/7//1//6//9f/+f/5f/7f/5//9f/+v/+f/5f/7f/5//9f/+v/+f/5f/7f/5//9f/+v/+f/5f/7f/5//9f/+v/+f/5f/7f/5');
-      toast.success('Instância criada! Escaneie o QR Code');
-    }, 2000);
+      setConnectionStatus('connected');
+      setIsTesting(false);
+      toast.success('Conexão testada com sucesso! API configurada.');
+    }, 1500);
   };
 
-  const handleScanComplete = () => {
-    setConnectionStatus('connected');
-    setQrCode(null);
-    toast.success('WhatsApp conectado com sucesso!');
+  const handleDisconnect = () => {
+    setConnectionStatus('disconnected');
+    toast.info('Desconectado');
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -264,71 +261,71 @@ export default function WhatsApp() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Zap className="w-5 h-5 text-primary" />
-                    Criar Instância UAZAP
+                    Configurar API UAZAP
                   </CardTitle>
                   <CardDescription>
-                    Configure e conecte seu WhatsApp via QR Code
+                    Insira a URL da API e o Token da sua instância UAZAP
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="uazap-url">URL da API *</Label>
+                    <Label htmlFor="api-url">URL da API *</Label>
                     <Input 
-                      id="uazap-url"
+                      id="api-url"
                       placeholder="https://sua-instancia.uazapi.com"
-                      value={uazapUrl}
-                      onChange={(e) => setUazapUrl(e.target.value)}
+                      value={apiUrl}
+                      onChange={(e) => setApiUrl(e.target.value)}
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Ex: https://api.uazapi.com ou sua URL personalizada
+                    </p>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="admin-token">Admin Token *</Label>
+                    <Label htmlFor="instance-token">Token da Instância *</Label>
                     <Input 
-                      id="admin-token"
+                      id="instance-token"
                       type="password"
-                      placeholder="Seu token de administrador"
-                      value={adminToken}
-                      onChange={(e) => setAdminToken(e.target.value)}
+                      placeholder="Token gerado na sua instância UAZAP"
+                      value={instanceToken}
+                      onChange={(e) => setInstanceToken(e.target.value)}
                     />
+                    <p className="text-xs text-muted-foreground">
+                      O token é gerado quando você cria a instância no painel UAZAP
+                    </p>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="instance-name">Nome da Instância *</Label>
-                    <Input 
-                      id="instance-name"
-                      placeholder="hotel-pets-principal"
-                      value={instanceName}
-                      onChange={(e) => setInstanceName(e.target.value)}
-                    />
-                  </div>
-                  <Button 
-                    className="w-full" 
-                    onClick={handleCreateInstance}
-                    disabled={!uazapUrl || !adminToken || !instanceName || connectionStatus === 'connecting'}
-                  >
-                    {connectionStatus === 'connecting' ? (
-                      <>
-                        <Clock className="w-4 h-4 mr-2 animate-spin" />
-                        Criando instância...
-                      </>
-                    ) : connectionStatus === 'connected' ? (
-                      <>
-                        <CheckCircle className="w-4 h-4 mr-2" />
-                        Conectado
-                      </>
-                    ) : (
-                      <>
-                        <QrCode className="w-4 h-4 mr-2" />
-                        Gerar QR Code
-                      </>
+                  
+                  <div className="flex gap-2">
+                    <Button 
+                      className="flex-1" 
+                      onClick={handleTestConnection}
+                      disabled={!apiUrl || !instanceToken || isTesting}
+                    >
+                      {isTesting ? (
+                        <>
+                          <Clock className="w-4 h-4 mr-2 animate-spin" />
+                          Testando...
+                        </>
+                      ) : (
+                        <>
+                          <Zap className="w-4 h-4 mr-2" />
+                          Testar Conexão
+                        </>
+                      )}
+                    </Button>
+                    {connectionStatus === 'connected' && (
+                      <Button variant="outline" onClick={handleDisconnect}>
+                        Desconectar
+                      </Button>
                     )}
-                  </Button>
+                  </div>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Conectar WhatsApp</CardTitle>
+                  <CardTitle>Status da Conexão</CardTitle>
                   <CardDescription>
-                    Escaneie o QR Code com seu celular
+                    Verifique se a API está configurada corretamente
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -336,44 +333,39 @@ export default function WhatsApp() {
                     "p-6 rounded-xl text-center",
                     connectionStatus === 'connected' ? "bg-mint-light" : "bg-muted"
                   )}>
-                    {qrCode ? (
-                      <div className="space-y-4">
-                        <div className="bg-white p-4 rounded-xl inline-block mx-auto">
-                          <div className="w-48 h-48 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-lg flex items-center justify-center">
-                            <QrCode className="w-32 h-32 text-foreground" />
-                          </div>
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          Abra o WhatsApp no celular, vá em Dispositivos Conectados e escaneie
-                        </p>
-                        <Button onClick={handleScanComplete} variant="outline">
-                          <CheckCircle className="w-4 h-4 mr-2" />
-                          Já escanei
-                        </Button>
+                    <div className={cn(
+                      "w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center",
+                      connectionStatus === 'connected' ? "bg-secondary" : 
+                      connectionStatus === 'connecting' ? "bg-honey" : "bg-muted-foreground/20"
+                    )}>
+                      {connectionStatus === 'connecting' ? (
+                        <Clock className="w-8 h-8 text-accent-foreground animate-spin" />
+                      ) : (
+                        <Smartphone className={cn(
+                          "w-8 h-8",
+                          connectionStatus === 'connected' ? "text-secondary-foreground" : "text-muted-foreground"
+                        )} />
+                      )}
+                    </div>
+                    <p className={cn(
+                      "font-semibold",
+                      connectionStatus === 'connected' ? "text-secondary" : 
+                      connectionStatus === 'connecting' ? "text-accent-foreground" : "text-muted-foreground"
+                    )}>
+                      {connectionStatus === 'connected' ? 'API Conectada' : 
+                       connectionStatus === 'connecting' ? 'Testando conexão...' : 'Não Configurado'}
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {connectionStatus === 'connected' 
+                        ? 'Pronto para enviar mensagens e usar automações' 
+                        : 'Configure a URL e Token para conectar'}
+                    </p>
+                    
+                    {connectionStatus === 'connected' && (
+                      <div className="mt-4 p-3 rounded-lg bg-background/50 text-left">
+                        <p className="text-xs font-medium text-foreground mb-1">Configuração ativa:</p>
+                        <p className="text-xs text-muted-foreground truncate">{apiUrl}</p>
                       </div>
-                    ) : (
-                      <>
-                        <div className={cn(
-                          "w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center",
-                          connectionStatus === 'connected' ? "bg-secondary" : "bg-muted-foreground/20"
-                        )}>
-                          <Smartphone className={cn(
-                            "w-8 h-8",
-                            connectionStatus === 'connected' ? "text-secondary-foreground" : "text-muted-foreground"
-                          )} />
-                        </div>
-                        <p className={cn(
-                          "font-semibold",
-                          connectionStatus === 'connected' ? "text-secondary" : "text-muted-foreground"
-                        )}>
-                          {connectionStatus === 'connected' ? 'WhatsApp Conectado' : 'Não Conectado'}
-                        </p>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {connectionStatus === 'connected' 
-                            ? 'Pronto para enviar mensagens' 
-                            : 'Clique em "Gerar QR Code" para iniciar'}
-                        </p>
-                      </>
                     )}
                   </div>
                 </CardContent>
