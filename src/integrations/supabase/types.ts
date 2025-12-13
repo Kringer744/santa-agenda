@@ -14,7 +14,126 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      whatsapp_campaigns: {
+        Row: {
+          created_at: string
+          delay_max: number | null
+          delay_min: number | null
+          enviados: number | null
+          id: string
+          mensagem: string
+          nome: string
+          status: string | null
+          total_leads: number | null
+        }
+        Insert: {
+          created_at?: string
+          delay_max?: number | null
+          delay_min?: number | null
+          enviados?: number | null
+          id?: string
+          mensagem: string
+          nome: string
+          status?: string | null
+          total_leads?: number | null
+        }
+        Update: {
+          created_at?: string
+          delay_max?: number | null
+          delay_min?: number | null
+          enviados?: number | null
+          id?: string
+          mensagem?: string
+          nome?: string
+          status?: string | null
+          total_leads?: number | null
+        }
+        Relationships: []
+      }
+      whatsapp_config: {
+        Row: {
+          api_url: string
+          created_at: string
+          id: string
+          instance_token: string
+          mensagem_boas_vindas: string | null
+          menu_ativo: boolean | null
+          opcoes_menu: Json | null
+          updated_at: string
+        }
+        Insert: {
+          api_url: string
+          created_at?: string
+          id?: string
+          instance_token: string
+          mensagem_boas_vindas?: string | null
+          menu_ativo?: boolean | null
+          opcoes_menu?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          api_url?: string
+          created_at?: string
+          id?: string
+          instance_token?: string
+          mensagem_boas_vindas?: string | null
+          menu_ativo?: boolean | null
+          opcoes_menu?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      whatsapp_leads: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          nome: string
+          telefone: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          nome: string
+          telefone: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          nome?: string
+          telefone?: string
+        }
+        Relationships: []
+      }
+      whatsapp_messages: {
+        Row: {
+          created_at: string
+          destinatario: string
+          id: string
+          mensagem: string
+          status: string | null
+          tipo: string
+        }
+        Insert: {
+          created_at?: string
+          destinatario: string
+          id?: string
+          mensagem: string
+          status?: string | null
+          tipo: string
+        }
+        Update: {
+          created_at?: string
+          destinatario?: string
+          id?: string
+          mensagem?: string
+          status?: string | null
+          tipo?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
