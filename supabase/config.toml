@@ -1,1 +1,4 @@
 project_id = "wnbzfvxnskvdvosjuklt"
+
+[functions.uazap-send]
+verify_jwt = false
