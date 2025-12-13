@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,14 +16,11 @@ import {
 } from '@/components/ui/card';
 import { 
   MessageSquare, 
-  Settings, 
   Send, 
-  Calendar, 
   CheckCircle, 
   Clock,
   Zap,
   Smartphone,
-  QrCode,
   Upload,
   Users,
   Play,
@@ -31,10 +28,13 @@ import {
   Trash2,
   FileSpreadsheet,
   Bot,
-  List
+  List,
+  Save
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { testConnection, sendInteractiveMenu, createBulkCampaign, sendTextMessage } from '@/lib/uazap';
 
 const mensagensTemplate = [
   {
@@ -67,12 +67,6 @@ const mensagensTemplate = [
   },
 ];
 
-const mensagensEnviadas = [
-  { id: 1, tipo: 'pre-estadia', pet: 'Rex', tutor: 'Maria Silva', data: '2024-12-11', status: 'enviada' },
-  { id: 2, tipo: 'durante', pet: 'Rex', tutor: 'Maria Silva', data: '2024-12-12', status: 'enviada' },
-  { id: 3, tipo: 'pre-estadia', pet: 'Thor', tutor: 'João Santos', data: '2024-12-12', status: 'agendada' },
-];
-
 interface Lead {
   id: string;
   nome: string;
@@ -87,23 +81,32 @@ interface MenuOption {
   ativo: boolean;
 }
 
+interface WhatsAppConfig {
+  id?: string;
+  api_url: string;
+  instance_token: string;
+  menu_ativo: boolean;
+  mensagem_boas_vindas: string;
+  opcoes_menu: MenuOption[];
+}
+
 export default function WhatsApp() {
-  const [apiUrl, setApiUrl] = useState('');
-  const [instanceToken, setInstanceToken] = useState('');
+  const [config, setConfig] = useState<WhatsAppConfig>({
+    api_url: '',
+    instance_token: '',
+    menu_ativo: false,
+    mensagem_boas_vindas: 'Olá! 🐾 Seja bem-vindo ao nosso Hotel para Pets. Como podemos cuidar do seu pet hoje?',
+    opcoes_menu: [
+      { id: '1', texto: '🐶 Reservar hospedagem para meu pet', resposta: 'Ótimo! Vamos iniciar sua reserva. Qual a data de check-in?', ativo: true },
+      { id: '2', texto: '📅 Consultar disponibilidade', resposta: 'Vou verificar nossa disponibilidade. Para qual período você precisa?', ativo: true },
+      { id: '3', texto: '📞 Falar com atendimento', resposta: 'Vou transferir você para um atendente. Aguarde um momento!', ativo: true },
+    ],
+  });
+  
   const [templates, setTemplates] = useState(mensagensTemplate);
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
   const [isTesting, setIsTesting] = useState(false);
-  
-  // Menu de conversa
-  const [menuAtivo, setMenuAtivo] = useState(false);
-  const [mensagemBoasVindas, setMensagemBoasVindas] = useState(
-    'Olá! 🐾 Seja bem-vindo ao nosso Hotel para Pets. Como podemos cuidar do seu pet hoje?'
-  );
-  const [opcoesMenu, setOpcoesMenu] = useState<MenuOption[]>([
-    { id: '1', texto: '🐶 Reservar hospedagem para meu pet', resposta: 'Ótimo! Vamos iniciar sua reserva. Qual a data de check-in?', ativo: true },
-    { id: '2', texto: '📅 Consultar disponibilidade', resposta: 'Vou verificar nossa disponibilidade. Para qual período você precisa?', ativo: true },
-    { id: '3', texto: '📞 Falar com atendimento', resposta: 'Vou transferir você para um atendente. Aguarde um momento!', ativo: true },
-  ]);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Upload de leads
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -113,6 +116,92 @@ export default function WhatsApp() {
   const [disparoAtivo, setDisparoAtivo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Carregar configuração salva
+  useEffect(() => {
+    loadConfig();
+  }, []);
+
+  const loadConfig = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('whatsapp_config')
+        .select('*')
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data) {
+        const opcoesMenu = Array.isArray(data.opcoes_menu) 
+          ? (data.opcoes_menu as unknown as MenuOption[]) 
+          : [];
+        setConfig({
+          id: data.id,
+          api_url: data.api_url,
+          instance_token: data.instance_token,
+          menu_ativo: data.menu_ativo || false,
+          mensagem_boas_vindas: data.mensagem_boas_vindas || '',
+          opcoes_menu: opcoesMenu,
+        });
+        
+        if (data.api_url && data.instance_token) {
+          setConnectionStatus('connected');
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao carregar configuração:', error);
+    }
+  };
+
+  const handleSaveConfig = async () => {
+    if (!config.api_url || !config.instance_token) {
+      toast.error('Preencha a URL da API e o Token');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      if (config.id) {
+        // Atualizar
+        const { error } = await supabase
+          .from('whatsapp_config')
+          .update({
+            api_url: config.api_url,
+            instance_token: config.instance_token,
+            menu_ativo: config.menu_ativo,
+            mensagem_boas_vindas: config.mensagem_boas_vindas,
+            opcoes_menu: JSON.parse(JSON.stringify(config.opcoes_menu)),
+          })
+          .eq('id', config.id);
+
+        if (error) throw error;
+      } else {
+        // Inserir
+        const { data, error } = await supabase
+          .from('whatsapp_config')
+          .insert([{
+            api_url: config.api_url,
+            instance_token: config.instance_token,
+            menu_ativo: config.menu_ativo,
+            mensagem_boas_vindas: config.mensagem_boas_vindas,
+            opcoes_menu: JSON.parse(JSON.stringify(config.opcoes_menu)),
+          }])
+          .select()
+          .single();
+
+        if (error) throw error;
+        setConfig(prev => ({ ...prev, id: data.id }));
+      }
+
+      toast.success('Configuração salva!');
+    } catch (error) {
+      console.error('Erro ao salvar:', error);
+      toast.error('Erro ao salvar configuração');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleToggleTemplate = (id: string) => {
     setTemplates(templates.map(t => 
       t.id === id ? { ...t, ativo: !t.ativo } : t
@@ -120,7 +209,7 @@ export default function WhatsApp() {
   };
 
   const handleTestConnection = async () => {
-    if (!apiUrl || !instanceToken) {
+    if (!config.api_url || !config.instance_token) {
       toast.error('Preencha a URL da API e o Token da Instância');
       return;
     }
@@ -128,12 +217,21 @@ export default function WhatsApp() {
     setIsTesting(true);
     setConnectionStatus('connecting');
     
-    // Simula teste de conexão - em produção faria GET /instance/info
-    setTimeout(() => {
+    const result = await testConnection({
+      apiUrl: config.api_url,
+      instanceToken: config.instance_token,
+    });
+
+    if (result.success) {
       setConnectionStatus('connected');
-      setIsTesting(false);
       toast.success('Conexão testada com sucesso! API configurada.');
-    }, 1500);
+      await handleSaveConfig();
+    } else {
+      setConnectionStatus('disconnected');
+      toast.error(result.error || 'Falha na conexão com a API');
+    }
+    
+    setIsTesting(false);
   };
 
   const handleDisconnect = () => {
@@ -141,16 +239,15 @@ export default function WhatsApp() {
     toast.info('Desconectado');
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       const text = e.target?.result as string;
       const lines = text.split('\n').filter(line => line.trim());
       
-      // Assume CSV: nome,telefone,email
       const newLeads: Lead[] = lines.slice(1).map((line, index) => {
         const [nome, telefone, email] = line.split(',').map(s => s.trim());
         return {
@@ -161,13 +258,30 @@ export default function WhatsApp() {
         };
       }).filter(lead => lead.telefone);
 
-      setLeads(newLeads);
-      toast.success(`${newLeads.length} leads importados com sucesso!`);
+      // Salvar leads no banco
+      try {
+        const { error } = await supabase
+          .from('whatsapp_leads')
+          .insert(newLeads.map(l => ({
+            nome: l.nome,
+            telefone: l.telefone,
+            email: l.email,
+          })));
+
+        if (error) throw error;
+        
+        setLeads(newLeads);
+        toast.success(`${newLeads.length} leads importados com sucesso!`);
+      } catch (error) {
+        console.error('Erro ao salvar leads:', error);
+        setLeads(newLeads); // Ainda usar localmente
+        toast.success(`${newLeads.length} leads carregados!`);
+      }
     };
     reader.readAsText(file);
   };
 
-  const handleStartDisparo = () => {
+  const handleStartDisparo = async () => {
     if (!mensagemDisparo.trim()) {
       toast.error('Digite a mensagem do disparo');
       return;
@@ -176,8 +290,39 @@ export default function WhatsApp() {
       toast.error('Importe uma base de leads primeiro');
       return;
     }
+    if (connectionStatus !== 'connected') {
+      toast.error('Configure a conexão primeiro');
+      return;
+    }
+
     setDisparoAtivo(true);
-    toast.success('Disparo iniciado!');
+    toast.loading('Criando campanha de disparo...');
+
+    const result = await createBulkCampaign(
+      { apiUrl: config.api_url, instanceToken: config.instance_token },
+      leads,
+      mensagemDisparo,
+      delayMin,
+      delayMax
+    );
+
+    if (result.success) {
+      toast.success('Campanha criada e iniciada!');
+      
+      // Salvar campanha no histórico
+      await supabase.from('whatsapp_campaigns').insert({
+        nome: `Campanha ${new Date().toLocaleDateString('pt-BR')}`,
+        mensagem: mensagemDisparo,
+        delay_min: delayMin,
+        delay_max: delayMax,
+        status: 'sending',
+        total_leads: leads.length,
+      });
+    } else {
+      toast.error(result.error || 'Erro ao criar campanha');
+    }
+
+    setDisparoAtivo(false);
   };
 
   const handleStopDisparo = () => {
@@ -185,31 +330,68 @@ export default function WhatsApp() {
     toast.info('Disparo pausado');
   };
 
-  const handleClearLeads = () => {
+  const handleClearLeads = async () => {
     setLeads([]);
+    await supabase.from('whatsapp_leads').delete().neq('id', '00000000-0000-0000-0000-000000000000');
     toast.info('Base de leads limpa');
   };
 
   const handleToggleMenuOption = (id: string) => {
-    setOpcoesMenu(opcoesMenu.map(opt =>
-      opt.id === id ? { ...opt, ativo: !opt.ativo } : opt
-    ));
+    setConfig(prev => ({
+      ...prev,
+      opcoes_menu: prev.opcoes_menu.map(opt =>
+        opt.id === id ? { ...opt, ativo: !opt.ativo } : opt
+      )
+    }));
   };
 
   const handleUpdateMenuOption = (id: string, field: 'texto' | 'resposta', value: string) => {
-    setOpcoesMenu(opcoesMenu.map(opt =>
-      opt.id === id ? { ...opt, [field]: value } : opt
-    ));
+    setConfig(prev => ({
+      ...prev,
+      opcoes_menu: prev.opcoes_menu.map(opt =>
+        opt.id === id ? { ...opt, [field]: value } : opt
+      )
+    }));
   };
 
   const handleAddMenuOption = () => {
-    const newId = String(opcoesMenu.length + 1);
-    setOpcoesMenu([...opcoesMenu, {
-      id: newId,
-      texto: 'Nova opção',
-      resposta: 'Resposta automática...',
-      ativo: true
-    }]);
+    const newId = String(config.opcoes_menu.length + 1);
+    setConfig(prev => ({
+      ...prev,
+      opcoes_menu: [...prev.opcoes_menu, {
+        id: newId,
+        texto: 'Nova opção',
+        resposta: 'Resposta automática...',
+        ativo: true
+      }]
+    }));
+  };
+
+  const handleSaveMenu = async () => {
+    setIsSaving(true);
+    await handleSaveConfig();
+    toast.success('Menu salvo com sucesso!');
+    setIsSaving(false);
+  };
+
+  const handleTestMenu = async () => {
+    const testNumber = prompt('Digite o número para testar (ex: 5511999999999):');
+    if (!testNumber) return;
+
+    toast.loading('Enviando menu de teste...');
+    
+    const result = await sendInteractiveMenu(
+      { apiUrl: config.api_url, instanceToken: config.instance_token },
+      testNumber,
+      config.mensagem_boas_vindas,
+      config.opcoes_menu
+    );
+
+    if (result.success) {
+      toast.success('Menu enviado com sucesso!');
+    } else {
+      toast.error(result.error || 'Erro ao enviar menu');
+    }
   };
 
   return (
@@ -233,7 +415,7 @@ export default function WhatsApp() {
         <Tabs defaultValue="conexao" className="animate-slide-up">
           <TabsList className="bg-muted flex-wrap h-auto gap-1 p-1">
             <TabsTrigger value="conexao" className="gap-2">
-              <QrCode className="w-4 h-4" />
+              <Zap className="w-4 h-4" />
               Conexão
             </TabsTrigger>
             <TabsTrigger value="menu" className="gap-2">
@@ -273,8 +455,8 @@ export default function WhatsApp() {
                     <Input 
                       id="api-url"
                       placeholder="https://sua-instancia.uazapi.com"
-                      value={apiUrl}
-                      onChange={(e) => setApiUrl(e.target.value)}
+                      value={config.api_url}
+                      onChange={(e) => setConfig(prev => ({ ...prev, api_url: e.target.value }))}
                     />
                     <p className="text-xs text-muted-foreground">
                       Ex: https://api.uazapi.com ou sua URL personalizada
@@ -286,8 +468,8 @@ export default function WhatsApp() {
                       id="instance-token"
                       type="password"
                       placeholder="Token gerado na sua instância UAZAP"
-                      value={instanceToken}
-                      onChange={(e) => setInstanceToken(e.target.value)}
+                      value={config.instance_token}
+                      onChange={(e) => setConfig(prev => ({ ...prev, instance_token: e.target.value }))}
                     />
                     <p className="text-xs text-muted-foreground">
                       O token é gerado quando você cria a instância no painel UAZAP
@@ -298,7 +480,7 @@ export default function WhatsApp() {
                     <Button 
                       className="flex-1" 
                       onClick={handleTestConnection}
-                      disabled={!apiUrl || !instanceToken || isTesting}
+                      disabled={!config.api_url || !config.instance_token || isTesting}
                     >
                       {isTesting ? (
                         <>
@@ -364,7 +546,7 @@ export default function WhatsApp() {
                     {connectionStatus === 'connected' && (
                       <div className="mt-4 p-3 rounded-lg bg-background/50 text-left">
                         <p className="text-xs font-medium text-foreground mb-1">Configuração ativa:</p>
-                        <p className="text-xs text-muted-foreground truncate">{apiUrl}</p>
+                        <p className="text-xs text-muted-foreground truncate">{config.api_url}</p>
                       </div>
                     )}
                   </div>
@@ -392,8 +574,8 @@ export default function WhatsApp() {
                       <Label htmlFor="menu-ativo">Menu Ativo</Label>
                       <Switch
                         id="menu-ativo"
-                        checked={menuAtivo}
-                        onCheckedChange={setMenuAtivo}
+                        checked={config.menu_ativo}
+                        onCheckedChange={(checked) => setConfig(prev => ({ ...prev, menu_ativo: checked }))}
                       />
                     </div>
                   </div>
@@ -402,8 +584,8 @@ export default function WhatsApp() {
                   <div className="space-y-2">
                     <Label>Mensagem de Boas-vindas</Label>
                     <Textarea
-                      value={mensagemBoasVindas}
-                      onChange={(e) => setMensagemBoasVindas(e.target.value)}
+                      value={config.mensagem_boas_vindas}
+                      onChange={(e) => setConfig(prev => ({ ...prev, mensagem_boas_vindas: e.target.value }))}
                       className="min-h-20"
                       placeholder="Olá! Seja bem-vindo..."
                     />
@@ -418,7 +600,7 @@ export default function WhatsApp() {
                       </Button>
                     </div>
                     
-                    {opcoesMenu.map((opcao, index) => (
+                    {config.opcoes_menu.map((opcao, index) => (
                       <div 
                         key={opcao.id}
                         className="p-4 rounded-xl border bg-card space-y-3 animate-slide-up"
@@ -452,10 +634,20 @@ export default function WhatsApp() {
                     ))}
                   </div>
 
-                  <Button className="w-full" disabled={!menuAtivo}>
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    Salvar Menu
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button className="flex-1" onClick={handleSaveMenu} disabled={isSaving}>
+                      <Save className="w-4 h-4 mr-2" />
+                      {isSaving ? 'Salvando...' : 'Salvar Menu'}
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={handleTestMenu}
+                      disabled={connectionStatus !== 'connected'}
+                    >
+                      <Send className="w-4 h-4 mr-2" />
+                      Testar Menu
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -470,10 +662,10 @@ export default function WhatsApp() {
                 <CardContent>
                   <div className="bg-gradient-to-br from-green-100 to-green-50 dark:from-green-900/20 dark:to-green-800/10 p-4 rounded-xl max-w-sm mx-auto">
                     <div className="bg-white dark:bg-card p-3 rounded-lg shadow-sm">
-                      <p className="text-sm text-foreground">{mensagemBoasVindas}</p>
+                      <p className="text-sm text-foreground">{config.mensagem_boas_vindas}</p>
                     </div>
                     <div className="mt-3 space-y-2">
-                      {opcoesMenu.filter(o => o.ativo).map((opcao) => (
+                      {config.opcoes_menu.filter(o => o.ativo).map((opcao) => (
                         <div 
                           key={opcao.id}
                           className="bg-white dark:bg-card p-2 rounded-lg shadow-sm text-center text-sm font-medium text-primary cursor-pointer hover:bg-primary/5 transition-colors"
@@ -639,7 +831,7 @@ export default function WhatsApp() {
 
                   {connectionStatus !== 'connected' && (
                     <p className="text-xs text-center text-muted-foreground">
-                      Conecte seu WhatsApp primeiro para fazer disparos
+                      Conecte a API primeiro para fazer disparos
                     </p>
                   )}
                 </CardContent>
@@ -695,57 +887,16 @@ export default function WhatsApp() {
           <TabsContent value="historico" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle>Mensagens Enviadas</CardTitle>
+                <CardTitle>Campanhas e Mensagens</CardTitle>
                 <CardDescription>
-                  Histórico de todas as mensagens automáticas
+                  Histórico de todas as campanhas e mensagens enviadas
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {mensagensEnviadas.map((msg, index) => (
-                    <div 
-                      key={msg.id}
-                      className="flex items-center gap-4 p-4 rounded-xl bg-muted/50 animate-slide-up"
-                      style={{ animationDelay: `${index * 50}ms` }}
-                    >
-                      <div className={cn(
-                        "w-10 h-10 rounded-full flex items-center justify-center",
-                        msg.status === 'enviada' ? "bg-mint-light" : "bg-honey-light"
-                      )}>
-                        {msg.status === 'enviada' ? (
-                          <CheckCircle className="w-5 h-5 text-secondary" />
-                        ) : (
-                          <Clock className="w-5 h-5 text-accent-foreground" />
-                        )}
-                      </div>
-                      
-                      <div className="flex-1">
-                        <p className="font-medium text-foreground">
-                          {templates.find(t => t.id === msg.tipo)?.titulo}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {msg.pet} • {msg.tutor}
-                        </p>
-                      </div>
-                      
-                      <div className="text-right">
-                        <p className="text-sm font-medium text-foreground">
-                          {new Date(msg.data).toLocaleDateString('pt-BR')}
-                        </p>
-                        <Badge 
-                          variant={msg.status === 'enviada' ? 'default' : 'secondary'}
-                          className={cn(
-                            "text-xs",
-                            msg.status === 'enviada' 
-                              ? "bg-secondary text-secondary-foreground" 
-                              : "bg-honey-light text-accent-foreground"
-                          )}
-                        >
-                          {msg.status === 'enviada' ? 'Enviada' : 'Agendada'}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
+                <div className="text-center py-8 text-muted-foreground">
+                  <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                  <p>Nenhuma campanha enviada ainda</p>
+                  <p className="text-sm">Configure a conexão e inicie uma campanha</p>
                 </div>
               </CardContent>
             </Card>
