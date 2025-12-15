@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -110,11 +110,39 @@ export default function WhatsApp() {
 
   // Upload de leads
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [numerosManuais, setNumerosManuais] = useState('');
+  const manualLeads = useMemo(() => {
+    const lines = numerosManuais
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean);
+
+    return lines
+      .map((line, idx) => {
+        // Aceita "nome,telefone" ou apenas "telefone"
+        const parts = line.split(',').map((p) => p.trim()).filter(Boolean);
+        const telefone = parts.length >= 2 ? parts[1] : parts[0] || '';
+        const nome = parts.length >= 2 ? (parts[0] || 'Contato') : 'Contato';
+
+        return {
+          id: `manual-${idx}`,
+          nome,
+          telefone,
+          email: '',
+        } as Lead;
+      })
+      .filter((l) => l.telefone);
+  }, [numerosManuais]);
+
+  const allLeads = useMemo(() => [...leads, ...manualLeads], [leads, manualLeads]);
+
   const [mensagemDisparo, setMensagemDisparo] = useState('');
   const [delayMin, setDelayMin] = useState(10);
   const [delayMax, setDelayMax] = useState(30);
   const [disparoAtivo, setDisparoAtivo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [menuTestNumber, setMenuTestNumber] = useState('');
 
   // Carregar configuração salva
   useEffect(() => {
@@ -286,8 +314,8 @@ export default function WhatsApp() {
       toast.error('Digite a mensagem do disparo');
       return;
     }
-    if (leads.length === 0) {
-      toast.error('Importe uma base de leads primeiro');
+    if (allLeads.length === 0) {
+      toast.error('Importe uma base de leads ou adicione números manualmente');
       return;
     }
     if (connectionStatus !== 'connected') {
@@ -300,7 +328,7 @@ export default function WhatsApp() {
 
     const result = await createBulkCampaign(
       { apiUrl: config.api_url, instanceToken: config.instance_token },
-      leads,
+      allLeads,
       mensagemDisparo,
       delayMin,
       delayMax
@@ -316,7 +344,7 @@ export default function WhatsApp() {
         delay_min: delayMin,
         delay_max: delayMax,
         status: 'sending',
-        total_leads: leads.length,
+        total_leads: allLeads.length,
       });
     } else {
       toast.error(result.error || 'Erro ao criar campanha');
@@ -375,8 +403,16 @@ export default function WhatsApp() {
   };
 
   const handleTestMenu = async () => {
-    const testNumber = prompt('Digite o número para testar (ex: 5511999999999):');
-    if (!testNumber) return;
+    const testNumber = menuTestNumber.trim();
+    if (!testNumber) {
+      toast.error('Informe um número para testar o menu');
+      return;
+    }
+
+    if (connectionStatus !== 'connected') {
+      toast.error('Conecte a API primeiro');
+      return;
+    }
 
     toast.loading('Enviando menu de teste...');
     
@@ -634,6 +670,19 @@ export default function WhatsApp() {
                     ))}
                   </div>
 
+                  <div className="space-y-2">
+                    <Label htmlFor="menu-test-number">Número para enviar o menu</Label>
+                    <Input
+                      id="menu-test-number"
+                      placeholder="Ex: 5511999999999"
+                      value={menuTestNumber}
+                      onChange={(e) => setMenuTestNumber(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Dica: use DDI + DDD (ex: 55 + 11 + número)
+                    </p>
+                  </div>
+
                   <div className="flex gap-2">
                     <Button className="flex-1" onClick={handleSaveMenu} disabled={isSaving}>
                       <Save className="w-4 h-4 mr-2" />
@@ -645,7 +694,7 @@ export default function WhatsApp() {
                       disabled={connectionStatus !== 'connected'}
                     >
                       <Send className="w-4 h-4 mr-2" />
-                      Testar Menu
+                      Enviar Menu
                     </Button>
                   </div>
                 </CardContent>
@@ -715,6 +764,40 @@ export default function WhatsApp() {
                     </p>
                   </div>
 
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <Label htmlFor="manual-numbers">Ou adicione números manualmente</Label>
+                      {manualLeads.length > 0 && (
+                        <Badge variant="secondary" className="gap-1">
+                          <Users className="w-3 h-3" />
+                          {manualLeads.length} números
+                        </Badge>
+                      )}
+                    </div>
+                    <Textarea
+                      id="manual-numbers"
+                      value={numerosManuais}
+                      onChange={(e) => setNumerosManuais(e.target.value)}
+                      className="min-h-24"
+                      placeholder="Cole um por linha:\n5511999999999\n5511988887777\n\nOu: Nome,5511999999999"
+                    />
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-muted-foreground">
+                        Um número por linha (com DDI). Opcional: "Nome,telefone".
+                      </p>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setNumerosManuais('')}
+                        disabled={!numerosManuais.trim()}
+                      >
+                        <Trash2 className="w-4 h-4 mr-1" />
+                        Limpar
+                      </Button>
+                    </div>
+                  </div>
+
                   {leads.length > 0 && (
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
@@ -750,6 +833,12 @@ export default function WhatsApp() {
                         )}
                       </div>
                     </div>
+                  )}
+
+                  {(allLeads.length > 0) && (
+                    <p className="text-xs text-muted-foreground text-center">
+                      Total para disparo: <span className="font-medium text-foreground">{allLeads.length}</span>
+                    </p>
                   )}
                 </CardContent>
               </Card>
@@ -821,7 +910,7 @@ export default function WhatsApp() {
                       <Button 
                         className="flex-1"
                         onClick={handleStartDisparo}
-                        disabled={connectionStatus !== 'connected' || leads.length === 0}
+                        disabled={connectionStatus !== 'connected' || allLeads.length === 0}
                       >
                         <Play className="w-4 h-4 mr-2" />
                         Iniciar Disparo

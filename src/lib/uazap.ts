@@ -145,8 +145,12 @@ function replaceTemplateVariables(
   template: string, 
   lead: { nome: string; telefone: string; email?: string }
 ): string {
+  const safeNome = (lead.nome || '').trim() || 'Cliente';
+  const safeTelefone = lead.telefone || '';
+  const safeEmail = lead.email || '';
+
   return template
-    .replace(/\{\{nome\}\}/gi, lead.nome)
-    .replace(/\{\{telefone\}\}/gi, lead.telefone)
-    .replace(/\{\{email\}\}/gi, lead.email || '');
+    .replace(/\{\{nome\}\}/gi, safeNome)
+    .replace(/\{\{telefone\}\}/gi, safeTelefone)
+    .replace(/\{\{email\}\}/gi, safeEmail);
 }
