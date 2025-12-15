@@ -25,27 +25,39 @@ serve(async (req) => {
       );
     }
 
-    // Testar conexão
+    // Headers padrão para todas as requisições UAZAP
+    const uazapHeaders = {
+      'token': instanceToken,
+      'Content-Type': 'application/json',
+    };
+
+    // Testar conexão - usando endpoint /instance/status
     if (action === 'test') {
       console.log('[UAZAP] Testing connection...');
-      const response = await fetch(`${apiUrl}/instance/info`, {
+      const response = await fetch(`${apiUrl}/instance/status`, {
         method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${instanceToken}`,
-          'Content-Type': 'application/json',
-        },
+        headers: uazapHeaders,
       });
 
+      const responseText = await response.text();
+      console.log('[UAZAP] Response status:', response.status);
+      console.log('[UAZAP] Response body:', responseText);
+
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[UAZAP] Connection test failed:', errorText);
+        console.error('[UAZAP] Connection test failed:', responseText);
         return new Response(
-          JSON.stringify({ success: false, error: 'Falha na conexão com a API UAZAP' }),
+          JSON.stringify({ success: false, error: `Falha na conexão: ${responseText}` }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      const data = await response.json();
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        data = { raw: responseText };
+      }
+      
       console.log('[UAZAP] Connection successful:', data);
       return new Response(
         JSON.stringify({ success: true, data }),
@@ -61,10 +73,7 @@ serve(async (req) => {
       
       const response = await fetch(`${apiUrl}/send/interactive`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${instanceToken}`,
-          'Content-Type': 'application/json',
-        },
+        headers: uazapHeaders,
         body: JSON.stringify({
           number,
           type: 'list',
@@ -92,10 +101,7 @@ serve(async (req) => {
       
       const response = await fetch(`${apiUrl}/send/text`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${instanceToken}`,
-          'Content-Type': 'application/json',
-        },
+        headers: uazapHeaders,
         body: JSON.stringify({ number, text }),
       });
 
@@ -116,10 +122,7 @@ serve(async (req) => {
       
       const response = await fetch(`${apiUrl}/sender/create`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${instanceToken}`,
-          'Content-Type': 'application/json',
-        },
+        headers: uazapHeaders,
         body: JSON.stringify({
           delayMin: delayMin || 10,
           delayMax: delayMax || 30,
@@ -146,10 +149,7 @@ serve(async (req) => {
       
       const response = await fetch(`${apiUrl}/send/interactive`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${instanceToken}`,
-          'Content-Type': 'application/json',
-        },
+        headers: uazapHeaders,
         body: JSON.stringify({
           number,
           type: 'button',
