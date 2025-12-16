@@ -127,21 +127,37 @@ serve(async (req) => {
       return jsonResponse({ ok: true, skipped: true });
     }
 
-    // Montar menu em texto
+    // Montar menu no formato UAZAPI list
     const activeOptions = opcoes.filter((o: any) => o.ativo !== false);
-    const menuLines = activeOptions.map((o: any, idx: number) => `• ${idx + 1} - ${o.texto || o.label || "Opção"}`);
-    const finalText = `${welcomeMessage}\n\n${menuLines.join("\n")}\n\nResponda com o número da opção.`;
+    
+    // Formato: "[Seção]", "Título|id|Descrição"
+    const choices: string[] = [
+      "[Atendimento]",
+      ...activeOptions.map((o: any) => {
+        const texto = o.texto || o.label || "Opção";
+        const id = o.id || "opt";
+        const desc = (o.resposta || o.description || "").substring(0, 72);
+        return `${texto}|${id}|${desc}`;
+      }),
+    ];
 
     console.log("[WEBHOOK] Enviando menu para:", fromNumber);
 
-    // Enviar via UAZAP
-    const sendResp = await fetch(`${apiUrl}/send/text`, {
+    // Enviar via UAZAP usando /send/menu com type: list
+    const sendResp = await fetch(`${apiUrl}/send/menu`, {
       method: "POST",
       headers: {
         token: instanceToken,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ number: fromNumber, text: finalText }),
+      body: JSON.stringify({
+        number: fromNumber,
+        type: "list",
+        text: welcomeMessage,
+        choices,
+        listButton: "Menu de Atendimento",
+        footerText: "Hotel para Pets",
+      }),
     });
 
     const sendResult = await sendResp.json().catch(() => ({}));

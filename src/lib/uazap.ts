@@ -31,18 +31,22 @@ export async function testConnection(config: UazapConfig): Promise<{ success: bo
   }
 }
 
-// Enviar menu interativo
+// Enviar menu interativo (lista nativa do WhatsApp)
 export async function sendInteractiveMenu(
   config: UazapConfig,
   number: string,
   welcomeMessage: string,
-  options: MenuOption[]
+  options: MenuOption[],
+  listButton: string = 'Menu de Atendimento',
+  footerText: string = 'Hotel para Pets'
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const activeOptions = options.filter(o => o.ativo);
-    const choices = [
-      '[Menu Principal]',
-      ...activeOptions.map(o => `${o.texto}|${o.id}|${o.resposta.substring(0, 50)}`)
+    
+    // Formato UAZAPI: "[Seção]", "Título|id|Descrição"
+    const choices: string[] = [
+      '[Atendimento]', // Seção principal
+      ...activeOptions.map(o => `${o.texto}|${o.id}|${o.resposta.substring(0, 72)}`)
     ];
 
     const { data, error } = await supabase.functions.invoke('uazap-send', {
@@ -53,8 +57,8 @@ export async function sendInteractiveMenu(
         number: formatPhoneNumber(number),
         text: welcomeMessage,
         choices,
-        listButton: 'Ver opções',
-        footerText: 'Hotel para Pets',
+        listButton,
+        footerText,
       },
     });
 
