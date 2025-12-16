@@ -20,6 +20,11 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Healthcheck (útil para testar a URL do webhook no navegador e no painel UAZAPI)
+  if (req.method === "GET") {
+    return jsonResponse({ ok: true, service: "uazap-webhook" });
+  }
+
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
   const supabase = createClient(supabaseUrl, supabaseKey);
