@@ -97,40 +97,43 @@ serve(async (req) => {
       return jsonResponse({ success: response.ok, data }, response.ok ? 200 : 400);
     }
 
-    // Enviar "menu" (fallback confiável via texto)
-    // Observação: o endpoint interativo pode variar por instalação, então aqui enviamos um menu em texto
+    // Enviar menu interativo (lista nativa do WhatsApp)
     if (action === "send-menu") {
       const {
         number,
         text,
         choices,
-      } = payload as { number?: string; text?: string; choices?: string[] };
+        listButton,
+        footerText,
+      } = payload as {
+        number?: string;
+        text?: string;
+        choices?: string[];
+        listButton?: string;
+        footerText?: string;
+      };
 
       if (!number || !text || !Array.isArray(choices) || choices.length === 0) {
         return jsonResponse({ error: "number, text e choices são obrigatórios" }, 400);
       }
 
-      const menuLines = choices
-        .filter((c) => typeof c === "string" && c.trim().length)
-        .map((c) => {
-          // formato atual do front: "Texto|id|preview"
-          const [label, id] = c.split("|");
-          if (!id) return `• ${label}`;
-          return `• ${id} - ${label}`;
-        });
+      console.log(`[UAZAP] Sending list menu to: ${number}`);
 
-      const finalText = `${text}\n\n${menuLines.join("\n")}\n\nResponda com o número da opção.`;
-
-      console.log(`[UAZAP] Sending menu-as-text to: ${number}`);
-
-      const response = await fetch(`${apiUrl}/send/text`, {
+      const response = await fetch(`${apiUrl}/send/menu`, {
         method: "POST",
         headers: uazapHeaders,
-        body: JSON.stringify({ number, text: finalText }),
+        body: JSON.stringify({
+          number,
+          type: "list",
+          text,
+          choices,
+          listButton: listButton || "Ver opções",
+          footerText: footerText || "",
+        }),
       });
 
       const data = await response.json().catch(async () => ({ raw: await response.text() }));
-      console.log("[UAZAP] Menu-as-text response:", data);
+      console.log("[UAZAP] Menu response:", data);
 
       return jsonResponse({ success: response.ok, data }, response.ok ? 200 : 400);
     }
