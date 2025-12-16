@@ -580,9 +580,15 @@ export default function WhatsApp() {
                     </p>
                     
                     {connectionStatus === 'connected' && (
-                      <div className="mt-4 p-3 rounded-lg bg-background/50 text-left">
+                      <div className="mt-4 p-3 rounded-lg bg-background/50 text-left space-y-2">
                         <p className="text-xs font-medium text-foreground mb-1">Configuração ativa:</p>
                         <p className="text-xs text-muted-foreground truncate">{config.api_url}</p>
+                        <div className="border-t border-border/50 pt-2 mt-2">
+                          <p className="text-xs font-medium text-foreground mb-1">URL do Webhook (configure no painel UAZAP):</p>
+                          <code className="text-xs text-primary break-all select-all">
+                            https://wnbzfvxnskvdvosjuklt.supabase.co/functions/v1/uazap-webhook
+                          </code>
+                        </div>
                       </div>
                     )}
                   </div>

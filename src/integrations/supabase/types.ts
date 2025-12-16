@@ -83,6 +83,36 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_conversas: {
+        Row: {
+          atendente_assumiu: boolean | null
+          created_at: string
+          id: string
+          menu_enviado_at: string | null
+          telefone: string
+          ultima_mensagem_at: string
+          updated_at: string
+        }
+        Insert: {
+          atendente_assumiu?: boolean | null
+          created_at?: string
+          id?: string
+          menu_enviado_at?: string | null
+          telefone: string
+          ultima_mensagem_at?: string
+          updated_at?: string
+        }
+        Update: {
+          atendente_assumiu?: boolean | null
+          created_at?: string
+          id?: string
+          menu_enviado_at?: string | null
+          telefone?: string
+          ultima_mensagem_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       whatsapp_leads: {
         Row: {
           created_at: string
