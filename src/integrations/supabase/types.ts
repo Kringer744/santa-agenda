@@ -14,6 +14,260 @@ export type Database = {
   }
   public: {
     Tables: {
+      pets: {
+        Row: {
+          created_at: string
+          data_nascimento: string | null
+          especie: string
+          id: string
+          idade: number | null
+          necessidades_especiais: string | null
+          nome: string
+          observacoes_comportamentais: string | null
+          porte: string | null
+          raca: string | null
+          tutor_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data_nascimento?: string | null
+          especie: string
+          id?: string
+          idade?: number | null
+          necessidades_especiais?: string | null
+          nome: string
+          observacoes_comportamentais?: string | null
+          porte?: string | null
+          raca?: string | null
+          tutor_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data_nascimento?: string | null
+          especie?: string
+          id?: string
+          idade?: number | null
+          necessidades_especiais?: string | null
+          nome?: string
+          observacoes_comportamentais?: string | null
+          porte?: string | null
+          raca?: string | null
+          tutor_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pets_tutor_id_fkey"
+            columns: ["tutor_id"]
+            isOneToOne: false
+            referencedRelation: "tutores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reservas: {
+        Row: {
+          check_in: string
+          check_out: string
+          codigo_estadia: string | null
+          created_at: string
+          id: string
+          pagamento_status: string | null
+          pet_id: string
+          servicos_adicionais: string[] | null
+          status: string
+          tutor_id: string
+          unidade_id: string
+          updated_at: string
+          valor_total: number | null
+        }
+        Insert: {
+          check_in: string
+          check_out: string
+          codigo_estadia?: string | null
+          created_at?: string
+          id?: string
+          pagamento_status?: string | null
+          pet_id: string
+          servicos_adicionais?: string[] | null
+          status?: string
+          tutor_id: string
+          unidade_id: string
+          updated_at?: string
+          valor_total?: number | null
+        }
+        Update: {
+          check_in?: string
+          check_out?: string
+          codigo_estadia?: string | null
+          created_at?: string
+          id?: string
+          pagamento_status?: string | null
+          pet_id?: string
+          servicos_adicionais?: string[] | null
+          status?: string
+          tutor_id?: string
+          unidade_id?: string
+          updated_at?: string
+          valor_total?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservas_pet_id_fkey"
+            columns: ["pet_id"]
+            isOneToOne: false
+            referencedRelation: "pets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_tutor_id_fkey"
+            columns: ["tutor_id"]
+            isOneToOne: false
+            referencedRelation: "tutores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_unidade_id_fkey"
+            columns: ["unidade_id"]
+            isOneToOne: false
+            referencedRelation: "unidades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      servicos_adicionais: {
+        Row: {
+          ativo: boolean | null
+          created_at: string
+          icone: string | null
+          id: string
+          nome: string
+          preco: number
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string
+          icone?: string | null
+          id?: string
+          nome: string
+          preco?: number
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string
+          icone?: string | null
+          id?: string
+          nome?: string
+          preco?: number
+        }
+        Relationships: []
+      }
+      tutores: {
+        Row: {
+          cpf: string
+          created_at: string
+          data_nascimento: string | null
+          email: string | null
+          id: string
+          nome: string
+          tags: string[] | null
+          telefone: string
+          updated_at: string
+        }
+        Insert: {
+          cpf: string
+          created_at?: string
+          data_nascimento?: string | null
+          email?: string | null
+          id?: string
+          nome: string
+          tags?: string[] | null
+          telefone: string
+          updated_at?: string
+        }
+        Update: {
+          cpf?: string
+          created_at?: string
+          data_nascimento?: string | null
+          email?: string | null
+          id?: string
+          nome?: string
+          tags?: string[] | null
+          telefone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      unidades: {
+        Row: {
+          capacidade_cachorro: number
+          capacidade_gato: number
+          created_at: string
+          endereco: string | null
+          id: string
+          nome: string
+          updated_at: string
+        }
+        Insert: {
+          capacidade_cachorro?: number
+          capacidade_gato?: number
+          created_at?: string
+          endereco?: string | null
+          id?: string
+          nome: string
+          updated_at?: string
+        }
+        Update: {
+          capacidade_cachorro?: number
+          capacidade_gato?: number
+          created_at?: string
+          endereco?: string | null
+          id?: string
+          nome?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      vagas_dia: {
+        Row: {
+          data: string
+          id: string
+          unidade_id: string
+          vagas_cachorro_ocupadas: number
+          vagas_cachorro_total: number
+          vagas_gato_ocupadas: number
+          vagas_gato_total: number
+        }
+        Insert: {
+          data: string
+          id?: string
+          unidade_id: string
+          vagas_cachorro_ocupadas?: number
+          vagas_cachorro_total?: number
+          vagas_gato_ocupadas?: number
+          vagas_gato_total?: number
+        }
+        Update: {
+          data?: string
+          id?: string
+          unidade_id?: string
+          vagas_cachorro_ocupadas?: number
+          vagas_cachorro_total?: number
+          vagas_gato_ocupadas?: number
+          vagas_gato_total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vagas_dia_unidade_id_fkey"
+            columns: ["unidade_id"]
+            isOneToOne: false
+            referencedRelation: "unidades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_campaigns: {
         Row: {
           created_at: string
