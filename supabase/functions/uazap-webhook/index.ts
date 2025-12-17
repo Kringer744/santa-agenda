@@ -33,26 +33,43 @@ serve(async (req) => {
     const body = await req.json();
     console.log("[WEBHOOK] Received:", JSON.stringify(body));
 
-    // UAZAPI envia eventos com diferentes estruturas; adapte conforme necessário
-    // Estrutura comum: { event, data: { ... } } ou diretamente { from, text, ... }
-    const event = body?.event ?? body?.type ?? "message";
-    const msgData = body?.data ?? body;
-
-    // Número do remetente (lead). Exemplos: body.data.from, body.sender, body.chatid
-    const rawFrom = msgData?.from ?? msgData?.sender ?? msgData?.chatid ?? "";
-    // Remove sufixos @s.whatsapp.net / @c.us se existirem
-    const fromNumber = rawFrom.replace(/@.+$/, "").replace(/\D/g, "");
-
-    if (!fromNumber) {
-      console.log("[WEBHOOK] Sem número de origem, ignorando.");
-      return jsonResponse({ ok: true, skipped: true });
+    // UAZAPI envia eventos com estrutura: { EventType, chat, message, ... }
+    const eventType = body?.EventType ?? body?.event ?? body?.type ?? "";
+    
+    // Só processar eventos de mensagem
+    if (eventType !== "messages") {
+      console.log("[WEBHOOK] Evento ignorado (não é mensagem):", eventType);
+      return jsonResponse({ ok: true, skipped: true, reason: "not_message_event" });
     }
 
+    const chat = body?.chat ?? {};
+    const message = body?.message ?? {};
+
     // Ignorar mensagens enviadas por nós mesmos
-    if (msgData?.fromMe === true) {
+    if (message?.fromMe === true) {
       console.log("[WEBHOOK] Mensagem enviada por mim, ignorando.");
       return jsonResponse({ ok: true, skipped: true });
     }
+
+    // Ignorar mensagens de grupos
+    if (chat?.wa_isGroup === true || message?.isGroup === true) {
+      console.log("[WEBHOOK] Mensagem de grupo, ignorando.");
+      return jsonResponse({ ok: true, skipped: true });
+    }
+
+    // Extrair número do remetente da estrutura UAZAPI
+    // Prioridade: chat.phone > chat.wa_chatid > message.chatid > message.sender
+    let rawFrom = chat?.phone ?? chat?.wa_chatid ?? message?.chatid ?? message?.sender ?? "";
+    
+    // Remove sufixos @s.whatsapp.net / @c.us / @lid e caracteres não numéricos
+    const fromNumber = rawFrom.replace(/@.+$/, "").replace(/\D/g, "");
+
+    if (!fromNumber) {
+      console.log("[WEBHOOK] Sem número de origem válido, ignorando.");
+      return jsonResponse({ ok: true, skipped: true });
+    }
+
+    console.log("[WEBHOOK] Processando mensagem de:", fromNumber);
 
     // Buscar config
     const { data: configRow, error: cfgErr } = await supabase
