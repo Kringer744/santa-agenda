@@ -1,21 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Tutor } from '@/types';
-// import { tutoresMock } from '@/data/mockData'; // Remove mock data import
+import { tutoresMock } from '@/data/mockData';
 
 export function useTutores() {
   return useQuery({
     queryKey: ['tutores'],
     queryFn: async () => {
-      // Fetch from Supabase
-      const { data, error } = await supabase
-        .from('tutores')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data as Tutor[];
+      // Usando dados fictícios
+      return new Promise<Tutor[]>((resolve) => {
+        setTimeout(() => resolve(tutoresMock), 300);
+      });
     },
   });
 }
@@ -26,14 +21,17 @@ export function useCreateTutor() {
   
   return useMutation({
     mutationFn: async (tutor: Omit<Tutor, 'id' | 'created_at' | 'updated_at'>) => {
-      const { data, error } = await supabase
-        .from('tutores')
-        .insert(tutor)
-        .select()
-        .single();
+      const newTutor = {
+        ...tutor,
+        id: `tutor-${Date.now()}`,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      } as Tutor;
       
-      if (error) throw error;
-      return data;
+      // Simular delay de API
+      return new Promise<Tutor>((resolve) => {
+        setTimeout(() => resolve(newTutor), 500);
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tutores'] });
@@ -57,12 +55,10 @@ export function useDeleteTutor() {
   
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('tutores')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
+      // Simular deleção
+      return new Promise<void>((resolve) => {
+        setTimeout(() => resolve(), 500);
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tutores'] });

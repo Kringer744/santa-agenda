@@ -1,21 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Pet } from '@/types';
-// import { petsMock } from '@/data/mockData'; // Remove mock data import
+import { petsMock } from '@/data/mockData';
 
 export function usePets() {
   return useQuery({
     queryKey: ['pets'],
     queryFn: async () => {
-      // Fetch from Supabase
-      const { data, error } = await supabase
-        .from('pets')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data as Pet[];
+      // Usando dados fictícios
+      return new Promise<Pet[]>((resolve) => {
+        setTimeout(() => resolve(petsMock), 300);
+      });
     },
   });
 }
@@ -26,14 +21,17 @@ export function useCreatePet() {
   
   return useMutation({
     mutationFn: async (pet: Omit<Pet, 'id' | 'created_at' | 'updated_at'>) => {
-      const { data, error } = await supabase
-        .from('pets')
-        .insert(pet)
-        .select()
-        .single();
+      const newPet = {
+        ...pet,
+        id: `pet-${Date.now()}`,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      } as Pet;
       
-      if (error) throw error;
-      return data;
+      // Simular delay de API
+      return new Promise<Pet>((resolve) => {
+        setTimeout(() => resolve(newPet), 500);
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pets'] });
@@ -57,12 +55,10 @@ export function useDeletePet() {
   
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('pets')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
+      // Simular deleção
+      return new Promise<void>((resolve) => {
+        setTimeout(() => resolve(), 500);
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pets'] });

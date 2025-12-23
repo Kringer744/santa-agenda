@@ -1,21 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Unidade } from '@/types';
-// import { unidades } from '@/data/mockData'; // Remove mock data import
+import { unidades } from '@/data/mockData';
 
 export function useUnidades() {
   return useQuery({
     queryKey: ['unidades'],
     queryFn: async () => {
-      // Fetch from Supabase
-      const { data, error } = await supabase
-        .from('unidades')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data as Unidade[];
+      // Usando dados fictícios
+      return new Promise<Unidade[]>((resolve) => {
+        setTimeout(() => resolve(unidades), 300);
+      });
     },
   });
 }
@@ -26,14 +21,17 @@ export function useCreateUnidade() {
   
   return useMutation({
     mutationFn: async (unidade: Omit<Unidade, 'id' | 'created_at' | 'updated_at'>) => {
-      const { data, error } = await supabase
-        .from('unidades')
-        .insert(unidade)
-        .select()
-        .single();
+      const newUnidade = {
+        ...unidade,
+        id: `unidade-${Date.now()}`,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      } as Unidade;
       
-      if (error) throw error;
-      return data;
+      // Simular delay de API
+      return new Promise<Unidade>((resolve) => {
+        setTimeout(() => resolve(newUnidade), 500);
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['unidades'] });
@@ -57,12 +55,10 @@ export function useDeleteUnidade() {
   
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('unidades')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
+      // Simular deleção
+      return new Promise<void>((resolve) => {
+        setTimeout(() => resolve(), 500);
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['unidades'] });

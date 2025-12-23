@@ -1,21 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ServicoAdicional } from '@/types';
-// import { servicosAdicionais } from '@/data/mockData'; // Remove mock data import
+import { servicosAdicionais } from '@/data/mockData';
 
 export function useServicos() {
   return useQuery({
     queryKey: ['servicos'],
     queryFn: async () => {
-      // Fetch from Supabase
-      const { data, error } = await supabase
-        .from('servicos_adicionais')
-        .select('*')
-        .order('nome', { ascending: true });
-      
-      if (error) throw error;
-      return data as ServicoAdicional[];
+      // Usando dados fictícios
+      return new Promise<ServicoAdicional[]>((resolve) => {
+        setTimeout(() => resolve(servicosAdicionais), 300);
+      });
     },
   });
 }
@@ -26,14 +21,16 @@ export function useCreateServico() {
   
   return useMutation({
     mutationFn: async (servico: Omit<ServicoAdicional, 'id' | 'created_at'>) => {
-      const { data, error } = await supabase
-        .from('servicos_adicionais')
-        .insert(servico)
-        .select()
-        .single();
+      const newServico = {
+        ...servico,
+        id: `servico-${Date.now()}`,
+        created_at: new Date().toISOString(),
+      } as ServicoAdicional;
       
-      if (error) throw error;
-      return data;
+      // Simular delay de API
+      return new Promise<ServicoAdicional>((resolve) => {
+        setTimeout(() => resolve(newServico), 500);
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['servicos'] });
@@ -57,15 +54,10 @@ export function useUpdateServico() {
   
   return useMutation({
     mutationFn: async ({ id, ...servico }: Partial<ServicoAdicional> & { id: string }) => {
-      const { data, error } = await supabase
-        .from('servicos_adicionais')
-        .update(servico)
-        .eq('id', id)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return data;
+      // Simular atualização
+      return new Promise((resolve) => {
+        setTimeout(() => resolve({ id, ...servico }), 500);
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['servicos'] });

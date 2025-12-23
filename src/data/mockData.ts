@@ -216,52 +216,52 @@ export const petsMock: Pet[] = [
 ];
 
 export const reservasMock: Reserva[] = [
-  // 1 Check-out Hoje (2024-12-12)
+  // 1 Check-out Hoje (2025-12-23)
   {
     id: '1',
     tutor_id: '1',
     pet_id: '1', // Rex
     unidade_id: '1',
-    check_in: '2024-12-09',
-    check_out: '2024-12-12', // Check-out hoje
+    check_in: '2025-12-20',
+    check_out: '2025-12-23', // Check-out hoje
     servicos_adicionais: [servicosAdicionais[0].id, servicosAdicionais[3].id],
     status: 'hospedado',
     valor_total: 300,
     codigo_estadia: 'PH2024001',
     pagamento_status: 'aprovado',
-    created_at: '2024-12-01T00:00:00Z',
-    updated_at: '2024-12-01T00:00:00Z',
+    created_at: '2025-12-01T00:00:00Z',
+    updated_at: '2025-12-01T00:00:00Z',
   },
-  // 2 Check-ins Hoje (2024-12-12)
+  // 2 Check-ins Hoje (2025-12-23)
   {
     id: '2',
     tutor_id: '2',
     pet_id: '3', // Thor
     unidade_id: '1',
-    check_in: '2024-12-12', // Check-in hoje
-    check_out: '2024-12-16',
+    check_in: '2025-12-23', // Check-in hoje
+    check_out: '2025-12-26',
     servicos_adicionais: [servicosAdicionais[1].id],
     status: 'confirmada',
     valor_total: 340,
     codigo_estadia: 'PH2024002',
     pagamento_status: 'aprovado',
-    created_at: '2024-12-05T00:00:00Z',
-    updated_at: '2024-12-05T00:00:00Z',
+    created_at: '2025-12-05T00:00:00Z',
+    updated_at: '2025-12-05T00:00:00Z',
   },
   {
     id: '8',
     tutor_id: '5',
     pet_id: '10', // Pingo
     unidade_id: '2',
-    check_in: '2024-12-12', // Check-in hoje
-    check_out: '2024-12-14',
+    check_in: '2025-12-23', // Check-in hoje
+    check_out: '2025-12-25',
     servicos_adicionais: [],
     status: 'pendente',
     valor_total: 180,
     codigo_estadia: 'PH2024008',
     pagamento_status: 'pendente',
-    created_at: '2024-12-11T00:00:00Z',
-    updated_at: '2024-12-11T00:00:00Z',
+    created_at: '2025-12-11T00:00:00Z',
+    updated_at: '2025-12-11T00:00:00Z',
   },
   // 4 Hospedados (check-in antes de hoje, check-out depois de hoje)
   {
@@ -269,68 +269,68 @@ export const reservasMock: Reserva[] = [
     tutor_id: '3',
     pet_id: '4', // Luna
     unidade_id: '2',
-    check_in: '2024-12-10',
-    check_out: '2024-12-14',
+    check_in: '2025-12-21',
+    check_out: '2025-12-25',
     servicos_adicionais: [servicosAdicionais[3].id],
     status: 'hospedado',
     valor_total: 210,
     codigo_estadia: 'PH2024003',
     pagamento_status: 'aprovado',
-    created_at: '2024-12-08T00:00:00Z',
-    updated_at: '2024-12-08T00:00:00Z',
+    created_at: '2025-12-08T00:00:00Z',
+    updated_at: '2025-12-08T00:00:00Z',
   },
   {
     id: '4',
     tutor_id: '3',
     pet_id: '5', // Bob
     unidade_id: '2',
-    check_in: '2024-12-08',
-    check_out: '2024-12-17',
+    check_in: '2025-12-19',
+    check_out: '2025-12-28',
     servicos_adicionais: [servicosAdicionais[0].id, servicosAdicionais[2].id],
     status: 'hospedado',
     valor_total: 600,
     codigo_estadia: 'PH2024004',
     pagamento_status: 'aprovado',
-    created_at: '2024-12-09T00:00:00Z',
-    updated_at: '2024-12-09T00:00:00Z',
+    created_at: '2025-12-09T00:00:00Z',
+    updated_at: '2025-12-09T00:00:00Z',
   },
   {
     id: '5',
     tutor_id: '4',
     pet_id: '6', // Mel
     unidade_id: '1',
-    check_in: '2024-12-11',
-    check_out: '2024-12-16',
+    check_in: '2025-12-22',
+    check_out: '2025-12-27',
     servicos_adicionais: [servicosAdicionais[1].id],
     status: 'hospedado',
     valor_total: 320,
     codigo_estadia: 'PH2024005',
     pagamento_status: 'pendente',
-    created_at: '2024-12-10T00:00:00Z',
-    updated_at: '2024-12-10T00:00:00Z',
+    created_at: '2025-12-10T00:00:00Z',
+    updated_at: '2025-12-10T00:00:00Z',
   },
   {
     id: '6',
     tutor_id: '4',
     pet_id: '7', // Simba
     unidade_id: '2',
-    check_in: '2024-12-11',
-    check_out: '2024-12-15',
+    check_in: '2025-12-22',
+    check_out: '2025-12-26',
     servicos_adicionais: [servicosAdicionais[3].id],
     status: 'hospedado',
     valor_total: 200,
     codigo_estadia: 'PH2024006',
     pagamento_status: 'aprovado',
-    created_at: '2024-12-11T00:00:00Z',
-    updated_at: '2024-12-11T00:00:00Z',
+    created_at: '2025-12-11T00:00:00Z',
+    updated_at: '2025-12-11T00:00:00Z',
   },
 ];
 
 export const vagasDiaMock: VagaDia[] = [
-  { id: 'vd1', data: '2024-12-12', unidade_id: '1', vagas_cachorro_total: 20, vagas_cachorro_ocupadas: 15, vagas_gato_total: 10, vagas_gato_ocupadas: 4 },
-  { id: 'vd2', data: '2024-12-13', unidade_id: '1', vagas_cachorro_total: 20, vagas_cachorro_ocupadas: 18, vagas_gato_total: 10, vagas_gato_ocupadas: 6 },
-  { id: 'vd3', data: '2024-12-14', unidade_id: '1', vagas_cachorro_total: 20, vagas_cachorro_ocupadas: 18, vagas_gato_total: 10, vagas_gato_ocupadas: 7 },
-  { id: 'vd4', data: '2024-12-15', unidade_id: '1', vagas_cachorro_total: 20, vagas_cachorro_ocupadas: 12, vagas_gato_total: 10, vagas_gato_ocupadas: 5 },
-  { id: 'vd5', data: '2024-12-16', unidade_id: '1', vagas_cachorro_total: 20, vagas_cachorro_ocupadas: 10, vagas_gato_total: 10, vagas_gato_ocupadas: 3 },
-  { id: 'vd6', data: '2024-12-17', unidade_id: '1', vagas_cachorro_total: 20, vagas_cachorro_ocupadas: 8, vagas_gato_total: 10, vagas_gato_ocupadas: 2 },
+  { id: 'vd1', data: '2025-12-23', unidade_id: '1', vagas_cachorro_total: 20, vagas_cachorro_ocupadas: 15, vagas_gato_total: 10, vagas_gato_ocupadas: 4 },
+  { id: 'vd2', data: '2025-12-24', unidade_id: '1', vagas_cachorro_total: 20, vagas_cachorro_ocupadas: 18, vagas_gato_total: 10, vagas_gato_ocupadas: 6 },
+  { id: 'vd3', data: '2025-12-25', unidade_id: '1', vagas_cachorro_total: 20, vagas_cachorro_ocupadas: 18, vagas_gato_total: 10, vagas_gato_ocupadas: 7 },
+  { id: 'vd4', data: '2025-12-26', unidade_id: '1', vagas_cachorro_total: 20, vagas_cachorro_ocupadas: 12, vagas_gato_total: 10, vagas_gato_ocupadas: 5 },
+  { id: 'vd5', data: '2025-12-27', unidade_id: '1', vagas_cachorro_total: 20, vagas_cachorro_ocupadas: 10, vagas_gato_total: 10, vagas_gato_ocupadas: 3 },
+  { id: 'vd6', data: '2025-12-28', unidade_id: '1', vagas_cachorro_total: 20, vagas_cachorro_ocupadas: 8, vagas_gato_total: 10, vagas_gato_ocupadas: 2 },
 ];
