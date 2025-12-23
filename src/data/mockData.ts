@@ -263,7 +263,7 @@ export const reservasMock: Reserva[] = [
     created_at: '2025-12-11T00:00:00Z',
     updated_at: '2025-12-11T00:00:00Z',
   },
-  // 4 Hospedados (check-in antes de hoje, check-out depois de hoje)
+  // 2 Hospedados (reduzido de 4 para 2)
   {
     id: '3',
     tutor_id: '3',
@@ -294,36 +294,7 @@ export const reservasMock: Reserva[] = [
     created_at: '2025-12-09T00:00:00Z',
     updated_at: '2025-12-09T00:00:00Z',
   },
-  {
-    id: '5',
-    tutor_id: '4',
-    pet_id: '6', // Mel
-    unidade_id: '1',
-    check_in: '2025-12-22',
-    check_out: '2025-12-27',
-    servicos_adicionais: [servicosAdicionais[1].id],
-    status: 'hospedado',
-    valor_total: 320,
-    codigo_estadia: 'PH2024005',
-    pagamento_status: 'pendente',
-    created_at: '2025-12-10T00:00:00Z',
-    updated_at: '2025-12-10T00:00:00Z',
-  },
-  {
-    id: '6',
-    tutor_id: '4',
-    pet_id: '7', // Simba
-    unidade_id: '2',
-    check_in: '2025-12-22',
-    check_out: '2025-12-26',
-    servicos_adicionais: [servicosAdicionais[3].id],
-    status: 'hospedado',
-    valor_total: 200,
-    codigo_estadia: 'PH2024006',
-    pagamento_status: 'aprovado',
-    created_at: '2025-12-11T00:00:00Z',
-    updated_at: '2025-12-11T00:00:00Z',
-  },
+  // Removido os dois últimos registros de hospedados
 ];
 
 export const vagasDiaMock: VagaDia[] = [
