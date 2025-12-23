@@ -93,7 +93,6 @@ export default function Reservas() {
       servicos_adicionais: [],
       status: 'pendente',
       valor_total: parseFloat(formData.get('valor_total') as string) || 0,
-      codigo_estadia: null,
       pagamento_status: 'pendente',
     }, {
       onSuccess: () => {

@@ -17,20 +17,20 @@ export function VagasChart({ vagas }: VagasChartProps) {
       
       <div className="space-y-4">
         {vagas.map((vaga, index) => {
-          const cachorroPercent = (vaga.vagasCachorroOcupadas / vaga.vagasCachorroTotal) * 100;
-          const gatoPercent = (vaga.vagasGatoOcupadas / vaga.vagasGatoTotal) * 100;
+          const cachorroPercent = (vaga.vagas_cachorro_ocupadas / vaga.vagas_cachorro_total) * 100;
+          const gatoPercent = (vaga.vagas_gato_ocupadas / vaga.vagas_gato_total) * 100;
           
           return (
             <div 
-              key={vaga.data} 
+              key={vaga.id} // Use vaga.id as key
               className="space-y-2"
               style={{ animationDelay: `${index * 100}ms` }}
             >
               <div className="flex items-center justify-between text-sm">
                 <span className="font-medium text-foreground">{formatDate(vaga.data)}</span>
                 <div className="flex gap-4 text-xs text-muted-foreground">
-                  <span>🐶 {vaga.vagasCachorroOcupadas}/{vaga.vagasCachorroTotal}</span>
-                  <span>🐱 {vaga.vagasGatoOcupadas}/{vaga.vagasGatoTotal}</span>
+                  <span>🐶 {vaga.vagas_cachorro_ocupadas}/{vaga.vagas_cachorro_total}</span>
+                  <span>🐱 {vaga.vagas_gato_ocupadas}/{vaga.vagas_gato_total}</span>
                 </div>
               </div>
               

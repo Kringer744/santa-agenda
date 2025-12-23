@@ -3,39 +3,42 @@ export interface Tutor {
   nome: string;
   cpf: string;
   telefone: string;
-  email: string;
-  dataNascimento: string;
-  createdAt: string;
+  email: string | null;
+  data_nascimento: string | null;
+  created_at: string;
+  updated_at: string; // Added updated_at to match Supabase type
   tags: string[];
 }
 
 export interface Pet {
   id: string;
-  tutorId: string;
+  tutor_id: string;
   nome: string;
   especie: 'cachorro' | 'gato';
-  raca: string;
-  porte: 'pequeno' | 'medio' | 'grande';
-  idade: number;
-  dataNascimento?: string;
-  necessidadesEspeciais?: string;
-  observacoesComportamentais?: string;
-  createdAt: string;
+  raca: string | null;
+  porte: 'pequeno' | 'medio' | 'grande' | null;
+  idade: number | null;
+  data_nascimento: string | null;
+  necessidades_especiais: string | null;
+  observacoes_comportamentais: string | null;
+  created_at: string;
+  updated_at: string; // Added updated_at to match Supabase type
 }
 
 export interface Reserva {
   id: string;
-  tutorId: string;
-  petId: string;
-  unidadeId: string;
-  checkIn: string;
-  checkOut: string;
-  servicosAdicionais: ServicoAdicional[];
+  tutor_id: string;
+  pet_id: string;
+  unidade_id: string;
+  check_in: string;
+  check_out: string;
+  servicos_adicionais: string[]; // Changed to string[] to store service IDs
   status: 'pendente' | 'confirmada' | 'checkin' | 'hospedado' | 'checkout' | 'finalizada' | 'cancelada';
-  valorTotal: number;
-  codigoEstadia: string;
-  pagamentoStatus: 'pendente' | 'aprovado' | 'recusado';
-  createdAt: string;
+  valor_total: number;
+  codigo_estadia: string | null;
+  pagamento_status: 'pendente' | 'aprovado' | 'recusado';
+  created_at: string;
+  updated_at: string; // Added updated_at to match Supabase type
 }
 
 export interface ServicoAdicional {
@@ -43,32 +46,37 @@ export interface ServicoAdicional {
   nome: string;
   preco: number;
   icone: string;
+  ativo: boolean; // Added ativo to match Supabase type
+  created_at: string; // Added created_at to match Supabase type
 }
 
 export interface Unidade {
   id: string;
   nome: string;
-  capacidadeCachorro: number;
-  capacidadeGato: number;
-  endereco: string;
+  capacidade_cachorro: number;
+  capacidade_gato: number;
+  endereco: string | null; // Changed to string | null to match Supabase type
+  created_at: string; // Added created_at to match Supabase type
+  updated_at: string; // Added updated_at to match Supabase type
 }
 
 export interface VagaDia {
+  id: string; // Added id to match Supabase type
   data: string;
-  unidadeId: string;
-  vagasCachorroTotal: number;
-  vagasCachorroOcupadas: number;
-  vagasGatoTotal: number;
-  vagasGatoOcupadas: number;
+  unidade_id: string;
+  vagas_cachorro_total: number;
+  vagas_cachorro_ocupadas: number;
+  vagas_gato_total: number;
+  vagas_gato_ocupadas: number;
 }
 
 export interface MensagemAgendada {
   id: string;
   tipo: 'pre-estadia' | 'durante' | 'pos-estadia' | 'aniversario';
-  reservaId?: string;
-  petId: string;
-  tutorId: string;
-  dataEnvio: string;
+  reserva_id?: string; // Changed to snake_case
+  pet_id: string; // Changed to snake_case
+  tutor_id: string; // Changed to snake_case
+  data_envio: string; // Changed to snake_case
   status: 'agendada' | 'enviada' | 'erro';
   mensagem: string;
 }

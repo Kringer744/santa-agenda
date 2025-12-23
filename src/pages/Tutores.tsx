@@ -40,8 +40,8 @@ export default function Tutores() {
       nome: formData.get('nome') as string,
       cpf: formData.get('cpf') as string,
       telefone: formData.get('telefone') as string,
-      email: formData.get('email') as string,
-      data_nascimento: formData.get('dataNascimento') as string || null,
+      email: formData.get('email') as string || null,
+      data_nascimento: formData.get('data_nascimento') as string || null,
       tags: ['novo'],
     }, {
       onSuccess: () => setIsDialogOpen(false)
@@ -91,8 +91,8 @@ export default function Tutores() {
                   <Input id="email" name="email" type="email" placeholder="maria@email.com" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="dataNascimento">Data de nascimento</Label>
-                  <Input id="dataNascimento" name="dataNascimento" type="date" />
+                  <Label htmlFor="data_nascimento">Data de nascimento</Label>
+                  <Input id="data_nascimento" name="data_nascimento" type="date" />
                 </div>
                 <div className="flex gap-3 pt-4">
                   <Button type="button" variant="outline" className="flex-1" onClick={() => setIsDialogOpen(false)}>

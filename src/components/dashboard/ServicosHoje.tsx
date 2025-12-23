@@ -2,18 +2,25 @@ import { Reserva, ServicoAdicional } from '@/types';
 
 interface ServicosHojeProps {
   reservas: Reserva[];
+  servicosAdicionais: ServicoAdicional[]; // Pass servicosAdicionais as a prop
 }
 
-export function ServicosHoje({ reservas }: ServicosHojeProps) {
+export function ServicosHoje({ reservas, servicosAdicionais }: ServicosHojeProps) {
+  // Map servicosAdicionais by ID for easy lookup
+  const servicosMap = new Map(servicosAdicionais.map(s => [s.id, s]));
+
   // Agrupa serviços contratados
   const servicosContagem: Record<string, { servico: ServicoAdicional; count: number }> = {};
   
   reservas.forEach(reserva => {
-    reserva.servicosAdicionais.forEach(servico => {
-      if (servicosContagem[servico.id]) {
-        servicosContagem[servico.id].count++;
-      } else {
-        servicosContagem[servico.id] = { servico, count: 1 };
+    reserva.servicos_adicionais.forEach(servicoId => { // Use servicos_adicionais
+      const servico = servicosMap.get(servicoId);
+      if (servico) {
+        if (servicosContagem[servico.id]) {
+          servicosContagem[servico.id].count++;
+        } else {
+          servicosContagem[servico.id] = { servico, count: 1 };
+        }
       }
     });
   });

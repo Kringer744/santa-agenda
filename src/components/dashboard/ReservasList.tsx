@@ -49,8 +49,8 @@ export function ReservasList({ reservas, pets, tutores, title, type }: ReservasL
       ) : (
         <div className="space-y-3">
           {reservas.map((reserva, index) => {
-            const pet = getPet(reserva.petId);
-            const tutor = getTutor(reserva.tutorId);
+            const pet = getPet(reserva.pet_id);
+            const tutor = getTutor(reserva.tutor_id);
             
             return (
               <div 
@@ -72,7 +72,7 @@ export function ReservasList({ reservas, pets, tutores, title, type }: ReservasL
                     {reserva.status}
                   </Badge>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {reserva.codigoEstadia}
+                    {reserva.codigo_estadia}
                   </p>
                 </div>
               </div>

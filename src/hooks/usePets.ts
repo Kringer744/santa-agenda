@@ -1,21 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-
-export interface Pet {
-  id: string;
-  tutor_id: string;
-  nome: string;
-  especie: 'cachorro' | 'gato';
-  raca: string | null;
-  porte: 'pequeno' | 'medio' | 'grande' | null;
-  idade: number | null;
-  data_nascimento: string | null;
-  necessidades_especiais: string | null;
-  observacoes_comportamentais: string | null;
-  created_at: string;
-  updated_at: string;
-}
+import { Pet } from '@/types'; // Import the updated type
 
 export function usePets() {
   return useQuery({

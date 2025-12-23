@@ -122,7 +122,7 @@ export default function Dashboard() {
                         <p className="text-xs text-muted-foreground truncate">{tutor?.nome}</p>
                       </div>
                       <Badge className={cn("text-xs", statusColors[reserva.status])}>
-                        {reserva.status}
+                        {statusLabels[reserva.status]}
                       </Badge>
                     </div>
                   );
@@ -194,3 +194,13 @@ export default function Dashboard() {
     </Layout>
   );
 }
+
+const statusLabels: Record<string, string> = {
+  pendente: 'Pendente',
+  confirmada: 'Confirmada',
+  checkin: 'Check-in',
+  hospedado: 'Hospedado',
+  checkout: 'Check-out',
+  finalizada: 'Finalizada',
+  cancelada: 'Cancelada',
+};

@@ -1,18 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-
-export interface Tutor {
-  id: string;
-  nome: string;
-  cpf: string;
-  telefone: string;
-  email: string | null;
-  data_nascimento: string | null;
-  tags: string[];
-  created_at: string;
-  updated_at: string;
-}
+import { Tutor } from '@/types'; // Import the updated type
 
 export function useTutores() {
   return useQuery({

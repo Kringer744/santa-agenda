@@ -1,22 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-
-export interface Reserva {
-  id: string;
-  tutor_id: string;
-  pet_id: string;
-  unidade_id: string;
-  check_in: string;
-  check_out: string;
-  servicos_adicionais: string[];
-  status: 'pendente' | 'confirmada' | 'checkin' | 'hospedado' | 'checkout' | 'finalizada' | 'cancelada';
-  valor_total: number;
-  codigo_estadia: string | null;
-  pagamento_status: 'pendente' | 'aprovado' | 'recusado';
-  created_at: string;
-  updated_at: string;
-}
+import { Reserva } from '@/types'; // Import the updated type
 
 export function useReservas() {
   return useQuery({
@@ -38,7 +23,7 @@ export function useCreateReserva() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (reserva: Omit<Reserva, 'id' | 'created_at' | 'updated_at'>) => {
+    mutationFn: async (reserva: Omit<Reserva, 'id' | 'created_at' | 'updated_at' | 'codigo_estadia'>) => {
       const codigoEstadia = `EST-${Date.now().toString(36).toUpperCase()}`;
       const { data, error } = await supabase
         .from('reservas')

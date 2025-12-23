@@ -1,15 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-
-export interface ServicoAdicional {
-  id: string;
-  nome: string;
-  preco: number;
-  icone: string;
-  ativo: boolean;
-  created_at: string;
-}
+import { ServicoAdicional } from '@/types'; // Import the updated type
 
 export function useServicos() {
   return useQuery({

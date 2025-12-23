@@ -1,16 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-
-export interface Unidade {
-  id: string;
-  nome: string;
-  endereco: string | null;
-  capacidade_cachorro: number;
-  capacidade_gato: number;
-  created_at: string;
-  updated_at: string;
-}
+import { Unidade } from '@/types'; // Import the updated type
 
 export function useUnidades() {
   return useQuery({

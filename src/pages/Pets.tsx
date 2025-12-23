@@ -151,6 +151,10 @@ export default function Pets() {
                   </div>
                 </div>
                 <div className="space-y-2">
+                  <Label htmlFor="data_nascimento">Data de Nascimento</Label>
+                  <Input id="data_nascimento" name="data_nascimento" type="date" />
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="necessidades_especiais">Necessidades especiais</Label>
                   <Textarea id="necessidades_especiais" name="necessidades_especiais" placeholder="Ex: medicação diária, dieta especial..." />
                 </div>
