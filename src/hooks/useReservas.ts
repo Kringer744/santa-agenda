@@ -2,23 +2,20 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Reserva } from '@/types';
-import { reservasMock } from '@/data/mockData'; // Import mock data
+// import { reservasMock } from '@/data/mockData'; // Remove mock data import
 
 export function useReservas() {
   return useQuery({
     queryKey: ['reservas'],
     queryFn: async () => {
-      // Temporarily return mock data for illustration
-      return reservasMock as Reserva[];
-
-      // Uncomment the following lines to fetch from Supabase when ready
-      // const { data, error } = await supabase
-      //   .from('reservas')
-      //   .select('*')
-      //   .order('created_at', { ascending: false });
+      // Fetch from Supabase
+      const { data, error } = await supabase
+        .from('reservas')
+        .select('*')
+        .order('created_at', { ascending: false });
       
-      // if (error) throw error;
-      // return data as Reserva[];
+      if (error) throw error;
+      return data as Reserva[];
     },
   });
 }
@@ -26,13 +23,16 @@ export function useReservas() {
 export function useCreateReserva() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-
+  
   return useMutation({
     mutationFn: async (reserva: Omit<Reserva, 'id' | 'created_at' | 'updated_at' | 'codigo_estadia'>) => {
       const codigoEstadia = `EST-${Date.now().toString(36).toUpperCase()}`;
       const { data, error } = await supabase
         .from('reservas')
-        .insert({ ...reserva, codigo_estadia: codigoEstadia })
+        .insert({
+          ...reserva,
+          codigo_estadia: codigoEstadia
+        })
         .select()
         .single();
       
@@ -41,13 +41,15 @@ export function useCreateReserva() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reservas'] });
-      toast({ title: 'Reserva criada com sucesso!' });
+      toast({
+        title: 'Reserva criada com sucesso!'
+      });
     },
     onError: (error: Error) => {
-      toast({ 
-        title: 'Erro ao criar reserva', 
+      toast({
+        title: 'Erro ao criar reserva',
         description: error.message,
-        variant: 'destructive' 
+        variant: 'destructive'
       });
     },
   });
@@ -56,7 +58,7 @@ export function useCreateReserva() {
 export function useUpdateReservaStatus() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-
+  
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: Reserva['status'] }) => {
       const { data, error } = await supabase
@@ -71,13 +73,15 @@ export function useUpdateReservaStatus() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reservas'] });
-      toast({ title: 'Status atualizado!' });
+      toast({
+        title: 'Status atualizado!'
+      });
     },
     onError: (error: Error) => {
-      toast({ 
-        title: 'Erro ao atualizar status', 
+      toast({
+        title: 'Erro ao atualizar status',
         description: error.message,
-        variant: 'destructive' 
+        variant: 'destructive'
       });
     },
   });

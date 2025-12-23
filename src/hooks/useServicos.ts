@@ -2,23 +2,20 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ServicoAdicional } from '@/types';
-import { servicosAdicionais } from '@/data/mockData'; // Import mock data
+// import { servicosAdicionais } from '@/data/mockData'; // Remove mock data import
 
 export function useServicos() {
   return useQuery({
     queryKey: ['servicos'],
     queryFn: async () => {
-      // Temporarily return mock data for illustration
-      return servicosAdicionais as ServicoAdicional[];
-
-      // Uncomment the following lines to fetch from Supabase when ready
-      // const { data, error } = await supabase
-      //   .from('servicos_adicionais')
-      //   .select('*')
-      //   .order('nome', { ascending: true });
+      // Fetch from Supabase
+      const { data, error } = await supabase
+        .from('servicos_adicionais')
+        .select('*')
+        .order('nome', { ascending: true });
       
-      // if (error) throw error;
-      // return data as ServicoAdicional[];
+      if (error) throw error;
+      return data as ServicoAdicional[];
     },
   });
 }
@@ -26,7 +23,7 @@ export function useServicos() {
 export function useCreateServico() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-
+  
   return useMutation({
     mutationFn: async (servico: Omit<ServicoAdicional, 'id' | 'created_at'>) => {
       const { data, error } = await supabase
@@ -40,13 +37,15 @@ export function useCreateServico() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['servicos'] });
-      toast({ title: 'Serviço criado com sucesso!' });
+      toast({
+        title: 'Serviço criado com sucesso!'
+      });
     },
     onError: (error: Error) => {
-      toast({ 
-        title: 'Erro ao criar serviço', 
+      toast({
+        title: 'Erro ao criar serviço',
         description: error.message,
-        variant: 'destructive' 
+        variant: 'destructive'
       });
     },
   });
@@ -55,7 +54,7 @@ export function useCreateServico() {
 export function useUpdateServico() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-
+  
   return useMutation({
     mutationFn: async ({ id, ...servico }: Partial<ServicoAdicional> & { id: string }) => {
       const { data, error } = await supabase
@@ -70,13 +69,15 @@ export function useUpdateServico() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['servicos'] });
-      toast({ title: 'Serviço atualizado!' });
+      toast({
+        title: 'Serviço atualizado!'
+      });
     },
     onError: (error: Error) => {
-      toast({ 
-        title: 'Erro ao atualizar serviço', 
+      toast({
+        title: 'Erro ao atualizar serviço',
         description: error.message,
-        variant: 'destructive' 
+        variant: 'destructive'
       });
     },
   });

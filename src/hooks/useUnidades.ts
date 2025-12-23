@@ -2,23 +2,20 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Unidade } from '@/types';
-import { unidades } from '@/data/mockData'; // Import mock data
+// import { unidades } from '@/data/mockData'; // Remove mock data import
 
 export function useUnidades() {
   return useQuery({
     queryKey: ['unidades'],
     queryFn: async () => {
-      // Temporarily return mock data for illustration
-      return unidades as Unidade[];
-
-      // Uncomment the following lines to fetch from Supabase when ready
-      // const { data, error } = await supabase
-      //   .from('unidades')
-      //   .select('*')
-      //   .order('created_at', { ascending: false });
+      // Fetch from Supabase
+      const { data, error } = await supabase
+        .from('unidades')
+        .select('*')
+        .order('created_at', { ascending: false });
       
-      // if (error) throw error;
-      // return data as Unidade[];
+      if (error) throw error;
+      return data as Unidade[];
     },
   });
 }
@@ -26,7 +23,7 @@ export function useUnidades() {
 export function useCreateUnidade() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-
+  
   return useMutation({
     mutationFn: async (unidade: Omit<Unidade, 'id' | 'created_at' | 'updated_at'>) => {
       const { data, error } = await supabase
@@ -40,13 +37,15 @@ export function useCreateUnidade() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['unidades'] });
-      toast({ title: 'Unidade criada com sucesso!' });
+      toast({
+        title: 'Unidade criada com sucesso!'
+      });
     },
     onError: (error: Error) => {
-      toast({ 
-        title: 'Erro ao criar unidade', 
+      toast({
+        title: 'Erro ao criar unidade',
         description: error.message,
-        variant: 'destructive' 
+        variant: 'destructive'
       });
     },
   });
@@ -55,7 +54,7 @@ export function useCreateUnidade() {
 export function useDeleteUnidade() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-
+  
   return useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
@@ -67,13 +66,15 @@ export function useDeleteUnidade() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['unidades'] });
-      toast({ title: 'Unidade excluída com sucesso!' });
+      toast({
+        title: 'Unidade excluída com sucesso!'
+      });
     },
     onError: (error: Error) => {
-      toast({ 
-        title: 'Erro ao excluir unidade', 
+      toast({
+        title: 'Erro ao excluir unidade',
         description: error.message,
-        variant: 'destructive' 
+        variant: 'destructive'
       });
     },
   });
