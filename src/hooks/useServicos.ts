@@ -1,19 +1,24 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { ServicoAdicional } from '@/types'; // Import the updated type
+import { ServicoAdicional } from '@/types';
+import { servicosAdicionais } from '@/data/mockData'; // Import mock data
 
 export function useServicos() {
   return useQuery({
     queryKey: ['servicos'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('servicos_adicionais')
-        .select('*')
-        .order('nome', { ascending: true });
+      // Temporarily return mock data for illustration
+      return servicosAdicionais as ServicoAdicional[];
+
+      // Uncomment the following lines to fetch from Supabase when ready
+      // const { data, error } = await supabase
+      //   .from('servicos_adicionais')
+      //   .select('*')
+      //   .order('nome', { ascending: true });
       
-      if (error) throw error;
-      return data as ServicoAdicional[];
+      // if (error) throw error;
+      // return data as ServicoAdicional[];
     },
   });
 }

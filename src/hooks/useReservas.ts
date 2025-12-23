@@ -1,19 +1,24 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Reserva } from '@/types'; // Import the updated type
+import { Reserva } from '@/types';
+import { reservasMock } from '@/data/mockData'; // Import mock data
 
 export function useReservas() {
   return useQuery({
     queryKey: ['reservas'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('reservas')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // Temporarily return mock data for illustration
+      return reservasMock as Reserva[];
+
+      // Uncomment the following lines to fetch from Supabase when ready
+      // const { data, error } = await supabase
+      //   .from('reservas')
+      //   .select('*')
+      //   .order('created_at', { ascending: false });
       
-      if (error) throw error;
-      return data as Reserva[];
+      // if (error) throw error;
+      // return data as Reserva[];
     },
   });
 }

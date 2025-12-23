@@ -1,19 +1,24 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Pet } from '@/types'; // Import the updated type
+import { Pet } from '@/types';
+import { petsMock } from '@/data/mockData'; // Import mock data
 
 export function usePets() {
   return useQuery({
     queryKey: ['pets'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('pets')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // Temporarily return mock data for illustration
+      return petsMock as Pet[];
+
+      // Uncomment the following lines to fetch from Supabase when ready
+      // const { data, error } = await supabase
+      //   .from('pets')
+      //   .select('*')
+      //   .order('created_at', { ascending: false });
       
-      if (error) throw error;
-      return data as Pet[];
+      // if (error) throw error;
+      // return data as Pet[];
     },
   });
 }

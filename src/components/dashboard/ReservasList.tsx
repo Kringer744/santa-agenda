@@ -10,7 +10,7 @@ interface ReservasListProps {
   type: 'checkin' | 'checkout' | 'hospedados';
 }
 
-const statusColors = {
+const statusColors: Record<string, string> = {
   pendente: 'bg-honey-light text-accent-foreground',
   confirmada: 'bg-mint-light text-secondary',
   checkin: 'bg-coral-light text-primary',
@@ -18,6 +18,16 @@ const statusColors = {
   checkout: 'bg-honey text-accent-foreground',
   finalizada: 'bg-muted text-muted-foreground',
   cancelada: 'bg-destructive/10 text-destructive',
+};
+
+const statusLabels: Record<string, string> = {
+  pendente: 'Pendente',
+  confirmada: 'Confirmada',
+  checkin: 'Check-in',
+  hospedado: 'Hospedado',
+  checkout: 'Check-out',
+  finalizada: 'Finalizada',
+  cancelada: 'Cancelada',
 };
 
 export function ReservasList({ reservas, pets, tutores, title, type }: ReservasListProps) {
@@ -69,7 +79,7 @@ export function ReservasList({ reservas, pets, tutores, title, type }: ReservasL
                 
                 <div className="text-right">
                   <Badge className={cn("text-xs", statusColors[reserva.status])}>
-                    {reserva.status}
+                    {statusLabels[reserva.status]}
                   </Badge>
                   <p className="text-xs text-muted-foreground mt-1">
                     {reserva.codigo_estadia}

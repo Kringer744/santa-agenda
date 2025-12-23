@@ -5,6 +5,11 @@ import { useReservas } from '@/hooks/useReservas';
 import { usePets } from '@/hooks/usePets';
 import { useTutores } from '@/hooks/useTutores';
 import { useUnidades } from '@/hooks/useUnidades';
+import { useServicos } from '@/hooks/useServicos'; // Import useServicos
+import { useVagasDia } from '@/hooks/useVagasDia'; // Import useVagasDia
+import { ReservasList } from '@/components/dashboard/ReservasList'; // Import ReservasList
+import { ServicosHoje } from '@/components/dashboard/ServicosHoje'; // Import ServicosHoje
+import { VagasChart } from '@/components/dashboard/VagasChart'; // Import VagasChart
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
@@ -24,9 +29,11 @@ export default function Dashboard() {
   const { data: reservas = [], isLoading: loadingReservas } = useReservas();
   const { data: pets = [], isLoading: loadingPets } = usePets();
   const { data: tutores = [], isLoading: loadingTutores } = useTutores();
-  const { data: unidades = [] } = useUnidades();
+  const { data: unidades = [], isLoading: loadingUnidades } = useUnidades();
+  const { data: servicosAdicionais = [], isLoading: loadingServicos } = useServicos(); // Use servicosAdicionais
+  const { data: vagasDia = [], isLoading: loadingVagasDia } = useVagasDia(); // Use vagasDia
 
-  const isLoading = loadingReservas || loadingPets || loadingTutores;
+  const isLoading = loadingReservas || loadingPets || loadingTutores || loadingUnidades || loadingServicos || loadingVagasDia;
 
   const petsHospedados = reservas.filter(r => r.status === 'hospedado').length;
   const checkinsHoje = reservas.filter(r => r.check_in === hoje && (r.status === 'confirmada' || r.status === 'pendente'));
@@ -102,93 +109,37 @@ export default function Dashboard() {
         {/* Reservas do dia */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Check-ins Hoje */}
-          <div className="bg-card rounded-2xl p-6 shadow-card animate-slide-up">
-            <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-mint" />
-              Check-ins Hoje ({checkinsHoje.length})
-            </h3>
-            {checkinsHoje.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhum check-in hoje</p>
-            ) : (
-              <div className="space-y-3">
-                {checkinsHoje.map(reserva => {
-                  const pet = getPet(reserva.pet_id);
-                  const tutor = getTutor(reserva.tutor_id);
-                  return (
-                    <div key={reserva.id} className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
-                      <span className="text-2xl">{pet?.especie === 'cachorro' ? '🐶' : '🐱'}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-foreground truncate">{pet?.nome}</p>
-                        <p className="text-xs text-muted-foreground truncate">{tutor?.nome}</p>
-                      </div>
-                      <Badge className={cn("text-xs", statusColors[reserva.status])}>
-                        {statusLabels[reserva.status]}
-                      </Badge>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+          <ReservasList 
+            title="Check-ins Hoje" 
+            type="checkin" 
+            reservas={checkinsHoje} 
+            pets={pets} 
+            tutores={tutores} 
+          />
 
           {/* Hospedados */}
-          <div className="bg-card rounded-2xl p-6 shadow-card animate-slide-up" style={{ animationDelay: '100ms' }}>
-            <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-secondary" />
-              Hospedados ({hospedadosHoje.length})
-            </h3>
-            {hospedadosHoje.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhum pet hospedado</p>
-            ) : (
-              <div className="space-y-3">
-                {hospedadosHoje.slice(0, 5).map(reserva => {
-                  const pet = getPet(reserva.pet_id);
-                  const tutor = getTutor(reserva.tutor_id);
-                  return (
-                    <div key={reserva.id} className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
-                      <span className="text-2xl">{pet?.especie === 'cachorro' ? '🐶' : '🐱'}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-foreground truncate">{pet?.nome}</p>
-                        <p className="text-xs text-muted-foreground truncate">{tutor?.nome}</p>
-                      </div>
-                    </div>
-                  );
-                })}
-                {hospedadosHoje.length > 5 && (
-                  <p className="text-xs text-muted-foreground text-center">
-                    +{hospedadosHoje.length - 5} mais
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
+          <ReservasList 
+            title="Hospedados" 
+            type="hospedados" 
+            reservas={hospedadosHoje} 
+            pets={pets} 
+            tutores={tutores} 
+          />
 
           {/* Check-outs Hoje */}
-          <div className="bg-card rounded-2xl p-6 shadow-card animate-slide-up" style={{ animationDelay: '200ms' }}>
-            <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-honey" />
-              Check-outs Hoje ({checkoutsHoje.length})
-            </h3>
-            {checkoutsHoje.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhum check-out hoje</p>
-            ) : (
-              <div className="space-y-3">
-                {checkoutsHoje.map(reserva => {
-                  const pet = getPet(reserva.pet_id);
-                  const tutor = getTutor(reserva.tutor_id);
-                  return (
-                    <div key={reserva.id} className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
-                      <span className="text-2xl">{pet?.especie === 'cachorro' ? '🐶' : '🐱'}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-foreground truncate">{pet?.nome}</p>
-                        <p className="text-xs text-muted-foreground truncate">{tutor?.nome}</p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+          <ReservasList 
+            title="Check-outs Hoje" 
+            type="checkout" 
+            reservas={checkoutsHoje} 
+            pets={pets} 
+            tutores={tutores} 
+          />
+        </div>
+
+        {/* Serviços e Vagas */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <ServicosHoje reservas={reservas.filter(r => r.status === 'hospedado')} servicosAdicionais={servicosAdicionais} />
+          <VagasChart vagas={vagasDia} />
         </div>
       </div>
     </Layout>

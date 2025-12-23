@@ -1,19 +1,24 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Tutor } from '@/types'; // Import the updated type
+import { Tutor } from '@/types';
+import { tutoresMock } from '@/data/mockData'; // Import mock data
 
 export function useTutores() {
   return useQuery({
     queryKey: ['tutores'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('tutores')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // Temporarily return mock data for illustration
+      return tutoresMock as Tutor[];
+
+      // Uncomment the following lines to fetch from Supabase when ready
+      // const { data, error } = await supabase
+      //   .from('tutores')
+      //   .select('*')
+      //   .order('created_at', { ascending: false });
       
-      if (error) throw error;
-      return data as Tutor[];
+      // if (error) throw error;
+      // return data as Tutor[];
     },
   });
 }

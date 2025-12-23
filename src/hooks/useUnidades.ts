@@ -1,19 +1,24 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Unidade } from '@/types'; // Import the updated type
+import { Unidade } from '@/types';
+import { unidades } from '@/data/mockData'; // Import mock data
 
 export function useUnidades() {
   return useQuery({
     queryKey: ['unidades'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('unidades')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // Temporarily return mock data for illustration
+      return unidades as Unidade[];
+
+      // Uncomment the following lines to fetch from Supabase when ready
+      // const { data, error } = await supabase
+      //   .from('unidades')
+      //   .select('*')
+      //   .order('created_at', { ascending: false });
       
-      if (error) throw error;
-      return data as Unidade[];
+      // if (error) throw error;
+      // return data as Unidade[];
     },
   });
 }
