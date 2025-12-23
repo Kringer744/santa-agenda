@@ -55,7 +55,9 @@ export interface Unidade {
   nome: string;
   capacidade_cachorro: number;
   capacidade_gato: number;
-  endereco: string | null; // Changed to string | null to match Supabase type
+  endereco: string | null;
+  cidade: string | null; // Added cidade
+  estado: string | null;  // Added estado
   created_at: string; // Added created_at to match Supabase type
   updated_at: string; // Added updated_at to match Supabase type
 }

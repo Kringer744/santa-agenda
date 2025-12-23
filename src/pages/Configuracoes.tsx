@@ -46,6 +46,8 @@ export default function Configuracoes() {
     createUnidade.mutate({
       nome: formData.get('nome') as string,
       endereco: formData.get('endereco') as string || null,
+      cidade: formData.get('cidade') as string || null, // Added cidade
+      estado: formData.get('estado') as string || null, // Added estado
       capacidade_cachorro: parseInt(formData.get('capacidade_cachorro') as string) || 10,
       capacidade_gato: parseInt(formData.get('capacidade_gato') as string) || 5,
     }, {
@@ -113,6 +115,16 @@ export default function Configuracoes() {
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
+                          <Label htmlFor="cidade">Cidade</Label>
+                          <Input id="cidade" name="cidade" placeholder="São Paulo" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="estado">Estado</Label>
+                          <Input id="estado" name="estado" placeholder="SP" />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
                           <Label htmlFor="capacidade_cachorro">Vagas cachorros</Label>
                           <Input id="capacidade_cachorro" name="capacidade_cachorro" type="number" defaultValue="10" />
                         </div>
@@ -164,8 +176,14 @@ export default function Configuracoes() {
                         </Button>
                       </div>
                     </div>
-                    {unidade.endereco && (
-                      <p className="text-sm text-muted-foreground">{unidade.endereco}</p>
+                    {(unidade.endereco || unidade.cidade || unidade.estado) && (
+                      <p className="text-sm text-muted-foreground">
+                        {unidade.endereco}
+                        {unidade.endereco && (unidade.cidade || unidade.estado) ? ', ' : ''}
+                        {unidade.cidade}
+                        {unidade.cidade && unidade.estado ? ' - ' : ''}
+                        {unidade.estado}
+                      </p>
                     )}
                     <div className="flex gap-3">
                       <Badge className="bg-coral-light text-primary">

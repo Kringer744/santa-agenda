@@ -8,8 +8,10 @@ export const servicosAdicionais: ServicoAdicional[] = [
 ];
 
 export const unidades: Unidade[] = [
-  { id: '1', nome: 'Unidade Centro', capacidade_cachorro: 20, capacidade_gato: 10, endereco: 'Rua das Flores, 123', created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
-  { id: '2', nome: 'Unidade Jardins', capacidade_cachorro: 30, capacidade_gato: 15, endereco: 'Av. Principal, 456', created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+  { id: '1', nome: 'Unidade Centro', capacidade_cachorro: 20, capacidade_gato: 10, endereco: 'Rua das Flores, 123', cidade: 'São Paulo', estado: 'SP', created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+  { id: '2', nome: 'Unidade Jardins', capacidade_cachorro: 30, capacidade_gato: 15, endereco: 'Av. Principal, 456', cidade: 'São Paulo', estado: 'SP', created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+  { id: '3', nome: 'Unidade Praia', capacidade_cachorro: 15, capacidade_gato: 8, endereco: 'Rua da Praia, 789', cidade: 'Santos', estado: 'SP', created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T00:00:00Z' },
+  { id: '4', nome: 'Unidade Montanha', capacidade_cachorro: 10, capacidade_gato: 5, endereco: 'Estrada da Serra, 10', cidade: 'Campos do Jordão', estado: 'SP', created_at: '2024-04-01T00:00:00Z', updated_at: '2024-04-01T00:00:00Z' },
 ];
 
 export const tutoresMock: Tutor[] = [
