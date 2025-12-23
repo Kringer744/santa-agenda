@@ -59,6 +59,17 @@ export const tutoresMock: Tutor[] = [
     updated_at: '2024-06-01T00:00:00Z',
     tags: ['premium'],
   },
+  {
+    id: '5',
+    nome: 'Fernanda Lima',
+    cpf: '777.888.999-11',
+    telefone: '11955554444',
+    email: 'fernanda@email.com',
+    data_nascimento: '1995-01-01',
+    created_at: '2024-11-20T00:00:00Z',
+    updated_at: '2024-11-20T00:00:00Z',
+    tags: ['novo'],
+  },
 ];
 
 export const petsMock: Pet[] = [
@@ -176,7 +187,7 @@ export const petsMock: Pet[] = [
   },
   {
     id: '9',
-    tutor_id: '4',
+    tutor_id: '5',
     nome: 'Estrela',
     especie: 'gato',
     raca: 'Ragdoll',
@@ -185,8 +196,22 @@ export const petsMock: Pet[] = [
     data_nascimento: '2023-07-07',
     necessidades_especiais: null,
     observacoes_comportamentais: 'Muito carinhosa e adora colo',
-    created_at: '2024-06-01T00:00:00Z',
-    updated_at: '2024-06-01T00:00:00Z',
+    created_at: '2024-11-20T00:00:00Z',
+    updated_at: '2024-11-20T00:00:00Z',
+  },
+  {
+    id: '10',
+    tutor_id: '5',
+    nome: 'Pingo',
+    especie: 'cachorro',
+    raca: 'Pinscher',
+    porte: 'pequeno',
+    idade: 2,
+    data_nascimento: '2022-03-01',
+    necessidades_especiais: null,
+    observacoes_comportamentais: 'Energético, gosta de atenção',
+    created_at: '2024-11-25T00:00:00Z',
+    updated_at: '2024-11-25T00:00:00Z',
   },
 ];
 
@@ -195,7 +220,7 @@ export const reservasMock: Reserva[] = [
   {
     id: '1',
     tutor_id: '1',
-    pet_id: '1',
+    pet_id: '1', // Rex
     unidade_id: '1',
     check_in: '2024-12-09',
     check_out: '2024-12-12', // Check-out hoje
@@ -211,12 +236,12 @@ export const reservasMock: Reserva[] = [
   {
     id: '2',
     tutor_id: '2',
-    pet_id: '3',
+    pet_id: '3', // Thor
     unidade_id: '1',
     check_in: '2024-12-12', // Check-in hoje
     check_out: '2024-12-16',
     servicos_adicionais: [servicosAdicionais[1].id],
-    status: 'confirmada', // Ou 'pendente'
+    status: 'confirmada',
     valor_total: 340,
     codigo_estadia: 'PH2024002',
     pagamento_status: 'aprovado',
@@ -224,9 +249,9 @@ export const reservasMock: Reserva[] = [
     updated_at: '2024-12-05T00:00:00Z',
   },
   {
-    id: '8', // Novo ID para evitar conflito
-    tutor_id: '4',
-    pet_id: '9',
+    id: '8',
+    tutor_id: '5',
+    pet_id: '10', // Pingo
     unidade_id: '2',
     check_in: '2024-12-12', // Check-in hoje
     check_out: '2024-12-14',
@@ -242,7 +267,7 @@ export const reservasMock: Reserva[] = [
   {
     id: '3',
     tutor_id: '3',
-    pet_id: '4',
+    pet_id: '4', // Luna
     unidade_id: '2',
     check_in: '2024-12-10',
     check_out: '2024-12-14',
@@ -257,7 +282,7 @@ export const reservasMock: Reserva[] = [
   {
     id: '4',
     tutor_id: '3',
-    pet_id: '5',
+    pet_id: '5', // Bob
     unidade_id: '2',
     check_in: '2024-12-08',
     check_out: '2024-12-17',
@@ -272,7 +297,7 @@ export const reservasMock: Reserva[] = [
   {
     id: '5',
     tutor_id: '4',
-    pet_id: '6',
+    pet_id: '6', // Mel
     unidade_id: '1',
     check_in: '2024-12-11',
     check_out: '2024-12-16',
@@ -287,7 +312,7 @@ export const reservasMock: Reserva[] = [
   {
     id: '6',
     tutor_id: '4',
-    pet_id: '7',
+    pet_id: '7', // Simba
     unidade_id: '2',
     check_in: '2024-12-11',
     check_out: '2024-12-15',
@@ -306,4 +331,6 @@ export const vagasDiaMock: VagaDia[] = [
   { id: 'vd2', data: '2024-12-13', unidade_id: '1', vagas_cachorro_total: 20, vagas_cachorro_ocupadas: 18, vagas_gato_total: 10, vagas_gato_ocupadas: 6 },
   { id: 'vd3', data: '2024-12-14', unidade_id: '1', vagas_cachorro_total: 20, vagas_cachorro_ocupadas: 18, vagas_gato_total: 10, vagas_gato_ocupadas: 7 },
   { id: 'vd4', data: '2024-12-15', unidade_id: '1', vagas_cachorro_total: 20, vagas_cachorro_ocupadas: 12, vagas_gato_total: 10, vagas_gato_ocupadas: 5 },
+  { id: 'vd5', data: '2024-12-16', unidade_id: '1', vagas_cachorro_total: 20, vagas_cachorro_ocupadas: 10, vagas_gato_total: 10, vagas_gato_ocupadas: 3 },
+  { id: 'vd6', data: '2024-12-17', unidade_id: '1', vagas_cachorro_total: 20, vagas_cachorro_ocupadas: 8, vagas_gato_total: 10, vagas_gato_ocupadas: 2 },
 ];
