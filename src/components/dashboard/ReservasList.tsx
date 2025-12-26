@@ -43,17 +43,17 @@ export function ReservasList({ reservas, pets, tutores, title, type }: ReservasL
   };
 
   return (
-    <div className="bg-card rounded-2xl p-6 shadow-card animate-slide-up">
+    <div className="bg-card rounded-2xl p-4 md:p-6 shadow-card animate-slide-up">
       <div className="flex items-center gap-2 mb-4">
-        <span className="text-2xl">{getIcon()}</span>
-        <h3 className="text-lg font-semibold text-foreground">{title}</h3>
-        <Badge variant="secondary" className="ml-auto">
+        <span className="text-xl md:text-2xl">{getIcon()}</span>
+        <h3 className="text-base md:text-lg font-semibold text-foreground">{title}</h3>
+        <Badge variant="secondary" className="ml-auto text-xs md:text-sm">
           {reservas.length}
         </Badge>
       </div>
       
       {reservas.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-8">
+        <p className="text-xs md:text-sm text-muted-foreground text-center py-8">
           Nenhuma reserva para hoje
         </p>
       ) : (
@@ -65,16 +65,16 @@ export function ReservasList({ reservas, pets, tutores, title, type }: ReservasL
             return (
               <div 
                 key={reserva.id}
-                className="flex items-center gap-4 p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors"
+                className="flex items-center gap-3 md:gap-4 p-3 md:p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors"
                 style={{ animationDelay: `${index * 50}ms` }}
               >
-                <div className="w-12 h-12 rounded-full bg-coral-light flex items-center justify-center text-2xl">
+                <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-coral-light flex items-center justify-center text-xl md:text-2xl">
                   {pet?.especie === 'cachorro' ? '🐶' : '🐱'}
                 </div>
                 
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-foreground truncate">{pet?.nome}</p>
-                  <p className="text-sm text-muted-foreground truncate">{tutor?.nome}</p>
+                  <p className="font-semibold text-foreground truncate text-sm md:text-base">{pet?.nome}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground truncate">{tutor?.nome}</p>
                 </div>
                 
                 <div className="text-right">

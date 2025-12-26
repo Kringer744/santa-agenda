@@ -46,8 +46,8 @@ export default function Configuracoes() {
     createUnidade.mutate({
       nome: formData.get('nome') as string,
       endereco: formData.get('endereco') as string || null,
-      cidade: formData.get('cidade') as string || null, // Added cidade
-      estado: formData.get('estado') as string || null, // Added estado
+      cidade: formData.get('cidade') as string || null,
+      estado: formData.get('estado') as string || null,
       capacidade_cachorro: parseInt(formData.get('capacidade_cachorro') as string) || 10,
       capacidade_gato: parseInt(formData.get('capacidade_gato') as string) || 5,
     }, {
@@ -61,7 +61,7 @@ export default function Configuracoes() {
     createServico.mutate({
       nome: formData.get('nome') as string,
       preco: parseFloat(formData.get('preco') as string) || 0,
-      icone: formData.get('icone') as string || 'star',
+      icone: formData.get('icone') as string || '⭐', // Changed default icon to emoji
       ativo: true,
     }, {
       onSuccess: () => setIsServicoDialogOpen(false)
@@ -70,26 +70,26 @@ export default function Configuracoes() {
 
   return (
     <Layout>
-      <div className="space-y-8">
+      <div className="space-y-6 md:space-y-8">
         {/* Header */}
         <div className="animate-fade-in">
-          <h1 className="text-3xl font-bold text-foreground">Configurações</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Configurações</h1>
+          <p className="text-muted-foreground mt-1 text-sm md:text-base">
             Configure unidades, preços e serviços
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
           {/* Unidades */}
           <Card className="animate-slide-up">
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
-                  <CardTitle className="flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
                     <Building2 className="w-5 h-5 text-primary" />
                     Unidades
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-sm md:text-base">
                     Gerencie as unidades do hotel
                   </CardDescription>
                 </div>
@@ -100,7 +100,7 @@ export default function Configuracoes() {
                       Adicionar
                     </Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                       <DialogTitle>Nova Unidade</DialogTitle>
                     </DialogHeader>
@@ -113,7 +113,7 @@ export default function Configuracoes() {
                         <Label htmlFor="endereco">Endereço</Label>
                         <Input id="endereco" name="endereco" placeholder="Rua das Flores, 123" />
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="cidade">Cidade</Label>
                           <Input id="cidade" name="cidade" placeholder="São Paulo" />
@@ -123,7 +123,7 @@ export default function Configuracoes() {
                           <Input id="estado" name="estado" placeholder="SP" />
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="capacidade_cachorro">Vagas cachorros</Label>
                           <Input id="capacidade_cachorro" name="capacidade_cachorro" type="number" defaultValue="10" />
@@ -133,7 +133,7 @@ export default function Configuracoes() {
                           <Input id="capacidade_gato" name="capacidade_gato" type="number" defaultValue="5" />
                         </div>
                       </div>
-                      <div className="flex gap-3 pt-4">
+                      <div className="flex flex-col sm:flex-row gap-3 pt-4">
                         <Button type="button" variant="outline" className="flex-1" onClick={() => setIsUnidadeDialogOpen(false)}>
                           Cancelar
                         </Button>
@@ -152,7 +152,7 @@ export default function Configuracoes() {
                   <Loader2 className="w-6 h-6 animate-spin text-primary" />
                 </div>
               ) : unidades.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">Nenhuma unidade cadastrada</p>
+                <p className="text-center text-muted-foreground py-8 text-sm">Nenhuma unidade cadastrada</p>
               ) : (
                 unidades.map((unidade, index) => (
                   <div 
@@ -160,8 +160,8 @@ export default function Configuracoes() {
                     className="p-4 rounded-xl bg-muted/50 space-y-2"
                     style={{ animationDelay: `${index * 50}ms` }}
                   >
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-semibold text-foreground">{unidade.nome}</h4>
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <h4 className="font-semibold text-foreground text-base">{unidade.nome}</h4>
                       <div className="flex gap-2">
                         <Button size="icon" variant="ghost" className="h-8 w-8">
                           <Pencil className="w-4 h-4" />
@@ -185,11 +185,11 @@ export default function Configuracoes() {
                         {unidade.estado}
                       </p>
                     )}
-                    <div className="flex gap-3">
-                      <Badge className="bg-coral-light text-primary">
+                    <div className="flex gap-3 flex-wrap">
+                      <Badge className="bg-coral-light text-primary text-xs">
                         🐶 {unidade.capacidade_cachorro} vagas
                       </Badge>
-                      <Badge className="bg-mint-light text-secondary">
+                      <Badge className="bg-mint-light text-secondary text-xs">
                         🐱 {unidade.capacidade_gato} vagas
                       </Badge>
                     </div>
@@ -202,13 +202,13 @@ export default function Configuracoes() {
           {/* Preços */}
           <Card className="animate-slide-up" style={{ animationDelay: '100ms' }}>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
-                  <CardTitle className="flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
                     <DollarSign className="w-5 h-5 text-secondary" />
                     Serviços Adicionais
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-sm md:text-base">
                     Configure serviços e preços
                   </CardDescription>
                 </div>
@@ -219,7 +219,7 @@ export default function Configuracoes() {
                       Novo
                     </Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                       <DialogTitle>Novo Serviço</DialogTitle>
                     </DialogHeader>
@@ -228,7 +228,7 @@ export default function Configuracoes() {
                         <Label htmlFor="servico_nome">Nome do serviço</Label>
                         <Input id="servico_nome" name="nome" required placeholder="Banho e Tosa" />
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="preco">Preço (R$)</Label>
                           <Input id="preco" name="preco" type="number" step="0.01" required placeholder="50.00" />
@@ -238,7 +238,7 @@ export default function Configuracoes() {
                           <Input id="icone" name="icone" placeholder="🛁" />
                         </div>
                       </div>
-                      <div className="flex gap-3 pt-4">
+                      <div className="flex flex-col sm:flex-row gap-3 pt-4">
                         <Button type="button" variant="outline" className="flex-1" onClick={() => setIsServicoDialogOpen(false)}>
                           Cancelar
                         </Button>
@@ -257,7 +257,7 @@ export default function Configuracoes() {
                   <Loader2 className="w-6 h-6 animate-spin text-primary" />
                 </div>
               ) : servicos.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">Nenhum serviço cadastrado</p>
+                <p className="text-center text-muted-foreground py-8 text-sm">Nenhum serviço cadastrado</p>
               ) : (
                 servicos.map((servico, index) => (
                   <div 
@@ -267,10 +267,10 @@ export default function Configuracoes() {
                   >
                     <span className="text-2xl">{servico.icone}</span>
                     <div className="flex-1">
-                      <p className="font-medium text-foreground">{servico.nome}</p>
+                      <p className="font-medium text-foreground text-base">{servico.nome}</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="font-semibold text-foreground">
+                      <span className="font-semibold text-foreground text-base">
                         R$ {Number(servico.preco).toFixed(2)}
                       </span>
                       <Button size="icon" variant="ghost" className="h-8 w-8">

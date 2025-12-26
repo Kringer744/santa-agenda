@@ -10,6 +10,7 @@ import Pets from "./pages/Pets";
 import WhatsApp from "./pages/WhatsApp";
 import Configuracoes from "./pages/Configuracoes";
 import NotFound from "./pages/NotFound";
+import { MobileHeader } from "./components/layout/MobileHeader"; // Import MobileHeader
 
 const queryClient = new QueryClient();
 

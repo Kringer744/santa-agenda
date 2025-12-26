@@ -1,16 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { ServicoAdicional } from '@/types';
-import { servicosAdicionais } from '@/data/mockData';
+import { supabase } from '@/integrations/supabase/client';
 
 export function useServicos() {
-  return useQuery({
+  return useQuery<ServicoAdicional[]>({
     queryKey: ['servicos'],
     queryFn: async () => {
-      // Usando dados fictícios
-      return new Promise<ServicoAdicional[]>((resolve) => {
-        setTimeout(() => resolve(servicosAdicionais), 300);
-      });
+      const { data, error } = await supabase.from('servicos_adicionais').select('*');
+      if (error) throw error;
+      return data as ServicoAdicional[];
     },
   });
 }
@@ -21,16 +20,14 @@ export function useCreateServico() {
   
   return useMutation({
     mutationFn: async (servico: Omit<ServicoAdicional, 'id' | 'created_at'>) => {
-      const newServico = {
-        ...servico,
-        id: `servico-${Date.now()}`,
-        created_at: new Date().toISOString(),
-      } as ServicoAdicional;
-      
-      // Simular delay de API
-      return new Promise<ServicoAdicional>((resolve) => {
-        setTimeout(() => resolve(newServico), 500);
-      });
+      const { data, error } = await supabase
+        .from('servicos_adicionais')
+        .insert(servico)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as ServicoAdicional;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['servicos'] });
@@ -54,10 +51,15 @@ export function useUpdateServico() {
   
   return useMutation({
     mutationFn: async ({ id, ...servico }: Partial<ServicoAdicional> & { id: string }) => {
-      // Simular atualização
-      return new Promise((resolve) => {
-        setTimeout(() => resolve({ id, ...servico }), 500);
-      });
+      const { data, error } = await supabase
+        .from('servicos_adicionais')
+        .update(servico)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as ServicoAdicional;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['servicos'] });

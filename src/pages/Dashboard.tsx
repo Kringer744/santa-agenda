@@ -5,11 +5,11 @@ import { useReservas } from '@/hooks/useReservas';
 import { usePets } from '@/hooks/usePets';
 import { useTutores } from '@/hooks/useTutores';
 import { useUnidades } from '@/hooks/useUnidades';
-import { useServicos } from '@/hooks/useServicos'; // Import useServicos
-import { useVagasDia } from '@/hooks/useVagasDia'; // Import useVagasDia
-import { ReservasList } from '@/components/dashboard/ReservasList'; // Import ReservasList
-import { ServicosHoje } from '@/components/dashboard/ServicosHoje'; // Import ServicosHoje
-import { VagasChart } from '@/components/dashboard/VagasChart'; // Import VagasChart
+import { useServicos } from '@/hooks/useServicos';
+import { useVagasDia } from '@/hooks/useVagasDia';
+import { ReservasList } from '@/components/dashboard/ReservasList';
+import { ServicosHoje } from '@/components/dashboard/ServicosHoje';
+import { VagasChart } from '@/components/dashboard/VagasChart';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
@@ -30,8 +30,8 @@ export default function Dashboard() {
   const { data: pets = [], isLoading: loadingPets } = usePets();
   const { data: tutores = [], isLoading: loadingTutores } = useTutores();
   const { data: unidades = [], isLoading: loadingUnidades } = useUnidades();
-  const { data: servicosAdicionais = [], isLoading: loadingServicos } = useServicos(); // Use servicosAdicionais
-  const { data: vagasDia = [], isLoading: loadingVagasDia } = useVagasDia(); // Use vagasDia
+  const { data: servicosAdicionais = [], isLoading: loadingServicos } = useServicos();
+  const { data: vagasDia = [], isLoading: loadingVagasDia } = useVagasDia();
 
   const isLoading = loadingReservas || loadingPets || loadingTutores || loadingUnidades || loadingServicos || loadingVagasDia;
 
@@ -45,9 +45,6 @@ export default function Dashboard() {
   const ocupacaoTotal = totalCapacidade > 0 
     ? Math.round((petsHospedados / totalCapacidade) * 100)
     : 0;
-
-  const getPet = (petId: string) => pets.find(p => p.id === petId);
-  const getTutor = (tutorId: string) => tutores.find(t => t.id === tutorId);
 
   if (isLoading) {
     return (
@@ -65,7 +62,7 @@ export default function Dashboard() {
         {/* Header */}
         <div className="animate-fade-in">
           <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-muted-foreground mt-1 text-sm md:text-base">
             Visão geral do hotel • {new Date().toLocaleDateString('pt-BR', { 
               weekday: 'long', 
               day: 'numeric', 
@@ -75,7 +72,7 @@ export default function Dashboard() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
           <StatsCard
             title="Pets Hospedados"
             value={petsHospedados}
@@ -107,7 +104,7 @@ export default function Dashboard() {
         </div>
 
         {/* Reservas do dia */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
           {/* Check-ins Hoje */}
           <ReservasList 
             title="Check-ins Hoje" 
@@ -137,7 +134,7 @@ export default function Dashboard() {
         </div>
 
         {/* Serviços e Vagas */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
           <ServicosHoje reservas={reservas.filter(r => r.status === 'hospedado')} servicosAdicionais={servicosAdicionais} />
           <VagasChart vagas={vagasDia} />
         </div>

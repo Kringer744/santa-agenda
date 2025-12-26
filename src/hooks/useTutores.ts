@@ -1,16 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { Tutor } from '@/types';
-import { tutoresMock } from '@/data/mockData';
+import { supabase } from '@/integrations/supabase/client';
 
 export function useTutores() {
-  return useQuery({
+  return useQuery<Tutor[]>({
     queryKey: ['tutores'],
     queryFn: async () => {
-      // Usando dados fictícios
-      return new Promise<Tutor[]>((resolve) => {
-        setTimeout(() => resolve(tutoresMock), 300);
-      });
+      const { data, error } = await supabase.from('tutores').select('*');
+      if (error) throw error;
+      return data as Tutor[];
     },
   });
 }
@@ -21,17 +20,14 @@ export function useCreateTutor() {
   
   return useMutation({
     mutationFn: async (tutor: Omit<Tutor, 'id' | 'created_at' | 'updated_at'>) => {
-      const newTutor = {
-        ...tutor,
-        id: `tutor-${Date.now()}`,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      } as Tutor;
-      
-      // Simular delay de API
-      return new Promise<Tutor>((resolve) => {
-        setTimeout(() => resolve(newTutor), 500);
-      });
+      const { data, error } = await supabase
+        .from('tutores')
+        .insert(tutor)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as Tutor;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tutores'] });
@@ -55,10 +51,8 @@ export function useDeleteTutor() {
   
   return useMutation({
     mutationFn: async (id: string) => {
-      // Simular deleção
-      return new Promise<void>((resolve) => {
-        setTimeout(() => resolve(), 500);
-      });
+      const { error } = await supabase.from('tutores').delete().eq('id', id);
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tutores'] });

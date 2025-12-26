@@ -50,19 +50,19 @@ export default function Tutores() {
 
   return (
     <Layout>
-      <div className="space-y-8">
+      <div className="space-y-6 md:space-y-8">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 animate-fade-in">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Tutores</h1>
-            <p className="text-muted-foreground mt-1">
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Tutores</h1>
+            <p className="text-muted-foreground mt-1 text-sm md:text-base">
               {tutores.length} tutores cadastrados
             </p>
           </div>
           
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button>
+              <Button className="w-full md:w-auto">
                 <Plus className="w-4 h-4 mr-2" />
                 Novo Tutor
               </Button>
@@ -76,7 +76,7 @@ export default function Tutores() {
                   <Label htmlFor="nome">Nome completo</Label>
                   <Input id="nome" name="nome" required placeholder="Maria Silva" />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="cpf">CPF</Label>
                     <Input id="cpf" name="cpf" required placeholder="000.000.000-00" />
@@ -94,7 +94,7 @@ export default function Tutores() {
                   <Label htmlFor="data_nascimento">Data de nascimento</Label>
                   <Input id="data_nascimento" name="data_nascimento" type="date" />
                 </div>
-                <div className="flex gap-3 pt-4">
+                <div className="flex flex-col sm:flex-row gap-3 pt-4">
                   <Button type="button" variant="outline" className="flex-1" onClick={() => setIsDialogOpen(false)}>
                     Cancelar
                   </Button>
@@ -108,11 +108,11 @@ export default function Tutores() {
         </div>
 
         {/* Search */}
-        <div className="relative max-w-md animate-slide-up">
+        <div className="relative max-w-full md:max-w-md animate-slide-up">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
           <Input 
             placeholder="Buscar por nome, CPF ou telefone..."
-            className="pl-12 h-12 rounded-xl"
+            className="pl-12 h-12 rounded-xl w-full"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -129,7 +129,7 @@ export default function Tutores() {
           </div>
         ) : (
           /* Tutores Grid */
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {filteredTutores.map((tutor, index) => {
               const tutorPets = getPetsByTutor(tutor.id);
               
@@ -144,7 +144,7 @@ export default function Tutores() {
                       {tutor.nome.charAt(0)}
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="flex gap-1">
+                      <div className="flex gap-1 flex-wrap justify-end">
                         {tutor.tags?.map(tag => (
                           <Badge key={tag} variant="secondary" className="text-xs">
                             {tag}

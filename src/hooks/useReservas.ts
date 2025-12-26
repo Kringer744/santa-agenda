@@ -1,16 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { Reserva } from '@/types';
-import { reservasMock } from '@/data/mockData';
+import { supabase } from '@/integrations/supabase/client';
 
 export function useReservas() {
-  return useQuery({
+  return useQuery<Reserva[]>({
     queryKey: ['reservas'],
     queryFn: async () => {
-      // Usando dados fictícios
-      return new Promise<Reserva[]>((resolve) => {
-        setTimeout(() => resolve(reservasMock), 300);
-      });
+      const { data, error } = await supabase.from('reservas').select('*');
+      if (error) throw error;
+      return data as Reserva[];
     },
   });
 }
@@ -20,20 +19,21 @@ export function useCreateReserva() {
   const { toast } = useToast();
   
   return useMutation({
-    mutationFn: async (reserva: Omit<Reserva, 'id' | 'created_at' | 'updated_at' | 'codigo_estadia'>) => {
-      const codigoEstadia = `EST-${Date.now().toString(36).toUpperCase()}`;
-      const newReserva = {
-        ...reserva,
-        id: `reserva-${Date.now()}`,
-        codigo_estadia: codigoEstadia,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      } as Reserva;
-      
-      // Simular delay de API
-      return new Promise<Reserva>((resolve) => {
-        setTimeout(() => resolve(newReserva), 500);
-      });
+    mutationFn: async (reserva: Omit<Reserva, 'id' | 'created_at' | 'updated_at' | 'codigo_estadia' | 'status' | 'pagamento_status'>) => {
+      const codigoEstadia = `PH${Date.now().toString(36).toUpperCase().substring(0, 7)}`; // Gerar código de estadia
+      const { data, error } = await supabase
+        .from('reservas')
+        .insert({
+          ...reserva,
+          codigo_estadia: codigoEstadia,
+          status: 'pendente', // Status inicial
+          pagamento_status: 'pendente', // Status de pagamento inicial
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as Reserva;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reservas'] });
@@ -57,10 +57,15 @@ export function useUpdateReservaStatus() {
   
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: Reserva['status'] }) => {
-      // Simular atualização de status
-      return new Promise((resolve) => {
-        setTimeout(() => resolve({ id, status }), 500);
-      });
+      const { data, error } = await supabase
+        .from('reservas')
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as Reserva;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reservas'] });

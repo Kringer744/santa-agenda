@@ -91,9 +91,7 @@ export default function Reservas() {
       check_in: formData.get('check_in') as string,
       check_out: formData.get('check_out') as string,
       servicos_adicionais: [],
-      status: 'pendente',
       valor_total: parseFloat(formData.get('valor_total') as string) || 0,
-      pagamento_status: 'pendente',
     }, {
       onSuccess: () => {
         setIsDialogOpen(false);
@@ -104,24 +102,24 @@ export default function Reservas() {
 
   return (
     <Layout>
-      <div className="space-y-8">
+      <div className="space-y-6 md:space-y-8">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 animate-fade-in">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Reservas</h1>
-            <p className="text-muted-foreground mt-1">
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Reservas</h1>
+            <p className="text-muted-foreground mt-1 text-sm md:text-base">
               {reservas.length} reservas no sistema
             </p>
           </div>
           
           <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) setSelectedTutor(''); }}>
             <DialogTrigger asChild>
-              <Button size="lg">
+              <Button size="lg" className="w-full md:w-auto">
                 <Plus className="w-5 h-5 mr-2" />
                 Nova Reserva
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Nova Reserva</DialogTitle>
               </DialogHeader>
@@ -171,7 +169,7 @@ export default function Reservas() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="check_in">Check-in</Label>
                     <Input id="check_in" name="check_in" type="date" required />
@@ -185,7 +183,7 @@ export default function Reservas() {
                   <Label htmlFor="valor_total">Valor total (R$)</Label>
                   <Input id="valor_total" name="valor_total" type="number" step="0.01" placeholder="100.00" />
                 </div>
-                <div className="flex gap-3 pt-4">
+                <div className="flex flex-col sm:flex-row gap-3 pt-4">
                   <Button type="button" variant="outline" className="flex-1" onClick={() => setIsDialogOpen(false)}>
                     Cancelar
                   </Button>
@@ -200,11 +198,11 @@ export default function Reservas() {
 
         {/* Filters */}
         <div className="flex flex-col md:flex-row gap-4 animate-slide-up">
-          <div className="relative flex-1 max-w-md">
+          <div className="relative flex-1 max-w-full md:max-w-md">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <Input 
               placeholder="Buscar por pet, tutor ou código..."
-              className="pl-12 h-12 rounded-xl"
+              className="pl-12 h-12 rounded-xl w-full"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -247,13 +245,13 @@ export default function Reservas() {
               return (
                 <div 
                   key={reserva.id}
-                  className="bg-card rounded-2xl p-6 shadow-card hover:shadow-elevated transition-all duration-300 animate-slide-up cursor-pointer group"
+                  className="bg-card rounded-2xl p-4 md:p-6 shadow-card hover:shadow-elevated transition-all duration-300 animate-slide-up cursor-pointer group"
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
-                  <div className="flex flex-col md:flex-row md:items-center gap-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 md:gap-4">
                     {/* Pet Avatar */}
                     <div className={cn(
-                      "w-16 h-16 rounded-xl flex items-center justify-center text-3xl flex-shrink-0",
+                      "w-14 h-14 sm:w-16 sm:h-16 rounded-xl flex items-center justify-center text-2xl sm:text-3xl flex-shrink-0",
                       pet?.especie === 'cachorro' ? 'bg-coral-light' : 'bg-mint-light'
                     )}>
                       {pet?.especie === 'cachorro' ? '🐶' : '🐱'}
@@ -261,13 +259,13 @@ export default function Reservas() {
                     
                     {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <h3 className="text-lg font-bold text-foreground">{pet?.nome || 'Pet não encontrado'}</h3>
+                      <div className="flex flex-wrap items-center gap-2 md:gap-3">
+                        <h3 className="text-base md:text-lg font-bold text-foreground">{pet?.nome || 'Pet não encontrado'}</h3>
                         <Select 
                           value={reserva.status} 
                           onValueChange={(value) => updateStatus.mutate({ id: reserva.id, status: value as any })}
                         >
-                          <SelectTrigger className={cn("w-auto h-7 border", statusColors[reserva.status])}>
+                          <SelectTrigger className={cn("w-auto h-7 border text-xs", statusColors[reserva.status])}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -281,19 +279,19 @@ export default function Reservas() {
                           </SelectContent>
                         </Select>
                         {reserva.codigo_estadia && (
-                          <span className="text-sm text-muted-foreground font-mono">
+                          <span className="text-xs text-muted-foreground font-mono">
                             {reserva.codigo_estadia}
                           </span>
                         )}
                       </div>
                       
-                      <p className="text-sm text-muted-foreground mt-1">
+                      <p className="text-xs md:text-sm text-muted-foreground mt-1">
                         Tutor: {tutor?.nome || 'N/A'} • {unidade?.nome || 'N/A'}
                       </p>
                       
-                      <div className="flex items-center gap-4 mt-2">
-                        <div className="flex items-center gap-2 text-sm">
-                          <Calendar className="w-4 h-4 text-primary" />
+                      <div className="flex flex-wrap items-center gap-2 md:gap-4 mt-2">
+                        <div className="flex items-center gap-1 md:gap-2 text-xs md:text-sm">
+                          <Calendar className="w-3 h-3 md:w-4 md:h-4 text-primary" />
                           <span className="text-foreground font-medium">
                             {new Date(reserva.check_in).toLocaleDateString('pt-BR')}
                           </span>
@@ -305,7 +303,7 @@ export default function Reservas() {
                       </div>
                       
                       {reserva.servicos_adicionais && reserva.servicos_adicionais.length > 0 && (
-                        <div className="flex gap-2 mt-3">
+                        <div className="flex gap-2 mt-3 flex-wrap">
                           {reserva.servicos_adicionais.map(servicoId => {
                             const servico = getServico(servicoId);
                             return servico ? (
@@ -319,9 +317,9 @@ export default function Reservas() {
                     </div>
                     
                     {/* Price & Action */}
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-4 mt-3 sm:mt-0">
                       <div className="text-right">
-                        <p className="text-2xl font-bold text-foreground">
+                        <p className="text-xl md:text-2xl font-bold text-foreground">
                           R$ {Number(reserva.valor_total || 0).toFixed(2)}
                         </p>
                         <Badge 
@@ -337,7 +335,7 @@ export default function Reservas() {
                         </Badge>
                       </div>
                       
-                      <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                      <ChevronRight className="w-4 h-4 md:w-5 md:h-5 text-muted-foreground group-hover:text-primary transition-colors" />
                     </div>
                   </div>
                 </div>

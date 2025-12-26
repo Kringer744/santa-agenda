@@ -1,16 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { Unidade } from '@/types';
-import { unidades } from '@/data/mockData';
+import { supabase } from '@/integrations/supabase/client';
 
 export function useUnidades() {
-  return useQuery({
+  return useQuery<Unidade[]>({
     queryKey: ['unidades'],
     queryFn: async () => {
-      // Usando dados fictícios
-      return new Promise<Unidade[]>((resolve) => {
-        setTimeout(() => resolve(unidades), 300);
-      });
+      const { data, error } = await supabase.from('unidades').select('*');
+      if (error) throw error;
+      return data as Unidade[];
     },
   });
 }
@@ -21,17 +20,14 @@ export function useCreateUnidade() {
   
   return useMutation({
     mutationFn: async (unidade: Omit<Unidade, 'id' | 'created_at' | 'updated_at'>) => {
-      const newUnidade = {
-        ...unidade,
-        id: `unidade-${Date.now()}`,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      } as Unidade;
-      
-      // Simular delay de API
-      return new Promise<Unidade>((resolve) => {
-        setTimeout(() => resolve(newUnidade), 500);
-      });
+      const { data, error } = await supabase
+        .from('unidades')
+        .insert(unidade)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as Unidade;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['unidades'] });
@@ -55,10 +51,8 @@ export function useDeleteUnidade() {
   
   return useMutation({
     mutationFn: async (id: string) => {
-      // Simular deleção
-      return new Promise<void>((resolve) => {
-        setTimeout(() => resolve(), 500);
-      });
+      const { error } = await supabase.from('unidades').delete().eq('id', id);
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['unidades'] });

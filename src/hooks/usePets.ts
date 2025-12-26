@@ -1,16 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { Pet } from '@/types';
-import { petsMock } from '@/data/mockData';
+import { supabase } from '@/integrations/supabase/client';
 
 export function usePets() {
-  return useQuery({
+  return useQuery<Pet[]>({
     queryKey: ['pets'],
     queryFn: async () => {
-      // Usando dados fictícios
-      return new Promise<Pet[]>((resolve) => {
-        setTimeout(() => resolve(petsMock), 300);
-      });
+      const { data, error } = await supabase.from('pets').select('*');
+      if (error) throw error;
+      return data as Pet[];
     },
   });
 }
@@ -21,17 +20,14 @@ export function useCreatePet() {
   
   return useMutation({
     mutationFn: async (pet: Omit<Pet, 'id' | 'created_at' | 'updated_at'>) => {
-      const newPet = {
-        ...pet,
-        id: `pet-${Date.now()}`,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      } as Pet;
-      
-      // Simular delay de API
-      return new Promise<Pet>((resolve) => {
-        setTimeout(() => resolve(newPet), 500);
-      });
+      const { data, error } = await supabase
+        .from('pets')
+        .insert(pet)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as Pet;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pets'] });
@@ -55,10 +51,8 @@ export function useDeletePet() {
   
   return useMutation({
     mutationFn: async (id: string) => {
-      // Simular deleção
-      return new Promise<void>((resolve) => {
-        setTimeout(() => resolve(), 500);
-      });
+      const { error } = await supabase.from('pets').delete().eq('id', id);
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pets'] });

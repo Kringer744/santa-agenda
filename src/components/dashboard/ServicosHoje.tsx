@@ -28,11 +28,11 @@ export function ServicosHoje({ reservas, servicosAdicionais }: ServicosHojeProps
   const servicosList = Object.values(servicosContagem);
 
   return (
-    <div className="bg-card rounded-2xl p-6 shadow-card animate-slide-up">
-      <h3 className="text-lg font-semibold text-foreground mb-4">Serviços Hoje</h3>
+    <div className="bg-card rounded-2xl p-4 md:p-6 shadow-card animate-slide-up">
+      <h3 className="text-base md:text-lg font-semibold text-foreground mb-4">Serviços Hoje</h3>
       
       {servicosList.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-8">
+        <p className="text-xs md:text-sm text-muted-foreground text-center py-8">
           Nenhum serviço agendado
         </p>
       ) : (
@@ -40,17 +40,17 @@ export function ServicosHoje({ reservas, servicosAdicionais }: ServicosHojeProps
           {servicosList.map(({ servico, count }, index) => (
             <div 
               key={servico.id}
-              className="flex items-center gap-4 p-4 rounded-xl bg-honey-light/50"
+              className="flex items-center gap-3 md:gap-4 p-3 md:p-4 rounded-xl bg-honey-light/50"
               style={{ animationDelay: `${index * 50}ms` }}
             >
-              <span className="text-2xl">{servico.icone}</span>
+              <span className="text-xl md:text-2xl">{servico.icone}</span>
               <div className="flex-1">
-                <p className="font-medium text-foreground">{servico.nome}</p>
-                <p className="text-sm text-muted-foreground">
+                <p className="font-medium text-foreground text-sm md:text-base">{servico.nome}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">
                   R$ {servico.preco.toFixed(2)} por pet
                 </p>
               </div>
-              <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center font-bold text-accent-foreground">
+              <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-accent flex items-center justify-center font-bold text-accent-foreground text-sm md:text-base">
                 {count}
               </div>
             </div>

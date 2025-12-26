@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { useIsMobile } from '@/hooks/use-mobile'; // Importar o hook useIsMobile
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
@@ -25,6 +26,12 @@ const menuItems = [
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
+  const isMobile = useIsMobile(); // Usar o hook para verificar se é mobile
+
+  // A sidebar fixa só aparece em telas não-mobile
+  if (isMobile) {
+    return null; 
+  }
 
   return (
     <aside 

@@ -34,7 +34,7 @@ import {
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { testConnection, sendInteractiveMenu, createBulkCampaign, sendTextMessage } from '@/lib/uazap';
+import { testConnection, sendInteractiveMenu, createBulkCampaign } from '@/lib/uazap';
 
 const mensagensTemplate = [
   {
@@ -432,16 +432,16 @@ export default function WhatsApp() {
 
   return (
     <Layout>
-      <div className="space-y-8">
+      <div className="space-y-6 md:space-y-8">
         {/* Header */}
         <div className="animate-fade-in">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-mint flex items-center justify-center">
-              <MessageSquare className="w-6 h-6 text-secondary-foreground" />
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-mint flex items-center justify-center">
+              <MessageSquare className="w-5 h-5 md:w-6 md:h-6 text-secondary-foreground" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-foreground">WhatsApp</h1>
-              <p className="text-muted-foreground">
+              <h1 className="text-2xl md:text-3xl font-bold text-foreground">WhatsApp</h1>
+              <p className="text-muted-foreground text-sm md:text-base">
                 Integração com UAZAP para automações
               </p>
             </div>
@@ -449,24 +449,24 @@ export default function WhatsApp() {
         </div>
 
         <Tabs defaultValue="conexao" className="animate-slide-up">
-          <TabsList className="bg-muted flex-wrap h-auto gap-1 p-1">
-            <TabsTrigger value="conexao" className="gap-2">
+          <TabsList className="bg-muted flex-wrap h-auto gap-1 p-1 w-full justify-start md:justify-center">
+            <TabsTrigger value="conexao" className="gap-2 text-xs md:text-sm">
               <Zap className="w-4 h-4" />
               Conexão
             </TabsTrigger>
-            <TabsTrigger value="menu" className="gap-2">
+            <TabsTrigger value="menu" className="gap-2 text-xs md:text-sm">
               <Bot className="w-4 h-4" />
               Menu Conversa
             </TabsTrigger>
-            <TabsTrigger value="disparos" className="gap-2">
+            <TabsTrigger value="disparos" className="gap-2 text-xs md:text-sm">
               <Send className="w-4 h-4" />
               Disparos
             </TabsTrigger>
-            <TabsTrigger value="templates" className="gap-2">
+            <TabsTrigger value="templates" className="gap-2 text-xs md:text-sm">
               <MessageSquare className="w-4 h-4" />
               Templates
             </TabsTrigger>
-            <TabsTrigger value="historico" className="gap-2">
+            <TabsTrigger value="historico" className="gap-2 text-xs md:text-sm">
               <Clock className="w-4 h-4" />
               Histórico
             </TabsTrigger>
@@ -474,14 +474,14 @@ export default function WhatsApp() {
 
           {/* Conexão WhatsApp */}
           <TabsContent value="conexao" className="mt-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
                     <Zap className="w-5 h-5 text-primary" />
                     Configurar API UAZAP
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-sm md:text-base">
                     Insira a URL da API e o Token da sua instância UAZAP
                   </CardDescription>
                 </CardHeader>
@@ -512,7 +512,7 @@ export default function WhatsApp() {
                     </p>
                   </div>
                   
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <Button 
                       className="flex-1" 
                       onClick={handleTestConnection}
@@ -531,7 +531,7 @@ export default function WhatsApp() {
                       )}
                     </Button>
                     {connectionStatus === 'connected' && (
-                      <Button variant="outline" onClick={handleDisconnect}>
+                      <Button variant="outline" onClick={handleDisconnect} className="flex-1 sm:flex-none">
                         Desconectar
                       </Button>
                     )}
@@ -541,39 +541,39 @@ export default function WhatsApp() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Status da Conexão</CardTitle>
-                  <CardDescription>
+                  <CardTitle className="text-lg md:text-xl">Status da Conexão</CardTitle>
+                  <CardDescription className="text-sm md:text-base">
                     Verifique se a API está configurada corretamente
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className={cn(
-                    "p-6 rounded-xl text-center",
+                    "p-4 md:p-6 rounded-xl text-center",
                     connectionStatus === 'connected' ? "bg-mint-light" : "bg-muted"
                   )}>
                     <div className={cn(
-                      "w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center",
+                      "w-14 h-14 md:w-16 md:h-16 rounded-full mx-auto mb-4 flex items-center justify-center",
                       connectionStatus === 'connected' ? "bg-secondary" : 
                       connectionStatus === 'connecting' ? "bg-honey" : "bg-muted-foreground/20"
                     )}>
                       {connectionStatus === 'connecting' ? (
-                        <Clock className="w-8 h-8 text-accent-foreground animate-spin" />
+                        <Clock className="w-7 h-7 md:w-8 md:h-8 text-accent-foreground animate-spin" />
                       ) : (
                         <Smartphone className={cn(
-                          "w-8 h-8",
+                          "w-7 h-7 md:w-8 md:h-8",
                           connectionStatus === 'connected' ? "text-secondary-foreground" : "text-muted-foreground"
                         )} />
                       )}
                     </div>
                     <p className={cn(
-                      "font-semibold",
+                      "font-semibold text-base md:text-lg",
                       connectionStatus === 'connected' ? "text-secondary" : 
                       connectionStatus === 'connecting' ? "text-accent-foreground" : "text-muted-foreground"
                     )}>
                       {connectionStatus === 'connected' ? 'API Conectada' : 
                        connectionStatus === 'connecting' ? 'Testando conexão...' : 'Não Configurado'}
                     </p>
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p className="text-xs md:text-sm text-muted-foreground mt-1">
                       {connectionStatus === 'connected' 
                         ? 'Pronto para enviar mensagens e usar automações' 
                         : 'Configure a URL e Token para conectar'}
@@ -599,21 +599,21 @@ export default function WhatsApp() {
 
           {/* Menu de Conversa */}
           <TabsContent value="menu" className="mt-6">
-            <div className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
               <Card>
                 <CardHeader>
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                     <div>
-                      <CardTitle className="flex items-center gap-2">
+                      <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
                         <Bot className="w-5 h-5 text-primary" />
                         Menu Interativo
                       </CardTitle>
-                      <CardDescription>
+                      <CardDescription className="text-sm md:text-base">
                         Configure o menu automático que aparece quando o lead envia mensagem
                       </CardDescription>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Label htmlFor="menu-ativo">Menu Ativo</Label>
+                      <Label htmlFor="menu-ativo" className="text-sm">Menu Ativo</Label>
                       <Switch
                         id="menu-ativo"
                         checked={config.menu_ativo}
@@ -624,7 +624,7 @@ export default function WhatsApp() {
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="space-y-2">
-                    <Label>Mensagem de Boas-vindas</Label>
+                    <Label className="text-sm">Mensagem de Boas-vindas</Label>
                     <Textarea
                       value={config.mensagem_boas_vindas}
                       onChange={(e) => setConfig(prev => ({ ...prev, mensagem_boas_vindas: e.target.value }))}
@@ -634,8 +634,8 @@ export default function WhatsApp() {
                   </div>
 
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <Label>Opções do Menu</Label>
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <Label className="text-sm">Opções do Menu</Label>
                       <Button variant="outline" size="sm" onClick={handleAddMenuOption}>
                         <List className="w-4 h-4 mr-2" />
                         Adicionar opção
@@ -649,7 +649,7 @@ export default function WhatsApp() {
                         style={{ animationDelay: `${index * 50}ms` }}
                       >
                         <div className="flex items-center justify-between">
-                          <Badge variant="secondary">Opção {opcao.id}</Badge>
+                          <Badge variant="secondary" className="text-xs">Opção {opcao.id}</Badge>
                           <Switch
                             checked={opcao.ativo}
                             onCheckedChange={() => handleToggleMenuOption(opcao.id)}
@@ -677,7 +677,7 @@ export default function WhatsApp() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="menu-test-number">Número para enviar o menu</Label>
+                    <Label htmlFor="menu-test-number" className="text-sm">Número para enviar o menu</Label>
                     <Input
                       id="menu-test-number"
                       placeholder="Ex: 5511999999999"
@@ -689,7 +689,7 @@ export default function WhatsApp() {
                     </p>
                   </div>
 
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <Button className="flex-1" onClick={handleSaveMenu} disabled={isSaving}>
                       <Save className="w-4 h-4 mr-2" />
                       {isSaving ? 'Salvando...' : 'Salvar Menu'}
@@ -698,6 +698,7 @@ export default function WhatsApp() {
                       variant="outline" 
                       onClick={handleTestMenu}
                       disabled={connectionStatus !== 'connected'}
+                      className="flex-1 sm:flex-none"
                     >
                       <Send className="w-4 h-4 mr-2" />
                       Enviar Menu
@@ -709,8 +710,8 @@ export default function WhatsApp() {
               {/* Preview do Menu */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Preview do Menu</CardTitle>
-                  <CardDescription>
+                  <CardTitle className="text-lg md:text-xl">Preview do Menu</CardTitle>
+                  <CardDescription className="text-sm md:text-base">
                     Assim ficará a mensagem no WhatsApp
                   </CardDescription>
                 </CardHeader>
@@ -737,14 +738,14 @@ export default function WhatsApp() {
 
           {/* Disparos em Massa */}
           <TabsContent value="disparos" className="mt-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
                     <Upload className="w-5 h-5 text-primary" />
                     Importar Base de Leads
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-sm md:text-base">
                     Faça upload de um arquivo CSV com: nome,telefone,email
                   </CardDescription>
                 </CardHeader>
@@ -771,10 +772,10 @@ export default function WhatsApp() {
                   </div>
 
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between gap-3">
-                      <Label htmlFor="manual-numbers">Ou adicione números manualmente</Label>
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <Label htmlFor="manual-numbers" className="text-sm">Ou adicione números manualmente</Label>
                       {manualLeads.length > 0 && (
-                        <Badge variant="secondary" className="gap-1">
+                        <Badge variant="secondary" className="gap-1 text-xs">
                           <Users className="w-3 h-3" />
                           {manualLeads.length} números
                         </Badge>
@@ -787,7 +788,7 @@ export default function WhatsApp() {
                       className="min-h-24"
                       placeholder="Cole um por linha:\n5511999999999\n5511988887777\n\nOu: Nome,5511999999999"
                     />
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
                       <p className="text-xs text-muted-foreground">
                         Um número por linha (com DDI). Opcional: "Nome,telefone".
                       </p>
@@ -806,8 +807,8 @@ export default function WhatsApp() {
 
                   {leads.length > 0 && (
                     <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <Badge variant="secondary" className="gap-1">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <Badge variant="secondary" className="gap-1 text-xs">
                           <Users className="w-3 h-3" />
                           {leads.length} leads
                         </Badge>
@@ -851,17 +852,17 @@ export default function WhatsApp() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
                     <Send className="w-5 h-5 text-primary" />
                     Configurar Disparo
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-sm md:text-base">
                     Defina a mensagem e delays entre envios
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label>Mensagem do Disparo</Label>
+                    <Label className="text-sm">Mensagem do Disparo</Label>
                     <Textarea
                       value={mensagemDisparo}
                       onChange={(e) => setMensagemDisparo(e.target.value)}
@@ -881,9 +882,9 @@ export default function WhatsApp() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Delay Mínimo (seg)</Label>
+                      <Label className="text-sm">Delay Mínimo (seg)</Label>
                       <Input
                         type="number"
                         value={delayMin}
@@ -892,7 +893,7 @@ export default function WhatsApp() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Delay Máximo (seg)</Label>
+                      <Label className="text-sm">Delay Máximo (seg)</Label>
                       <Input
                         type="number"
                         value={delayMax}
@@ -902,7 +903,7 @@ export default function WhatsApp() {
                     </div>
                   </div>
 
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     {disparoAtivo ? (
                       <Button 
                         className="flex-1" 
@@ -936,7 +937,7 @@ export default function WhatsApp() {
 
           {/* Templates */}
           <TabsContent value="templates" className="mt-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
               {templates.map((template, index) => (
                 <Card 
                   key={template.id}
@@ -945,7 +946,7 @@ export default function WhatsApp() {
                 >
                   <CardHeader>
                     <div className="flex items-center justify-between">
-                      <CardTitle className="flex items-center gap-2 text-base">
+                      <CardTitle className="flex items-center gap-2 text-base md:text-lg">
                         <span className="text-xl">{template.icone}</span>
                         {template.titulo}
                       </CardTitle>
@@ -982,16 +983,16 @@ export default function WhatsApp() {
           <TabsContent value="historico" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle>Campanhas e Mensagens</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-lg md:text-xl">Campanhas e Mensagens</CardTitle>
+                <CardDescription className="text-sm md:text-base">
                   Histórico de todas as campanhas e mensagens enviadas
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="text-center py-8 text-muted-foreground">
-                  <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                  <p>Nenhuma campanha enviada ainda</p>
-                  <p className="text-sm">Configure a conexão e inicie uma campanha</p>
+                  <MessageSquare className="w-10 h-10 md:w-12 md:h-12 mx-auto mb-3 opacity-50" />
+                  <p className="text-sm md:text-base">Nenhuma campanha enviada ainda</p>
+                  <p className="text-xs md:text-sm">Configure a conexão e inicie uma campanha</p>
                 </div>
               </CardContent>
             </Card>

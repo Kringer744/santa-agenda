@@ -72,19 +72,19 @@ export default function Pets() {
 
   return (
     <Layout>
-      <div className="space-y-8">
+      <div className="space-y-6 md:space-y-8">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 animate-fade-in">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Pets</h1>
-            <p className="text-muted-foreground mt-1">
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Pets</h1>
+            <p className="text-muted-foreground mt-1 text-sm md:text-base">
               {pets.length} pets cadastrados
             </p>
           </div>
           
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button>
+              <Button className="w-full md:w-auto">
                 <Plus className="w-4 h-4 mr-2" />
                 Novo Pet
               </Button>
@@ -113,7 +113,7 @@ export default function Pets() {
                   <Label htmlFor="nome">Nome do pet</Label>
                   <Input id="nome" name="nome" required placeholder="Rex" />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="especie">Espécie</Label>
                     <Select name="especie" required>
@@ -140,7 +140,7 @@ export default function Pets() {
                     </Select>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="raca">Raça</Label>
                     <Input id="raca" name="raca" placeholder="Golden Retriever" />
@@ -162,7 +162,7 @@ export default function Pets() {
                   <Label htmlFor="observacoes_comportamentais">Observações comportamentais</Label>
                   <Textarea id="observacoes_comportamentais" name="observacoes_comportamentais" placeholder="Ex: não se dá bem com outros cães..." />
                 </div>
-                <div className="flex gap-3 pt-4">
+                <div className="flex flex-col sm:flex-row gap-3 pt-4">
                   <Button type="button" variant="outline" className="flex-1" onClick={() => setIsDialogOpen(false)}>
                     Cancelar
                   </Button>
@@ -178,18 +178,18 @@ export default function Pets() {
         {/* Filters */}
         <div className="flex flex-col md:flex-row gap-4 animate-slide-up">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full md:w-auto">
-            <TabsList className="bg-muted">
+            <TabsList className="bg-muted grid grid-cols-3"> {/* Ajustado para 3 colunas no mobile */}
               <TabsTrigger value="todos">Todos</TabsTrigger>
               <TabsTrigger value="cachorro">🐶 Cachorros</TabsTrigger>
               <TabsTrigger value="gato">🐱 Gatos</TabsTrigger>
             </TabsList>
           </Tabs>
 
-          <div className="relative flex-1 max-w-md">
+          <div className="relative flex-1 max-w-full md:max-w-md">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <Input 
               placeholder="Buscar por nome ou raça..."
-              className="pl-12 h-10 rounded-xl"
+              className="pl-12 h-10 rounded-xl w-full"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -207,7 +207,7 @@ export default function Pets() {
           </div>
         ) : (
           /* Pets Grid */
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
             {filteredPets.map((pet, index) => {
               const tutor = getTutor(pet.tutor_id);
               
