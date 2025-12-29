@@ -17,7 +17,6 @@ import { cn } from '@/lib/utils';
 import { format, isBefore, isAfter, addDays, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
-// import { QRCode } from 'qrcode.react'; // Removido temporariamente
 import { supabase } from '@/integrations/supabase/client';
 
 interface DateRange {
@@ -28,14 +27,16 @@ interface DateRange {
 export default function ClientReservation() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const tutorId = searchParams.get('tutor_id');
-  const petId = searchParams.get('pet_id');
+  const initialTutorId = searchParams.get('tutor_id');
+  const initialPetId = searchParams.get('pet_id');
   
+  const [selectedTutorId, setSelectedTutorId] = useState<string | undefined>(initialTutorId || undefined);
+  const [selectedPetId, setSelectedPetId] = useState<string | undefined>(initialPetId || undefined);
+  const [selectedUnidadeId, setSelectedUnidadeId] = useState<string | undefined>(undefined);
   const [dateRange, setDateRange] = useState<DateRange>({ 
     from: undefined, 
     to: undefined 
   });
-  const [selectedUnidadeId, setSelectedUnidadeId] = useState<string | undefined>(undefined);
   const [reservationValue, setReservationValue] = useState<number>(0);
   const [currentStep, setCurrentStep] = useState(1); // 1: Select Dates, 2: Confirm & Pay, 3: Payment Status
   const [pixData, setPixData] = useState<{ qrCodeBase64: string; pixCopiaECola: string; txid: string } | null>(null);
@@ -52,15 +53,9 @@ export default function ClientReservation() {
   
   const isLoading = loadingPets || loadingTutores || loadingUnidades || loadingVagasDia;
   
-  const currentPet = useMemo(() => pets.find(p => p.id === petId), [pets, petId]);
-  const currentTutor = useMemo(() => tutores.find(t => t.id === tutorId), [tutores, tutorId]);
-
-  useEffect(() => {
-    if (!tutorId || !petId) {
-      toast.error('Informações do tutor ou pet ausentes. Por favor, inicie a reserva pelo WhatsApp.');
-      navigate('/'); // Redireciona para a home ou uma página de erro
-    }
-  }, [tutorId, petId, navigate]);
+  const currentTutor = useMemo(() => tutores.find(t => t.id === selectedTutorId), [tutores, selectedTutorId]);
+  const currentPet = useMemo(() => pets.find(p => p.id === selectedPetId), [pets, selectedPetId]);
+  const tutorPets = useMemo(() => pets.filter(p => p.tutor_id === selectedTutorId), [pets, selectedTutorId]);
 
   // Calculate reservation value based on dates and pet type
   useEffect(() => {
@@ -236,26 +231,16 @@ export default function ClientReservation() {
     );
   }
 
-  if (!currentTutor || !currentPet) {
-    return (
-      <Layout>
-        <div className="flex flex-col items-center justify-center h-96 text-center text-muted-foreground">
-          <XCircle className="w-12 h-12 mb-4 text-destructive" />
-          <p className="text-lg font-semibold">Dados do tutor ou pet não encontrados.</p>
-          <p className="text-sm">Por favor, verifique o link ou inicie a reserva novamente pelo WhatsApp.</p>
-          <Button onClick={() => navigate('/')} className="mt-6">Voltar para o Início</Button>
-        </div>
-      </Layout>
-    );
-  }
-
   return (
     <Layout>
       <div className="max-w-3xl mx-auto space-y-8 py-8">
         <div className="text-center animate-fade-in">
           <h1 className="text-3xl font-bold text-foreground">Reservar Hospedagem</h1>
           <p className="text-muted-foreground mt-2">
-            Olá <span className="font-semibold">{currentTutor.nome}</span>! Vamos reservar um lugar para <span className="font-semibold">{currentPet.nome}</span> ({currentPet.especie === 'cachorro' ? '🐶' : '🐱'}).
+            {currentTutor && currentPet ? 
+              `Olá ${currentTutor.nome}! Vamos reservar um lugar para ${currentPet.nome} (${currentPet.especie === 'cachorro' ? '🐶' : '🐱'}).` :
+              'Selecione o tutor e o pet para iniciar a reserva.'
+            }
           </p>
         </div>
 
@@ -263,14 +248,57 @@ export default function ClientReservation() {
           <Card className="animate-slide-up">
             <CardHeader>
               <CardTitle>1. Selecione as Datas e Unidade</CardTitle>
-              <CardDescription>Escolha o período de hospedagem e a unidade desejada.</CardDescription>
+              <CardDescription>Escolha o tutor, pet, período de hospedagem e a unidade desejada.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="unidade_id">Unidade</Label>
-                <Select value={selectedUnidadeId} onValueChange={setSelectedUnidadeId}>
+                <Label htmlFor="tutor_id">Tutor</Label>
+                <Select 
+                  value={selectedTutorId} 
+                  onValueChange={(value) => {
+                    setSelectedTutorId(value);
+                    setSelectedPetId(undefined); // Reset pet selection when tutor changes
+                  }}
+                  disabled={!!initialTutorId} // Disable if tutor_id came from URL
+                >
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione a unidade" />
+                    <SelectValue placeholder="Selecione o tutor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tutores.map(tutor => (
+                      <SelectItem key={tutor.id} value={tutor.id}>
+                        {tutor.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="pet_id">Pet</Label>
+                <Select 
+                  value={selectedPetId} 
+                  onValueChange={setSelectedPetId}
+                  disabled={!selectedTutorId || !!initialPetId} // Disable if no tutor selected or pet_id came from URL
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={selectedTutorId ? "Selecione o pet" : "Selecione o tutor primeiro"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tutorPets.map(pet => (
+                      <SelectItem key={pet.id} value={pet.id}>
+                        {pet.especie === 'cachorro' ? '🐶' : '🐱'} {pet.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="unidade_id">Unidade</Label>
+                <Select value={selectedUnidadeId} onValueChange={setSelectedUnidadeId} disabled={!currentPet}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={currentPet ? "Selecione a unidade" : "Selecione o pet primeiro"} />
                   </SelectTrigger>
                   <SelectContent>
                     {unidades.map(unidade => (
@@ -287,7 +315,7 @@ export default function ClientReservation() {
                   mode="range"
                   selected={dateRange}
                   onSelect={handleSelectDates}
-                  disabled={(date) => isBefore(date, new Date()) || isDateUnavailable(date)}
+                  disabled={(date) => isBefore(date, new Date()) || isDateUnavailable(date) || !selectedUnidadeId || !currentPet}
                   numberOfMonths={window.innerWidth > 768 ? 2 : 1} // 2 meses em desktop, 1 em mobile
                   locale={ptBR}
                   className="rounded-md border shadow-card p-3"
@@ -310,7 +338,7 @@ export default function ClientReservation() {
               
               <Button 
                 onClick={() => setCurrentStep(2)} 
-                disabled={!dateRange.from || !dateRange.to || !selectedUnidadeId || reservationValue <= 0}
+                disabled={!dateRange.from || !dateRange.to || !selectedUnidadeId || reservationValue <= 0 || !currentTutor || !currentPet}
                 className="w-full"
               >
                 Continuar para Pagamento
@@ -328,12 +356,12 @@ export default function ClientReservation() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">Pet:</p>
-                <p className="font-semibold text-foreground">{currentPet.nome} ({currentPet.especie === 'cachorro' ? '🐶' : '🐱'})</p>
+                <p className="font-semibold text-foreground">{currentPet?.nome} ({currentPet?.especie === 'cachorro' ? '🐶' : '🐱'})</p>
               </div>
               
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">Tutor:</p>
-                <p className="font-semibold text-foreground">{currentTutor.nome}</p>
+                <p className="font-semibold text-foreground">{currentTutor?.nome}</p>
               </div>
               
               <div className="space-y-2">
@@ -395,12 +423,6 @@ export default function ClientReservation() {
                         className="w-48 h-48 border rounded-lg p-2" 
                       />
                     ) : (
-                      // <QRCode 
-                      //   value={pixData.pixCopiaECola} 
-                      //   size={192} 
-                      //   level="H" 
-                      //   includeMargin={true} 
-                      // />
                       <div className="w-48 h-48 border rounded-lg p-2 flex items-center justify-center bg-muted text-muted-foreground">
                         <QrCode className="w-12 h-12" />
                         <span className="sr-only">QR Code Pix</span>
