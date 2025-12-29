@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils';
 import { format, isBefore, isAfter, addDays, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
-import QRCode from 'qrcode.react';
+import { QRCode } from 'qrcode.react'; // Corrigido: Usar exportação nomeada
 import { supabase } from '@/integrations/supabase/client';
 
 interface DateRange {
@@ -30,8 +30,11 @@ export default function ClientReservation() {
   const navigate = useNavigate();
   const tutorId = searchParams.get('tutor_id');
   const petId = searchParams.get('pet_id');
-
-  const [dateRange, setDateRange] = useState<DateRange>({ from: undefined, to: undefined });
+  
+  const [dateRange, setDateRange] = useState<DateRange>({ 
+    from: undefined, 
+    to: undefined 
+  });
   const [selectedUnidadeId, setSelectedUnidadeId] = useState<string | undefined>(undefined);
   const [reservationValue, setReservationValue] = useState<number>(0);
   const [currentStep, setCurrentStep] = useState(1); // 1: Select Dates, 2: Confirm & Pay, 3: Payment Status
@@ -39,16 +42,16 @@ export default function ClientReservation() {
   const [paymentStatus, setPaymentStatus] = useState<'pending' | 'paid' | 'failed'>('pending');
   const [reservaId, setReservaId] = useState<string | null>(null);
   const [pollingInterval, setPollingInterval] = useState<number | null>(null);
-
+  
   const { data: pets = [], isLoading: loadingPets } = usePets();
   const { data: tutores = [], isLoading: loadingTutores } = useTutores();
   const { data: unidades = [], isLoading: loadingUnidades } = useUnidades();
   const { data: vagasDia = [], isLoading: loadingVagasDia } = useVagasDia();
   const createReserva = useCreateReserva();
   const updateReservaStatus = useUpdateReservaStatus();
-
+  
   const isLoading = loadingPets || loadingTutores || loadingUnidades || loadingVagasDia;
-
+  
   const currentPet = useMemo(() => pets.find(p => p.id === petId), [pets, petId]);
   const currentTutor = useMemo(() => tutores.find(t => t.id === tutorId), [tutores, tutorId]);
 
@@ -96,7 +99,10 @@ export default function ClientReservation() {
             toast.success('Pagamento Pix confirmado! Sua reserva está aprovada.');
             // Update reservation status in DB
             updateReservaStatus.mutate({ id: reservaId, status: 'confirmada' });
-          } else if (pixCheckData?.pix_status === 'REMOVIDA_PELO_USUARIO_RECEBEDOR' || pixCheckData?.pix_status === 'REMOVIDA_PELO_PSP') {
+          } else if (
+            pixCheckData?.pix_status === 'REMOVIDA_PELO_USUARIO_RECEBEDOR' ||
+            pixCheckData?.pix_status === 'REMOVIDA_PELO_PSP'
+          ) {
             setPaymentStatus('failed');
             clearInterval(interval);
             toast.error('Pagamento Pix cancelado ou expirado.');
@@ -110,8 +116,9 @@ export default function ClientReservation() {
           setPaymentStatus('failed');
         }
       }, 5000); // Poll every 5 seconds
+      
       setPollingInterval(interval as unknown as number); // Store interval ID
-
+      
       return () => {
         if (interval) clearInterval(interval);
       };
@@ -124,15 +131,15 @@ export default function ClientReservation() {
   const getAvailableVagas = (unidadeId: string, date: Date, especie: 'cachorro' | 'gato') => {
     const dateString = format(date, 'yyyy-MM-dd');
     const vagaDoDia = vagasDia.find(v => v.unidade_id === unidadeId && v.data === dateString);
-
+    
     if (!vagaDoDia) {
       // Se não há registro para o dia, assume capacidade total da unidade
       const unidade = unidades.find(u => u.id === unidadeId);
       if (!unidade) return 0;
       return especie === 'cachorro' ? unidade.capacidade_cachorro : unidade.capacidade_gato;
     }
-
-    return especie === 'cachorro'
+    
+    return especie === 'cachorro' 
       ? vagaDoDia.vagas_cachorro_total - vagaDoDia.vagas_cachorro_ocupadas
       : vagaDoDia.vagas_gato_total - vagaDoDia.vagas_gato_ocupadas;
   };
@@ -192,13 +199,18 @@ export default function ClientReservation() {
           pixCopiaECola: pixCopiaECola,
           txid: txid,
         });
+
         // Update reservation with Pix details
-        await supabase.from('reservas').update({
-          pix_txid: txid,
-          pix_qr_code_base64: imagem_base64,
-          pix_copia_e_cola: pixCopiaECola,
-          pagamento_status: 'pendente',
-        }).eq('id', createdReserva.id);
+        await supabase
+          .from('reservas')
+          .update({
+            pix_txid: txid,
+            pix_qr_code_base64: imagem_base64,
+            pix_copia_e_cola: pixCopiaECola,
+            pagamento_status: 'pendente',
+          })
+          .eq('id', createdReserva.id);
+
         setCurrentStep(3); // Move to payment status step
       } else {
         throw new Error('Falha ao gerar dados do Pix.');
@@ -206,6 +218,7 @@ export default function ClientReservation() {
     } catch (error: any) {
       console.error('Erro ao confirmar reserva ou gerar Pix:', error);
       toast.error(`Erro: ${error.message}`);
+      
       // If reservation was created but Pix failed, mark reservation as canceled or pending payment error
       if (reservaId) {
         updateReservaStatus.mutate({ id: reservaId, status: 'cancelada' });
@@ -242,8 +255,7 @@ export default function ClientReservation() {
         <div className="text-center animate-fade-in">
           <h1 className="text-3xl font-bold text-foreground">Reservar Hospedagem</h1>
           <p className="text-muted-foreground mt-2">
-            Olá <span className="font-semibold">{currentTutor.nome}</span>!
-            Vamos reservar um lugar para <span className="font-semibold">{currentPet.nome}</span> ({currentPet.especie === 'cachorro' ? '🐶' : '🐱'}).
+            Olá <span className="font-semibold">{currentTutor.nome}</span>! Vamos reservar um lugar para <span className="font-semibold">{currentPet.nome}</span> ({currentPet.especie === 'cachorro' ? '🐶' : '🐱'}).
           </p>
         </div>
 
@@ -269,7 +281,7 @@ export default function ClientReservation() {
                   </SelectContent>
                 </Select>
               </div>
-
+              
               <div className="flex flex-col lg:flex-row gap-4 justify-center">
                 <Calendar
                   mode="range"
@@ -281,7 +293,7 @@ export default function ClientReservation() {
                   className="rounded-md border shadow-card p-3"
                 />
               </div>
-
+              
               {dateRange.from && dateRange.to && (
                 <div className="text-center mt-4">
                   <p className="text-lg font-semibold text-foreground">
@@ -295,9 +307,9 @@ export default function ClientReservation() {
                   </p>
                 </div>
               )}
-
-              <Button
-                onClick={() => setCurrentStep(2)}
+              
+              <Button 
+                onClick={() => setCurrentStep(2)} 
                 disabled={!dateRange.from || !dateRange.to || !selectedUnidadeId || reservationValue <= 0}
                 className="w-full"
               >
@@ -318,29 +330,38 @@ export default function ClientReservation() {
                 <p className="text-sm text-muted-foreground">Pet:</p>
                 <p className="font-semibold text-foreground">{currentPet.nome} ({currentPet.especie === 'cachorro' ? '🐶' : '🐱'})</p>
               </div>
+              
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">Tutor:</p>
                 <p className="font-semibold text-foreground">{currentTutor.nome}</p>
               </div>
+              
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">Unidade:</p>
                 <p className="font-semibold text-foreground">{unidades.find(u => u.id === selectedUnidadeId)?.nome}</p>
               </div>
+              
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">Período:</p>
                 <p className="font-semibold text-foreground">
                   {dateRange.from && format(dateRange.from, 'dd/MM/yyyy', { locale: ptBR })} - {dateRange.to && format(dateRange.to, 'dd/MM/yyyy', { locale: ptBR })}
                 </p>
               </div>
+              
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">Valor Total:</p>
                 <p className="text-2xl font-bold text-primary">R$ {reservationValue.toFixed(2)}</p>
               </div>
+              
               <div className="flex gap-2">
                 <Button variant="outline" onClick={() => setCurrentStep(1)} className="flex-1">
                   Voltar
                 </Button>
-                <Button onClick={handleConfirmReservation} className="flex-1" disabled={createReserva.isPending}>
+                <Button 
+                  onClick={handleConfirmReservation} 
+                  className="flex-1"
+                  disabled={createReserva.isPending}
+                >
                   {createReserva.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : 'Pagar com Pix'}
                 </Button>
               </div>
@@ -368,18 +389,32 @@ export default function ClientReservation() {
                 <>
                   <div className="flex justify-center">
                     {pixData.qrCodeBase64 ? (
-                      <img src={`data:image/png;base64,${pixData.qrCodeBase64}`} alt="QR Code Pix" className="w-48 h-48 border rounded-lg p-2" />
+                      <img 
+                        src={`data:image/png;base64,${pixData.qrCodeBase64}`} 
+                        alt="QR Code Pix" 
+                        className="w-48 h-48 border rounded-lg p-2" 
+                      />
                     ) : (
-                      <QRCode value={pixData.pixCopiaECola} size={192} level="H" includeMargin={true} />
+                      <QRCode 
+                        value={pixData.pixCopiaECola} 
+                        size={192} 
+                        level="H" 
+                        includeMargin={true} 
+                      />
                     )}
                   </div>
+                  
                   <div className="space-y-2">
                     <Label className="text-sm">Chave Pix Copia e Cola</Label>
                     <div className="flex items-center justify-center gap-2">
-                      <Input value={pixData.pixCopiaECola} readOnly className="w-full max-w-xs text-center" />
-                      <Button
-                        variant="outline"
-                        size="icon"
+                      <Input 
+                        value={pixData.pixCopiaECola} 
+                        readOnly 
+                        className="w-full max-w-xs text-center" 
+                      />
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
                         onClick={() => {
                           navigator.clipboard.writeText(pixData.pixCopiaECola);
                           toast.info('Chave Pix copiada!');
@@ -389,11 +424,13 @@ export default function ClientReservation() {
                       </Button>
                     </div>
                   </div>
+                  
                   <p className="text-sm text-muted-foreground">
                     Aguardando pagamento de R$ {reservationValue.toFixed(2)}...
                   </p>
                 </>
               )}
+              
               {paymentStatus === 'paid' && (
                 <div className="text-center space-y-4">
                   <CheckCircle className="w-20 h-20 text-secondary mx-auto" />
@@ -402,6 +439,7 @@ export default function ClientReservation() {
                   <Button onClick={() => navigate('/')} className="mt-4">Voltar para o Início</Button>
                 </div>
               )}
+              
               {paymentStatus === 'failed' && (
                 <div className="text-center space-y-4">
                   <XCircle className="w-20 h-20 text-destructive mx-auto" />
