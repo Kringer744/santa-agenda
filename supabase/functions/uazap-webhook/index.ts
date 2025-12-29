@@ -114,8 +114,9 @@ serve(async (req) => {
       }
 
       if (!tutor) {
-        // Se não encontrar o tutor, pode pedir para ele se cadastrar ou enviar um link genérico
-        const responseText = "Parece que você ainda não está cadastrado. Por favor, cadastre-se primeiro ou entre em contato com nosso atendimento.";
+        // Se não encontrar o tutor, envia link para cadastro de tutor
+        const registrationLink = `https://seu-app.com/client-registration`; // TODO: Substitua pela URL real do seu app
+        const responseText = "Parece que você ainda não está cadastrado. Por favor, crie seu perfil de tutor aqui:\n\n" + registrationLink;
         await fetch(`${apiUrl}/send/text`, {
           method: "POST",
           headers: { token: instanceToken, "Content-Type": "application/json" },
@@ -136,7 +137,9 @@ serve(async (req) => {
       }
 
       if (!pets || pets.length === 0) {
-        const responseText = `Olá ${tutor.nome}! Você ainda não tem pets cadastrados. Por favor, cadastre seu pet no nosso sistema ou entre em contato com nosso atendimento.`;
+        // Se o tutor não tem pets, envia link para cadastro de pet
+        const petRegistrationLink = `https://seu-app.com/pet-registration?tutor_id=${tutor.id}`; // TODO: Substitua pela URL real do seu app
+        const responseText = `Olá ${tutor.nome}! Você ainda não tem pets cadastrados. Por favor, cadastre seu pet aqui:\n\n` + petRegistrationLink;
         await fetch(`${apiUrl}/send/text`, {
           method: "POST",
           headers: { token: instanceToken, "Content-Type": "application/json" },
@@ -145,10 +148,9 @@ serve(async (req) => {
         return jsonResponse({ ok: true, messageSent: true, reason: "no_pets_found" });
       }
 
-      // Por simplicidade, vamos pegar o primeiro pet. Em um cenário real, você pode listar os pets e pedir para o cliente escolher.
-      const firstPet = pets[0];
-      // TODO: Substitua 'https://seu-app.com' pela URL do seu app
-      const reservationLink = `https://seu-app.com/client-reservation?tutor_id=${tutor.id}&pet_id=${firstPet.id}`; 
+      // Se tutor e pets encontrados, envia link para reserva (pode listar pets para escolha ou pegar o primeiro)
+      const firstPet = pets[0]; // Por simplicidade, pegando o primeiro pet.
+      const reservationLink = `https://seu-app.com/client-reservation?tutor_id=${tutor.id}&pet_id=${firstPet.id}`; // TODO: Substitua pela URL real do seu app
       const responseText = `Olá ${tutor.nome}! Para reservar a hospedagem do seu pet ${firstPet.nome} (${firstPet.especie === 'cachorro' ? '🐶' : '🐱'}), acesse o link abaixo:\n\n${reservationLink}\n\nSelecione as datas e finalize sua reserva.`;
 
       await fetch(`${apiUrl}/send/text`, {
