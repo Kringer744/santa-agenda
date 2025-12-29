@@ -39,6 +39,9 @@ export interface Reserva {
   pagamento_status: 'pendente' | 'aprovado' | 'recusado';
   created_at: string;
   updated_at: string; // Added updated_at to match Supabase type
+  pix_txid: string | null; // Novo: ID da transação Pix
+  pix_qr_code_base64: string | null; // Novo: QR Code em base64
+  pix_copia_e_cola: string | null; // Novo: Chave Pix copia e cola
 }
 
 export interface ServicoAdicional {

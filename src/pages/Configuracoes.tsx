@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,14 +24,22 @@ import {
   DollarSign,
   Pencil,
   Trash2,
-  Loader2
+  Loader2,
+  Banknote,
+  CheckCircle,
+  XCircle,
+  Info
 } from 'lucide-react';
 import { useUnidades, useCreateUnidade, useDeleteUnidade } from '@/hooks/useUnidades';
 import { useServicos, useCreateServico, useUpdateServico } from '@/hooks/useServicos';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export default function Configuracoes() {
   const [isUnidadeDialogOpen, setIsUnidadeDialogOpen] = useState(false);
   const [isServicoDialogOpen, setIsServicoDialogOpen] = useState(false);
+  const [itauConfigured, setItauConfigured] = useState(false);
+  const [loadingItauStatus, setLoadingItauStatus] = useState(true);
 
   const { data: unidades = [], isLoading: loadingUnidades } = useUnidades();
   const { data: servicos = [], isLoading: loadingServicos } = useServicos();
@@ -39,6 +47,30 @@ export default function Configuracoes() {
   const deleteUnidade = useDeleteUnidade();
   const createServico = useCreateServico();
   const updateServico = useUpdateServico();
+
+  useEffect(() => {
+    const checkItauConfig = async () => {
+      setLoadingItauStatus(true);
+      try {
+        // Tenta invocar a função de auth para verificar se as credenciais estão lá
+        const { data, error } = await supabase.functions.invoke('itau-auth');
+        if (error) {
+          console.warn('Itaú Auth function error (likely missing env vars):', error.message);
+          setItauConfigured(false);
+        } else if (data?.access_token) {
+          setItauConfigured(true);
+        } else {
+          setItauConfigured(false);
+        }
+      } catch (e) {
+        console.error('Erro ao verificar configuração do Itaú:', e);
+        setItauConfigured(false);
+      } finally {
+        setLoadingItauStatus(false);
+      }
+    };
+    checkItauConfig();
+  }, []);
 
   const handleAddUnidade = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -199,7 +231,7 @@ export default function Configuracoes() {
             </CardContent>
           </Card>
 
-          {/* Preços */}
+          {/* Serviços Adicionais */}
           <Card className="animate-slide-up" style={{ animationDelay: '100ms' }}>
             <CardHeader>
               <div className="flex items-center justify-between flex-wrap gap-2">
@@ -280,6 +312,64 @@ export default function Configuracoes() {
                   </div>
                 ))
               )}
+            </CardContent>
+          </Card>
+
+          {/* Integração Itaú Pix */}
+          <Card className="animate-slide-up" style={{ animationDelay: '200ms' }}>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+                <Banknote className="w-5 h-5 text-mint" />
+                Integração Itaú Pix
+              </CardTitle>
+              <CardDescription className="text-sm md:text-base">
+                Configure as credenciais para pagamentos Pix via Itaú.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {loadingItauStatus ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                  <span className="ml-2 text-muted-foreground">Verificando status...</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3 p-4 rounded-xl bg-muted/50">
+                  {itauConfigured ? (
+                    <CheckCircle className="w-6 h-6 text-secondary" />
+                  ) : (
+                    <XCircle className="w-6 h-6 text-destructive" />
+                  )}
+                  <div className="flex-1">
+                    <p className="font-semibold text-foreground">
+                      Status: {itauConfigured ? 'Conectado' : 'Não Configurado'}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {itauConfigured 
+                        ? 'As credenciais do Itaú Pix estão configuradas.' 
+                        : 'As variáveis de ambiente do Itaú Pix não foram encontradas.'}
+                    </p>
+                  </div>
+                </div>
+              )}
+              <div className="space-y-2 p-4 bg-blue-50/50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <p className="font-semibold text-blue-700 dark:text-blue-300 flex items-center gap-2">
+                  <Info className="w-4 h-4" />
+                  Instruções de Configuração
+                </p>
+                <p className="text-sm text-blue-600 dark:text-blue-400">
+                  Para conectar ao Itaú Pix, você precisa definir as seguintes variáveis de ambiente (secrets) no seu projeto Supabase (em `Edge Functions > Secrets`):
+                </p>
+                <ul className="list-disc list-inside text-sm text-blue-600 dark:text-blue-400 space-y-1">
+                  <li>`ITAU_CLIENT_ID`: Seu Client ID do Itaú.</li>
+                  <li>`ITAU_CLIENT_SECRET`: Seu Client Secret do Itaú.</li>
+                  <li>`ITAU_PIX_CHAVE`: A chave Pix do seu estabelecimento.</li>
+                  <li>`ITAU_API_URL`: URL base da API do Itaú (ex: `https://api.itau.com.br/pix/v2`).</li>
+                  <li>`ITAU_AUTH_URL`: URL de autenticação do Itaú (ex: `https://oauth.itau.com.br/identity/oauth/access-token`).</li>
+                </ul>
+                <p className="text-xs text-blue-500 dark:text-blue-500 mt-2">
+                  Após configurar, reinicie suas funções de Edge para que as variáveis sejam carregadas.
+                </p>
+              </div>
             </CardContent>
           </Card>
         </div>

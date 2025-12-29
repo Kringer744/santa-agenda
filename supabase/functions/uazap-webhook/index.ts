@@ -94,6 +94,71 @@ serve(async (req) => {
     const welcomeMessage = configRow.mensagem_boas_vindas ?? "";
     const opcoes = Array.isArray(configRow.opcoes_menu) ? configRow.opcoes_menu : [];
 
+    // Verificar se a mensagem recebida é uma resposta a uma opção do menu
+    const receivedMessageText = message?.text?.toLowerCase().trim();
+    const selectedOption = opcoes.find((o: any) => o.id === receivedMessageText);
+
+    if (selectedOption && selectedOption.id === '1') { // Opção "Reservar hospedagem para meu pet"
+      console.log("[WEBHOOK] Opção 'Reservar hospedagem' selecionada.");
+
+      // Buscar tutor pelo telefone
+      const { data: tutor, error: tutorError } = await supabase
+        .from('tutores')
+        .select('id, nome')
+        .eq('telefone', fromNumber)
+        .maybeSingle();
+
+      if (tutorError) {
+        console.error("[WEBHOOK] Erro ao buscar tutor:", tutorError);
+        return jsonResponse({ ok: false, error: tutorError.message }, 500);
+      }
+
+      if (!tutor) {
+        // Se não encontrar o tutor, pode pedir para ele se cadastrar ou enviar um link genérico
+        const responseText = "Parece que você ainda não está cadastrado. Por favor, cadastre-se primeiro ou entre em contato com nosso atendimento.";
+        await fetch(`${apiUrl}/send/text`, {
+          method: "POST",
+          headers: { token: instanceToken, "Content-Type": "application/json" },
+          body: JSON.stringify({ number: fromNumber, text: responseText }),
+        });
+        return jsonResponse({ ok: true, messageSent: true, reason: "tutor_not_found" });
+      }
+
+      // Buscar pets do tutor
+      const { data: pets, error: petsError } = await supabase
+        .from('pets')
+        .select('id, nome, especie')
+        .eq('tutor_id', tutor.id);
+
+      if (petsError) {
+        console.error("[WEBHOOK] Erro ao buscar pets:", petsError);
+        return jsonResponse({ ok: false, error: petsError.message }, 500);
+      }
+
+      if (!pets || pets.length === 0) {
+        const responseText = `Olá ${tutor.nome}! Você ainda não tem pets cadastrados. Por favor, cadastre seu pet no nosso sistema ou entre em contato com nosso atendimento.`;
+        await fetch(`${apiUrl}/send/text`, {
+          method: "POST",
+          headers: { token: instanceToken, "Content-Type": "application/json" },
+          body: JSON.stringify({ number: fromNumber, text: responseText }),
+        });
+        return jsonResponse({ ok: true, messageSent: true, reason: "no_pets_found" });
+      }
+
+      // Por simplicidade, vamos pegar o primeiro pet. Em um cenário real, você pode listar os pets e pedir para o cliente escolher.
+      const firstPet = pets[0];
+      const reservationLink = `https://seu-app.com/client-reservation?tutor_id=${tutor.id}&pet_id=${firstPet.id}`; // TODO: Substitua 'https://seu-app.com' pela URL do seu app
+      const responseText = `Olá ${tutor.nome}! Para reservar a hospedagem do seu pet ${firstPet.nome} (${firstPet.especie === 'cachorro' ? '🐶' : '🐱'}), acesse o link abaixo:\n\n${reservationLink}\n\nSelecione as datas e finalize sua reserva.`;
+
+      await fetch(`${apiUrl}/send/text`, {
+        method: "POST",
+        headers: { token: instanceToken, "Content-Type": "application/json" },
+        body: JSON.stringify({ number: fromNumber, text: responseText }),
+      });
+
+      return jsonResponse({ ok: true, reservationLinkSent: true });
+    }
+
     if (!menuAtivo) {
       console.log("[WEBHOOK] Menu não está ativo, ignorando.");
       return jsonResponse({ ok: true, skipped: true });

@@ -9,6 +9,7 @@ import Tutores from "./pages/Tutores";
 import Pets from "./pages/Pets";
 import WhatsApp from "./pages/WhatsApp";
 import Configuracoes from "./pages/Configuracoes";
+import ClientReservation from "./pages/ClientReservation"; // Importar a nova página
 import NotFound from "./pages/NotFound";
 import { MobileHeader } from "./components/layout/MobileHeader"; // Import MobileHeader
 
@@ -27,6 +28,7 @@ const App = () => (
           <Route path="/pets" element={<Pets />} />
           <Route path="/whatsapp" element={<WhatsApp />} />
           <Route path="/configuracoes" element={<Configuracoes />} />
+          <Route path="/client-reservation" element={<ClientReservation />} /> {/* Nova rota */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
