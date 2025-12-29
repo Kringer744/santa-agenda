@@ -95,6 +95,33 @@ export async function sendTextMessage(
   }
 }
 
+// NEW: Enviar mensagem com imagem (QR Code)
+export async function sendImageMessage(
+  config: UazapConfig,
+  number: string,
+  base64Image: string,
+  caption: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { data, error } = await supabase.functions.invoke('uazap-send', {
+      body: {
+        action: 'send-image',
+        apiUrl: config.apiUrl,
+        instanceToken: config.instanceToken,
+        number: formatPhoneNumber(number),
+        base64: base64Image,
+        caption: caption,
+      },
+    });
+
+    if (error) throw error;
+    return { success: data?.success || false, error: data?.error };
+  } catch (error: any) {
+    console.error('Erro ao enviar imagem:', error);
+    return { success: false, error: error.message };
+  }
+}
+
 // Criar campanha de disparo em massa
 export async function createBulkCampaign(
   config: UazapConfig,

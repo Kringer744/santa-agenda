@@ -21,9 +21,13 @@ serve(async (req) => {
     const { access_token, txid } = await req.json();
 
     const ITAU_API_URL = Deno.env.get("ITAU_API_URL") || "https://api.itau.com.br/pix/v2";
+    const ITAU_API_KEY = Deno.env.get("ITAU_API_KEY");
 
     if (!access_token || !txid) {
       return jsonResponse({ error: "access_token e txid são obrigatórios" }, 400);
+    }
+    if (!ITAU_API_KEY) {
+      return jsonResponse({ error: "ITAU_API_KEY não configurada" }, 400);
     }
 
     const response = await fetch(`${ITAU_API_URL}/cob/${txid}`, {
@@ -31,6 +35,7 @@ serve(async (req) => {
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${access_token}`,
+        "x-itau-apikey": ITAU_API_KEY,
       },
     });
 
@@ -41,11 +46,7 @@ serve(async (req) => {
       return jsonResponse({ error: data.detail || "Erro ao consultar cobrança Pix" }, response.status);
     }
 
-    // O status da cobrança pode ser 'ATIVA', 'CONCLUIDA', 'REMOVIDA_PELO_USUARIO_RECEBEDOR', 'REMOVIDA_PELO_PSP'
-    // Para verificar o pagamento, precisamos ver se há transações Pix associadas.
-    // A estrutura de resposta pode variar, mas geralmente 'status' indica o estado da cobrança.
-    // Se houver um campo 'pix' na resposta, ele conteria os pagamentos recebidos.
-    const isPaid = data.status === 'CONCLUIDA'; // Exemplo: assumindo que 'CONCLUIDA' significa pago
+    const isPaid = data.status === 'CONCLUIDA';
 
     return jsonResponse({ success: true, is_paid: isPaid, pix_status: data.status, full_data: data });
   } catch (error) {

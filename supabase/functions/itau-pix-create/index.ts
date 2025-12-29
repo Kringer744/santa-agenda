@@ -18,48 +18,81 @@ serve(async (req) => {
   }
 
   try {
-    const { access_token, valor, txid } = await req.json();
+    const { access_token, valor, tutor_cpf, tutor_nome, solicitacaoPagador } = await req.json();
 
     const ITAU_API_URL = Deno.env.get("ITAU_API_URL") || "https://api.itau.com.br/pix/v2";
     const ITAU_PIX_CHAVE = Deno.env.get("ITAU_PIX_CHAVE");
+    const ITAU_API_KEY = Deno.env.get("ITAU_API_KEY");
 
-    if (!access_token || !valor || !txid) {
-      return jsonResponse({ error: "access_token, valor e txid são obrigatórios" }, 400);
+    if (!access_token || !valor || !tutor_cpf || !tutor_nome) {
+      return jsonResponse({ error: "access_token, valor, tutor_cpf e tutor_nome são obrigatórios" }, 400);
     }
     if (!ITAU_PIX_CHAVE) {
       return jsonResponse({ error: "ITAU_PIX_CHAVE não configurada" }, 400);
+    }
+    if (!ITAU_API_KEY) {
+      return jsonResponse({ error: "ITAU_API_KEY não configurada" }, 400);
     }
 
     const pixPayload = {
       calendario: {
         expiracao: 3600, // 1 hora para expirar
       },
+      devedor: {
+        cpf: tutor_cpf,
+        nome: tutor_nome,
+      },
       valor: {
         original: valor.toFixed(2),
       },
       chave: ITAU_PIX_CHAVE,
-      solicitacaoPagador: "Reserva PetHotel",
+      solicitacaoPagador: solicitacaoPagador || "Reserva PetHotel",
     };
 
-    const response = await fetch(`${ITAU_API_URL}/cob/${txid}`, {
-      method: "PUT", // Ou POST para criar uma nova cobrança sem txid pré-definido
+    // STEP 2: CREATE PIX CHARGE
+    const createChargeResponse = await fetch(`${ITAU_API_URL}/cob`, {
+      method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${access_token}`,
-        "x-itau-correlation-id": txid, // Usar txid como correlation ID
+        "x-itau-apikey": ITAU_API_KEY,
       },
       body: JSON.stringify(pixPayload),
     });
 
-    const data = await response.json();
+    const createChargeData = await createChargeResponse.json();
 
-    if (!response.ok) {
-      console.error("[ITAU_PIX_CREATE] Erro ao criar cobrança Pix:", data);
-      return jsonResponse({ error: data.detail || "Erro ao criar cobrança Pix" }, response.status);
+    if (!createChargeResponse.ok) {
+      console.error("[ITAU_PIX_CREATE] Erro ao criar cobrança Pix:", createChargeData);
+      return jsonResponse({ error: createChargeData.detail || "Erro ao criar cobrança Pix" }, createChargeResponse.status);
     }
 
-    // A resposta do Itaú já deve conter o pixCopiaECola e a imagem_base64 (se solicitada)
-    return jsonResponse({ success: true, pix_data: data });
+    const { txid, pixCopiaECola, loc } = createChargeData;
+
+    if (!loc?.id) {
+        console.error("[ITAU_PIX_CREATE] loc.id não encontrado na resposta da criação da cobrança:", createChargeData);
+        return jsonResponse({ error: "ID da localização do QR Code não encontrado" }, 500);
+    }
+
+    // STEP 3: GENERATE QR CODE IMAGE
+    const getQrCodeResponse = await fetch(`${ITAU_API_URL}/loc/${loc.id}/qrcode`, {
+        method: "GET",
+        headers: {
+            "Authorization": `Bearer ${access_token}`,
+            "x-itau-apikey": ITAU_API_KEY,
+        },
+    });
+
+    const getQrCodeData = await getQrCodeResponse.json();
+
+    if (!getQrCodeResponse.ok) {
+        console.error("[ITAU_PIX_CREATE] Erro ao gerar QR Code:", getQrCodeData);
+        return jsonResponse({ error: getQrCodeData.detail || "Erro ao gerar QR Code" }, getQrCodeResponse.status);
+    }
+
+    const { imagemQrcode } = getQrCodeData;
+
+    return jsonResponse({ success: true, pix_data: { txid, pixCopiaECola, qrCodeBase64: imagemQrcode } });
   } catch (error) {
     console.error("[ITAU_PIX_CREATE] Erro:", error);
     const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";

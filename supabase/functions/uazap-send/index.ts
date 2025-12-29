@@ -97,6 +97,28 @@ serve(async (req) => {
       return jsonResponse({ success: response.ok, data }, response.ok ? 200 : 400);
     }
 
+    // Enviar imagem
+    if (action === "send-image") {
+      const { number, base64, caption } = payload as { number?: string; base64?: string; caption?: string };
+
+      if (!number || !base64) {
+        return jsonResponse({ error: "number e base64 são obrigatórios para enviar imagem" }, 400);
+      }
+
+      console.log(`[UAZAP] Sending image to: ${number}`);
+
+      const response = await fetch(`${apiUrl}/send/image`, {
+        method: "POST",
+        headers: uazapHeaders,
+        body: JSON.stringify({ number, base64, caption }),
+      });
+
+      const data = await response.json().catch(async () => ({ raw: await response.text() }));
+      console.log("[UAZAP] Image sent response:", data);
+
+      return jsonResponse({ success: response.ok, data }, response.ok ? 200 : 400);
+    }
+
     // Enviar menu interativo (lista nativa do WhatsApp)
     if (action === "send-menu") {
       const {

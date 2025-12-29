@@ -15,6 +15,19 @@ function jsonResponse(body: unknown, status = 200) {
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
+// Formatar número de telefone para formato brasileiro
+function formatPhoneNumber(phone: string): string {
+  // Remove tudo que não é número
+  let cleaned = phone.replace(/\D/g, '');
+  
+  // Se não começa com 55, adiciona
+  if (!cleaned.startsWith('55')) {
+    cleaned = '55' + cleaned;
+  }
+  
+  return cleaned;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -28,6 +41,8 @@ serve(async (req) => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
   const supabase = createClient(supabaseUrl, supabaseKey);
+
+  const APP_BASE_URL = Deno.env.get("APP_BASE_URL") || "https://localhost:8080"; // Default para desenvolvimento
 
   try {
     const body = await req.json();
@@ -62,7 +77,7 @@ serve(async (req) => {
     let rawFrom = chat?.phone ?? chat?.wa_chatid ?? message?.chatid ?? message?.sender ?? "";
     
     // Remove sufixos @s.whatsapp.net / @c.us / @lid e caracteres não numéricos
-    const fromNumber = rawFrom.replace(/@.+$/, "").replace(/\D/g, "");
+    const fromNumber = formatPhoneNumber(rawFrom);
 
     if (!fromNumber) {
       console.log("[WEBHOOK] Sem número de origem válido, ignorando.");
@@ -98,7 +113,7 @@ serve(async (req) => {
     const receivedMessageText = message?.text?.toLowerCase().trim();
     const selectedOption = opcoes.find((o: any) => o.id === receivedMessageText);
 
-    if (selectedOption && selectedOption.id === '1') { // Opção "Reservar hospedagem para meu pet"
+    if (selectedOption && selectedOption.id === '1') { // Opção "🐶 Reservar hospedagem para meu pet"
       console.log("[WEBHOOK] Opção 'Reservar hospedagem' selecionada.");
 
       // Buscar tutor pelo telefone
@@ -115,7 +130,7 @@ serve(async (req) => {
 
       if (!tutor) {
         // Se não encontrar o tutor, envia link para cadastro de tutor
-        const registrationLink = `https://seu-app.com/client-registration`; // TODO: Substitua pela URL real do seu app
+        const registrationLink = `${APP_BASE_URL}/client-registration`;
         const responseText = "Parece que você ainda não está cadastrado. Por favor, crie seu perfil de tutor aqui:\n\n" + registrationLink;
         await fetch(`${apiUrl}/send/text`, {
           method: "POST",
@@ -138,7 +153,7 @@ serve(async (req) => {
 
       if (!pets || pets.length === 0) {
         // Se o tutor não tem pets, envia link para cadastro de pet
-        const petRegistrationLink = `https://seu-app.com/pet-registration?tutor_id=${tutor.id}`; // TODO: Substitua pela URL real do seu app
+        const petRegistrationLink = `${APP_BASE_URL}/pet-registration?tutor_id=${tutor.id}`;
         const responseText = `Olá ${tutor.nome}! Você ainda não tem pets cadastrados. Por favor, cadastre seu pet aqui:\n\n` + petRegistrationLink;
         await fetch(`${apiUrl}/send/text`, {
           method: "POST",
@@ -150,7 +165,7 @@ serve(async (req) => {
 
       // Se tutor e pets encontrados, envia link para reserva (pode listar pets para escolha ou pegar o primeiro)
       const firstPet = pets[0]; // Por simplicidade, pegando o primeiro pet.
-      const reservationLink = `https://seu-app.com/client-reservation?tutor_id=${tutor.id}&pet_id=${firstPet.id}`; // TODO: Substitua pela URL real do seu app
+      const reservationLink = `${APP_BASE_URL}/client-reservation?tutor_id=${tutor.id}&pet_id=${firstPet.id}`;
       const responseText = `Olá ${tutor.nome}! Para reservar a hospedagem do seu pet ${firstPet.nome} (${firstPet.especie === 'cachorro' ? '🐶' : '🐱'}), acesse o link abaixo:\n\n${reservationLink}\n\nSelecione as datas e finalize sua reserva.`;
 
       await fetch(`${apiUrl}/send/text`, {

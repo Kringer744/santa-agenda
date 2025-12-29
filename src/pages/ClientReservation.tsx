@@ -18,10 +18,16 @@ import { format, isBefore, isAfter, addDays, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { sendImageMessage, sendTextMessage } from '@/lib/uazap';
 
 interface DateRange {
   from: Date | undefined;
   to: Date | undefined;
+}
+
+interface WhatsAppConfig {
+  api_url: string;
+  instance_token: string;
 }
 
 export default function ClientReservation() {
@@ -43,6 +49,7 @@ export default function ClientReservation() {
   const [paymentStatus, setPaymentStatus] = useState<'pending' | 'paid' | 'failed'>('pending');
   const [reservaId, setReservaId] = useState<string | null>(null);
   const [pollingInterval, setPollingInterval] = useState<number | null>(null);
+  const [whatsappConfig, setWhatsappConfig] = useState<WhatsAppConfig | null>(null);
   
   const { data: pets = [], isLoading: loadingPets } = usePets();
   const { data: tutores = [], isLoading: loadingTutores } = useTutores();
@@ -56,6 +63,23 @@ export default function ClientReservation() {
   const currentTutor = useMemo(() => tutores.find(t => t.id === selectedTutorId), [tutores, selectedTutorId]);
   const currentPet = useMemo(() => pets.find(p => p.id === selectedPetId), [pets, selectedPetId]);
   const tutorPets = useMemo(() => pets.filter(p => p.tutor_id === selectedTutorId), [pets, selectedTutorId]);
+
+  // Load WhatsApp config
+  useEffect(() => {
+    const loadWhatsappConfig = async () => {
+      const { data, error } = await supabase
+        .from('whatsapp_config')
+        .select('api_url, instance_token')
+        .limit(1)
+        .maybeSingle();
+      if (error) {
+        console.error('Error loading WhatsApp config:', error);
+      } else if (data) {
+        setWhatsappConfig(data);
+      }
+    };
+    loadWhatsappConfig();
+  }, []);
 
   // Calculate reservation value based on dates and pet type
   useEffect(() => {
@@ -94,6 +118,25 @@ export default function ClientReservation() {
             toast.success('Pagamento Pix confirmado! Sua reserva está aprovada.');
             // Update reservation status in DB
             updateReservaStatus.mutate({ id: reservaId, status: 'confirmada' });
+
+            // NEW: Send QR code and Pix Copia e Cola to WhatsApp
+            if (whatsappConfig && currentTutor?.telefone && pixData.qrCodeBase64) {
+              const caption = `🎉 Sua reserva no PetHotel foi confirmada!\n\nPet: ${currentPet?.nome}\nCheck-in: ${format(dateRange.from!, 'dd/MM/yyyy', { locale: ptBR })}\nCheck-out: ${format(dateRange.to!, 'dd/MM/yyyy', { locale: ptBR })}\nValor: R$ ${reservationValue.toFixed(2)}\n\nCódigo da estadia: ${pixData.txid}\n\nObrigado por escolher o PetHotel! 🐾`;
+              
+              await sendImageMessage(
+                whatsappConfig,
+                currentTutor.telefone,
+                pixData.qrCodeBase64,
+                caption
+              );
+              await sendTextMessage(
+                whatsappConfig,
+                currentTutor.telefone,
+                `Chave Pix Copia e Cola: ${pixData.pixCopiaECola}`
+              );
+              toast.info('Confirmação de reserva e Pix enviados para o WhatsApp!');
+            }
+
           } else if (
             pixCheckData?.pix_status === 'REMOVIDA_PELO_USUARIO_RECEBEDOR' ||
             pixCheckData?.pix_status === 'REMOVIDA_PELO_PSP'
@@ -121,7 +164,7 @@ export default function ClientReservation() {
       clearInterval(pollingInterval);
       setPollingInterval(null);
     }
-  }, [currentStep, pixData, reservaId, paymentStatus, updateReservaStatus, pollingInterval]);
+  }, [currentStep, pixData, reservaId, paymentStatus, updateReservaStatus, pollingInterval, whatsappConfig, currentTutor, currentPet, dateRange, reservationValue]);
 
   const getAvailableVagas = (unidadeId: string, date: Date, especie: 'cachorro' | 'gato') => {
     const dateString = format(date, 'yyyy-MM-dd');
@@ -182,25 +225,28 @@ export default function ClientReservation() {
         body: {
           access_token: authData.access_token,
           valor: reservationValue,
-          txid: txid,
+          txid: txid, // Pass txid for correlation, though the function now generates it
+          tutor_cpf: currentTutor.cpf,
+          tutor_nome: currentTutor.nome,
+          solicitacaoPagador: `Hospedagem Pet - ${currentPet.nome} (${currentTutor.nome})`,
         },
       });
       if (pixCreateError) throw pixCreateError;
 
       if (pixCreateData?.success && pixCreateData.pix_data) {
-        const { pixCopiaECola, imagem_base64 } = pixCreateData.pix_data;
+        const { pixCopiaECola, qrCodeBase64, txid: returnedTxid } = pixCreateData.pix_data;
         setPixData({
-          qrCodeBase64: imagem_base64,
+          qrCodeBase64: qrCodeBase64,
           pixCopiaECola: pixCopiaECola,
-          txid: txid,
+          txid: returnedTxid,
         });
 
         // Update reservation with Pix details
         await supabase
           .from('reservas')
           .update({
-            pix_txid: txid,
-            pix_qr_code_base64: imagem_base64,
+            pix_txid: returnedTxid,
+            pix_qr_code_base64: qrCodeBase64,
             pix_copia_e_cola: pixCopiaECola,
             pagamento_status: 'pendente',
           })

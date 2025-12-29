@@ -330,6 +330,7 @@ export default function Configuracoes() {
                   <li>`ITAU_CLIENT_ID`: Seu Client ID do Itaú.</li>
                   <li>`ITAU_CLIENT_SECRET`: Seu Client Secret do Itaú.</li>
                   <li>`ITAU_PIX_CHAVE`: A chave Pix do seu estabelecimento.</li>
+                  <li>`ITAU_API_KEY`: Sua API Key do Itaú.</li>
                   <li>`ITAU_API_URL`: URL base da API do Itaú (ex: `https://api.itau.com.br/pix/v2`).</li>
                   <li>`ITAU_AUTH_URL`: URL de autenticação do Itaú (ex: `https://oauth.itau.com.br/identity/oauth/access-token`).</li>
                 </ul>
