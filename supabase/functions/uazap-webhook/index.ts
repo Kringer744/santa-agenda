@@ -147,7 +147,8 @@ serve(async (req) => {
 
       // Por simplicidade, vamos pegar o primeiro pet. Em um cenário real, você pode listar os pets e pedir para o cliente escolher.
       const firstPet = pets[0];
-      const reservationLink = `https://seu-app.com/client-reservation?tutor_id=${tutor.id}&pet_id=${firstPet.id}`; // TODO: Substitua 'https://seu-app.com' pela URL do seu app
+      // TODO: Substitua 'https://seu-app.com' pela URL do seu app
+      const reservationLink = `https://seu-app.com/client-reservation?tutor_id=${tutor.id}&pet_id=${firstPet.id}`; 
       const responseText = `Olá ${tutor.nome}! Para reservar a hospedagem do seu pet ${firstPet.nome} (${firstPet.especie === 'cachorro' ? '🐶' : '🐱'}), acesse o link abaixo:\n\n${reservationLink}\n\nSelecione as datas e finalize sua reserva.`;
 
       await fetch(`${apiUrl}/send/text`, {
