@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils';
 import { format, isBefore, isAfter, addDays, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
-import { QRCode } from 'qrcode.react'; // Revertido para named export
+// import { QRCode } from 'qrcode.react'; // Removido temporariamente
 import { supabase } from '@/integrations/supabase/client';
 
 interface DateRange {
@@ -395,12 +395,16 @@ export default function ClientReservation() {
                         className="w-48 h-48 border rounded-lg p-2" 
                       />
                     ) : (
-                      <QRCode 
-                        value={pixData.pixCopiaECola} 
-                        size={192} 
-                        level="H" 
-                        includeMargin={true} 
-                      />
+                      // <QRCode 
+                      //   value={pixData.pixCopiaECola} 
+                      //   size={192} 
+                      //   level="H" 
+                      //   includeMargin={true} 
+                      // />
+                      <div className="w-48 h-48 border rounded-lg p-2 flex items-center justify-center bg-muted text-muted-foreground">
+                        <QrCode className="w-12 h-12" />
+                        <span className="sr-only">QR Code Pix</span>
+                      </div>
                     )}
                   </div>
                   
