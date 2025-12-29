@@ -3,33 +3,10 @@ import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { 
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogTrigger 
-} from '@/components/ui/dialog';
-import { 
-  Building2, 
-  Plus, 
-  DollarSign,
-  Pencil,
-  Trash2,
-  Loader2,
-  Banknote,
-  CheckCircle,
-  XCircle,
-  Info
-} from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Building2, Plus, DollarSign, Pencil, Trash2, Loader2, Banknote, CheckCircle, XCircle, Info } from 'lucide-react';
 import { useUnidades, useCreateUnidade, useDeleteUnidade } from '@/hooks/useUnidades';
 import { useServicos, useCreateServico, useUpdateServico } from '@/hooks/useServicos';
 import { supabase } from '@/integrations/supabase/client';
@@ -40,9 +17,10 @@ export default function Configuracoes() {
   const [isServicoDialogOpen, setIsServicoDialogOpen] = useState(false);
   const [itauConfigured, setItauConfigured] = useState(false);
   const [loadingItauStatus, setLoadingItauStatus] = useState(true);
-
+  
   const { data: unidades = [], isLoading: loadingUnidades } = useUnidades();
   const { data: servicos = [], isLoading: loadingServicos } = useServicos();
+  
   const createUnidade = useCreateUnidade();
   const deleteUnidade = useDeleteUnidade();
   const createServico = useCreateServico();
@@ -69,12 +47,14 @@ export default function Configuracoes() {
         setLoadingItauStatus(false);
       }
     };
+    
     checkItauConfig();
   }, []);
 
   const handleAddUnidade = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    
     createUnidade.mutate({
       nome: formData.get('nome') as string,
       endereco: formData.get('endereco') as string || null,
@@ -90,6 +70,7 @@ export default function Configuracoes() {
   const handleAddServico = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    
     createServico.mutate({
       nome: formData.get('nome') as string,
       preco: parseFloat(formData.get('preco') as string) || 0,
@@ -187,33 +168,22 @@ export default function Configuracoes() {
                 <p className="text-center text-muted-foreground py-8 text-sm">Nenhuma unidade cadastrada</p>
               ) : (
                 unidades.map((unidade, index) => (
-                  <div 
-                    key={unidade.id}
-                    className="p-4 rounded-xl bg-muted/50 space-y-2"
-                    style={{ animationDelay: `${index * 50}ms` }}
-                  >
+                  <div key={unidade.id} className="p-4 rounded-xl bg-muted/50 space-y-2" style={{ animationDelay: `${index * 50}ms` }}>
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <h4 className="font-semibold text-foreground text-base">{unidade.nome}</h4>
                       <div className="flex gap-2">
                         <Button size="icon" variant="ghost" className="h-8 w-8">
                           <Pencil className="w-4 h-4" />
                         </Button>
-                        <Button 
-                          size="icon" 
-                          variant="ghost" 
-                          className="h-8 w-8 text-destructive"
-                          onClick={() => deleteUnidade.mutate(unidade.id)}
-                        >
+                        <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => deleteUnidade.mutate(unidade.id)}>
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
                     </div>
                     {(unidade.endereco || unidade.cidade || unidade.estado) && (
                       <p className="text-sm text-muted-foreground">
-                        {unidade.endereco}
-                        {unidade.endereco && (unidade.cidade || unidade.estado) ? ', ' : ''}
-                        {unidade.cidade}
-                        {unidade.cidade && unidade.estado ? ' - ' : ''}
+                        {unidade.endereco} {unidade.endereco && (unidade.cidade || unidade.estado) ? ', ' : ''}
+                        {unidade.cidade} {unidade.cidade && unidade.estado ? ' - ' : ''}
                         {unidade.estado}
                       </p>
                     )}
@@ -292,11 +262,7 @@ export default function Configuracoes() {
                 <p className="text-center text-muted-foreground py-8 text-sm">Nenhum serviço cadastrado</p>
               ) : (
                 servicos.map((servico, index) => (
-                  <div 
-                    key={servico.id}
-                    className="flex items-center gap-4 p-4 rounded-xl bg-honey-light/50"
-                    style={{ animationDelay: `${index * 50}ms` }}
-                  >
+                  <div key={servico.id} className="flex items-center gap-4 p-4 rounded-xl bg-honey-light/50" style={{ animationDelay: `${index * 50}ms` }}>
                     <span className="text-2xl">{servico.icone}</span>
                     <div className="flex-1">
                       <p className="font-medium text-foreground text-base">{servico.nome}</p>
@@ -344,20 +310,21 @@ export default function Configuracoes() {
                       Status: {itauConfigured ? 'Conectado' : 'Não Configurado'}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {itauConfigured 
-                        ? 'As credenciais do Itaú Pix estão configuradas.' 
+                      {itauConfigured
+                        ? 'As credenciais do Itaú Pix estão configuradas.'
                         : 'As variáveis de ambiente do Itaú Pix não foram encontradas.'}
                     </p>
                   </div>
                 </div>
               )}
+              
               <div className="space-y-2 p-4 bg-blue-50/50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                 <p className="font-semibold text-blue-700 dark:text-blue-300 flex items-center gap-2">
                   <Info className="w-4 h-4" />
                   Instruções de Configuração
                 </p>
                 <p className="text-sm text-blue-600 dark:text-blue-400">
-                  Para conectar ao Itaú Pix, você precisa definir as seguintes variáveis de ambiente (secrets) no seu projeto Supabase (em `Edge Functions > Secrets`):
+                  Para conectar ao Itaú Pix, você precisa definir as seguintes variáveis de ambiente (secrets) no seu projeto Supabase (em `Edge Functions &gt; Secrets`):
                 </p>
                 <ul className="list-disc list-inside text-sm text-blue-600 dark:text-blue-400 space-y-1">
                   <li>`ITAU_CLIENT_ID`: Seu Client ID do Itaú.</li>
