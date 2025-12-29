@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils';
 import { format, isBefore, isAfter, addDays, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
-import QRCode from 'qrcode.react'; // Corrigido: Usar exportação padrão
+import QRCode from 'qrcode.react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface DateRange {
