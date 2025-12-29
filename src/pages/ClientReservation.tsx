@@ -30,10 +30,9 @@ export default function ClientReservation() {
   const navigate = useNavigate();
   const tutorId = searchParams.get('tutor_id');
   const petId = searchParams.get('pet_id');
-  
-  const [dateRange, setDateRange] = useState<DateRange>({ 
-    from: undefined, 
-    to: undefined 
+  const [dateRange, setDateRange] = useState<DateRange>({
+    from: undefined,
+    to: undefined
   });
   const [selectedUnidadeId, setSelectedUnidadeId] = useState<string | undefined>(undefined);
   const [reservationValue, setReservationValue] = useState<number>(0);
@@ -54,14 +53,14 @@ export default function ClientReservation() {
   
   const currentPet = useMemo(() => pets.find(p => p.id === petId), [pets, petId]);
   const currentTutor = useMemo(() => tutores.find(t => t.id === tutorId), [tutores, tutorId]);
-
+  
   useEffect(() => {
     if (!tutorId || !petId) {
       toast.error('Informações do tutor ou pet ausentes. Por favor, inicie a reserva pelo WhatsApp.');
       navigate('/'); // Redireciona para a home ou uma página de erro
     }
   }, [tutorId, petId, navigate]);
-
+  
   // Calculate reservation value based on dates and pet type
   useEffect(() => {
     if (dateRange.from && dateRange.to && currentPet) {
@@ -73,7 +72,7 @@ export default function ClientReservation() {
       setReservationValue(0);
     }
   }, [dateRange, currentPet]);
-
+  
   // Polling for Pix payment status
   useEffect(() => {
     if (currentStep === 3 && pixData?.txid && reservaId && paymentStatus === 'pending') {
@@ -83,16 +82,16 @@ export default function ClientReservation() {
           const { data: authData, error: authError } = await supabase.functions.invoke('itau-auth');
           if (authError) throw authError;
           if (!authData?.access_token) throw new Error('Failed to get Itaú access token.');
-
+          
           // 2. Check Pix Payment Status
           const { data: pixCheckData, error: pixCheckError } = await supabase.functions.invoke('itau-pix-check', {
             body: {
               access_token: authData.access_token,
               txid: pixData.txid,
-            },
+            }
           });
           if (pixCheckError) throw pixCheckError;
-
+          
           if (pixCheckData?.is_paid) {
             setPaymentStatus('paid');
             clearInterval(interval);
@@ -118,7 +117,6 @@ export default function ClientReservation() {
       }, 5000); // Poll every 5 seconds
       
       setPollingInterval(interval as unknown as number); // Store interval ID
-      
       return () => {
         if (interval) clearInterval(interval);
       };
@@ -127,7 +125,7 @@ export default function ClientReservation() {
       setPollingInterval(null);
     }
   }, [currentStep, pixData, reservaId, paymentStatus, updateReservaStatus, pollingInterval]);
-
+  
   const getAvailableVagas = (unidadeId: string, date: Date, especie: 'cachorro' | 'gato') => {
     const dateString = format(date, 'yyyy-MM-dd');
     const vagaDoDia = vagasDia.find(v => v.unidade_id === unidadeId && v.data === dateString);
@@ -143,23 +141,23 @@ export default function ClientReservation() {
       ? vagaDoDia.vagas_cachorro_total - vagaDoDia.vagas_cachorro_ocupadas
       : vagaDoDia.vagas_gato_total - vagaDoDia.vagas_gato_ocupadas;
   };
-
+  
   const isDateUnavailable = (date: Date) => {
     if (!selectedUnidadeId || !currentPet) return false;
     const available = getAvailableVagas(selectedUnidadeId, date, currentPet.especie);
     return available <= 0;
   };
-
+  
   const handleSelectDates = (range: DateRange) => {
     setDateRange(range);
   };
-
+  
   const handleConfirmReservation = async () => {
     if (!dateRange.from || !dateRange.to || !selectedUnidadeId || !currentPet || !currentTutor || reservationValue <= 0) {
       toast.error('Por favor, preencha todos os dados da reserva.');
       return;
     }
-
+    
     // 1. Create pending reservation in DB
     const newReservaData = {
       tutor_id: currentTutor.id,
@@ -170,17 +168,17 @@ export default function ClientReservation() {
       servicos_adicionais: [],
       valor_total: reservationValue,
     };
-
+    
     try {
       const createdReserva = await createReserva.mutateAsync(newReservaData);
       setReservaId(createdReserva.id);
       toast.success('Reserva criada com sucesso! Gerando Pix para pagamento.');
-
+      
       // 2. Get Itaú Auth Token
       const { data: authData, error: authError } = await supabase.functions.invoke('itau-auth');
       if (authError) throw authError;
       if (!authData?.access_token) throw new Error('Failed to get Itaú access token.');
-
+      
       // 3. Create Pix Charge
       const txid = `RESERVA${createdReserva.id.replace(/-/g, '').substring(0, 25).toUpperCase()}`; // Generate unique txid
       const { data: pixCreateData, error: pixCreateError } = await supabase.functions.invoke('itau-pix-create', {
@@ -188,10 +186,10 @@ export default function ClientReservation() {
           access_token: authData.access_token,
           valor: reservationValue,
           txid: txid,
-        },
+        }
       });
       if (pixCreateError) throw pixCreateError;
-
+      
       if (pixCreateData?.success && pixCreateData.pix_data) {
         const { pixCopiaECola, imagem_base64 } = pixCreateData.pix_data;
         setPixData({
@@ -199,7 +197,7 @@ export default function ClientReservation() {
           pixCopiaECola: pixCopiaECola,
           txid: txid,
         });
-
+        
         // Update reservation with Pix details
         await supabase
           .from('reservas')
@@ -210,7 +208,7 @@ export default function ClientReservation() {
             pagamento_status: 'pendente',
           })
           .eq('id', createdReserva.id);
-
+        
         setCurrentStep(3); // Move to payment status step
       } else {
         throw new Error('Falha ao gerar dados do Pix.');
@@ -218,14 +216,13 @@ export default function ClientReservation() {
     } catch (error: any) {
       console.error('Erro ao confirmar reserva ou gerar Pix:', error);
       toast.error(`Erro: ${error.message}`);
-      
       // If reservation was created but Pix failed, mark reservation as canceled or pending payment error
       if (reservaId) {
         updateReservaStatus.mutate({ id: reservaId, status: 'cancelada' });
       }
     }
   };
-
+  
   if (isLoading) {
     return (
       <Layout>
@@ -235,7 +232,7 @@ export default function ClientReservation() {
       </Layout>
     );
   }
-
+  
   if (!currentTutor || !currentPet) {
     return (
       <Layout>
@@ -248,7 +245,7 @@ export default function ClientReservation() {
       </Layout>
     );
   }
-
+  
   return (
     <Layout>
       <div className="max-w-3xl mx-auto space-y-8 py-8">
@@ -258,7 +255,7 @@ export default function ClientReservation() {
             Olá <span className="font-semibold">{currentTutor.nome}</span>! Vamos reservar um lugar para <span className="font-semibold">{currentPet.nome}</span> ({currentPet.especie === 'cachorro' ? '🐶' : '🐱'}).
           </p>
         </div>
-
+        
         {currentStep === 1 && (
           <Card className="animate-slide-up">
             <CardHeader>
@@ -287,7 +284,10 @@ export default function ClientReservation() {
                   mode="range"
                   selected={dateRange}
                   onSelect={handleSelectDates}
-                  disabled={(date) => isBefore(date, new Date()) || isDateUnavailable(date)}
+                  disabled={(date) => 
+                    isBefore(date, new Date()) || 
+                    isDateUnavailable(date)
+                  }
                   numberOfMonths={window.innerWidth > 768 ? 2 : 1} // 2 meses em desktop, 1 em mobile
                   locale={ptBR}
                   className="rounded-md border shadow-card p-3"
@@ -318,7 +318,7 @@ export default function ClientReservation() {
             </CardContent>
           </Card>
         )}
-
+        
         {currentStep === 2 && (
           <Card className="animate-slide-up">
             <CardHeader>
@@ -344,7 +344,8 @@ export default function ClientReservation() {
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">Período:</p>
                 <p className="font-semibold text-foreground">
-                  {dateRange.from && format(dateRange.from, 'dd/MM/yyyy', { locale: ptBR })} - {dateRange.to && format(dateRange.to, 'dd/MM/yyyy', { locale: ptBR })}
+                  {dateRange.from && format(dateRange.from, 'dd/MM/yyyy', { locale: ptBR })} - 
+                  {dateRange.to && format(dateRange.to, 'dd/MM/yyyy', { locale: ptBR })}
                 </p>
               </div>
               
@@ -368,7 +369,7 @@ export default function ClientReservation() {
             </CardContent>
           </Card>
         )}
-
+        
         {currentStep === 3 && pixData && (
           <Card className="animate-fade-in">
             <CardHeader>
