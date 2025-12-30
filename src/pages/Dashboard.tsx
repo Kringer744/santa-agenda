@@ -56,22 +56,21 @@ export default function Dashboard() {
             variant="dental"
           />
           <StatsCard
+            title="Total de Dentistas"
+            value={dentistas.length}
+            icon={<Stethoscope size={24} />}
+            variant="soft"
+          />
+          <StatsCard
             title="Consultas Hoje"
             value={consultasHoje.length}
             subtitle="Atendimentos previstos"
-            icon={<Stethoscope size={24} />}
-            variant="soft"
+            icon={<CalendarCheck size={24} />}
           />
           <StatsCard
             title="Agendamentos"
             value={consultasPendentes}
             subtitle="Pendentes/Confirmados"
-            icon={<CalendarCheck size={24} />}
-          />
-          <StatsCard
-            title="Capacidade"
-            value={clinicas[0]?.capacidade_atendimentos || 0}
-            subtitle="Atendimentos/dia"
             icon={<TrendingUp size={24} />}
             variant="muted"
           />
