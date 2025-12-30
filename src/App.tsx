@@ -10,8 +10,6 @@ import Pets from "./pages/Pets";
 import WhatsApp from "./pages/WhatsApp";
 import Configuracoes from "./pages/Configuracoes";
 import ClientReservation from "./pages/ClientReservation";
-import ClientRegistration from "./pages/ClientRegistration"; // Importar a nova página
-import PetRegistration from "./pages/PetRegistration";     // Importar a nova página
 import NotFound from "./pages/NotFound";
 import { MobileHeader } from "./components/layout/MobileHeader"; // Import MobileHeader
 
@@ -30,8 +28,7 @@ const App = () => (
           <Route path="/pets" element={<Pets />} />
           <Route path="/whatsapp" element={<WhatsApp />} />
           <Route path="/configuracoes" element={<Configuracoes />} />
-          <Route path="/client-registration" element={<ClientRegistration />} /> {/* Nova rota */}
-          <Route path="/pet-registration" element={<PetRegistration />} />       {/* Nova rota */}
+          {/* Removed ClientRegistration and PetRegistration routes */}
           <Route path="/client-reservation" element={<ClientReservation />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

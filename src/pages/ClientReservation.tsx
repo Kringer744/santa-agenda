@@ -19,6 +19,8 @@ import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { sendImageMessage, sendTextMessage } from '@/lib/uazap';
+import { TutorSelectorAndCreator } from '@/components/reservation/TutorSelectorAndCreator';
+import { PetSelectorAndCreator } from '@/components/reservation/PetSelectorAndCreator';
 
 interface DateRange {
   from: Date | undefined;
@@ -62,7 +64,6 @@ export default function ClientReservation() {
   
   const currentTutor = useMemo(() => tutores.find(t => t.id === selectedTutorId), [tutores, selectedTutorId]);
   const currentPet = useMemo(() => pets.find(p => p.id === selectedPetId), [pets, selectedPetId]);
-  const tutorPets = useMemo(() => pets.filter(p => p.tutor_id === selectedTutorId), [pets, selectedTutorId]);
 
   // Load WhatsApp config
   useEffect(() => {
@@ -297,48 +298,22 @@ export default function ClientReservation() {
               <CardDescription>Escolha o tutor, pet, período de hospedagem e a unidade desejada.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="tutor_id">Tutor</Label>
-                <Select 
-                  value={selectedTutorId} 
-                  onValueChange={(value) => {
-                    setSelectedTutorId(value);
-                    setSelectedPetId(undefined); // Reset pet selection when tutor changes
-                  }}
-                  disabled={!!initialTutorId} // Disable if tutor_id came from URL
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o tutor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {tutores.map(tutor => (
-                      <SelectItem key={tutor.id} value={tutor.id}>
-                        {tutor.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <TutorSelectorAndCreator
+                selectedTutorId={selectedTutorId}
+                onSelectTutor={setSelectedTutorId}
+                tutores={tutores}
+                isLoadingTutores={loadingTutores}
+              />
 
-              <div className="space-y-2">
-                <Label htmlFor="pet_id">Pet</Label>
-                <Select 
-                  value={selectedPetId} 
-                  onValueChange={setSelectedPetId}
-                  disabled={!selectedTutorId || !!initialPetId} // Disable if no tutor selected or pet_id came from URL
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={selectedTutorId ? "Selecione o pet" : "Selecione o tutor primeiro"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {tutorPets.map(pet => (
-                      <SelectItem key={pet.id} value={pet.id}>
-                        {pet.especie === 'cachorro' ? '🐶' : '🐱'} {pet.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {selectedTutorId && (
+                <PetSelectorAndCreator
+                  selectedTutorId={selectedTutorId}
+                  selectedPetId={selectedPetId}
+                  onSelectPet={setSelectedPetId}
+                  pets={pets}
+                  isLoadingPets={loadingPets}
+                />
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="unidade_id">Unidade</Label>
