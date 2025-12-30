@@ -91,6 +91,7 @@ export async function getDentista(dentistaId: string): Promise<Dentista | null> 
   }
 }
 
+// Busca aniversariantes do dia
 export async function getPatientsWithBirthdayToday(): Promise<Paciente[]> {
   try {
     const today = new Date();
@@ -115,6 +116,30 @@ export async function getPatientsWithBirthdayToday(): Promise<Paciente[]> {
   }
 }
 
+// NOVO: Busca aniversariantes do mês atual
+export async function getPatientsWithBirthdayThisMonth(): Promise<Paciente[]> {
+  try {
+    const today = new Date();
+    const currentMonth = today.getMonth() + 1;
+
+    const { data, error } = await supabase
+      .from('pacientes')
+      .select('*');
+
+    if (error) throw error;
+
+    const patients = data as any as Paciente[];
+    return patients.filter(paciente => {
+      if (!paciente.data_nascimento) return false;
+      const dob = new Date(paciente.data_nascimento);
+      return dob.getMonth() + 1 === currentMonth;
+    });
+  } catch (error) {
+    console.error('Erro ao carregar pacientes com aniversário no mês:', error);
+    return [];
+  }
+}
+
 function replaceTemplateVariables(
   template: string,
   paciente: Paciente,
@@ -122,6 +147,8 @@ function replaceTemplateVariables(
   consulta: Consulta | null
 ): string {
   let message = template.replace(/\{\{nome_paciente\}\}/g, paciente.nome);
+  // Compatibilidade com template {{nome}}
+  message = message.replace(/\{\{nome\}\}/g, paciente.nome);
 
   if (dentista) {
     message = message.replace(/\{\{nome_dentista\}\}/g, dentista.nome);

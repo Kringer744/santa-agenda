@@ -48,17 +48,33 @@ export default function ClientAppointment() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      if (!nome || !telefone || !cpf) {
+        toast.error("Por favor, preencha todos os campos.");
+        return;
+      }
       const res = await createPaciente.mutateAsync({ 
         nome, telefone, cpf, tags: ['cliente-web'], email: null, data_nascimento: null 
       });
       toast.success(`Olá ${res.nome}, vamos agendar sua consulta.`);
       setStep(2);
-    } catch (err: any) { toast.error("Verifique os dados informados."); }
+    } catch (err: any) { 
+      console.error("Erro no cadastro:", err);
+      toast.error(`Erro ao cadastrar: ${err.message || 'Verifique se os dados já existem.'}`); 
+    }
   };
 
   const handleBook = async () => {
     const pacienteId = pacienteIdUrl || pacientes.find(p => p.telefone === telefone)?.id;
-    if (!pacienteId || !selectedDate || !selectedSlot || !selectedDentistaId) return;
+    
+    if (clinicas.length === 0) {
+      toast.error("Erro interno: Clínica não configurada. Avise o suporte.");
+      return;
+    }
+
+    if (!pacienteId || !selectedDate || !selectedSlot || !selectedDentistaId) {
+      toast.error("Por favor, selecione o dentista, a data e o horário.");
+      return;
+    }
 
     const start = parseISO(`${format(selectedDate, 'yyyy-MM-dd')}T${selectedSlot}:00`);
     const end = addMinutes(start, 30);
@@ -80,7 +96,10 @@ export default function ClientAppointment() {
       setPixData({ qrCodeBase64: 'placeholder', pixCopiaECola: '00020126360014BR.GOV.BCB.PIX0114241648318805204000053039865802BR5925DentalClinic6009SAO PAULO62070503***6304' });
       setStep(4);
       toast.success("Reserva realizada! Efetue o pagamento para confirmar.");
-    } catch (err: any) { toast.error("Erro ao gerar agendamento."); }
+    } catch (err: any) { 
+      console.error("Erro no agendamento:", err);
+      toast.error(`Erro ao gerar agendamento: ${err.message}`); 
+    }
   };
 
   return (
@@ -116,7 +135,7 @@ export default function ClientAppointment() {
                 </div>
               </div>
               <Button type="submit" className="w-full h-12 bg-primary hover:bg-primary/90" disabled={createPaciente.isPending}>
-                Próximo Passo
+                {createPaciente.isPending ? <Loader2 className="animate-spin" /> : 'Próximo Passo'}
               </Button>
             </form>
           )}
@@ -126,7 +145,9 @@ export default function ClientAppointment() {
               <div className="space-y-3">
                 <Label className="text-base font-bold">1. Selecione o Dentista</Label>
                 <div className="grid grid-cols-1 gap-3">
-                  {dentistas.map(d => (
+                  {dentistas.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">Nenhum dentista disponível no momento.</p>
+                  ) : dentistas.map(d => (
                     <button 
                       key={d.id} 
                       onClick={() => setSelectedDentistaId(d.id)}
@@ -171,7 +192,7 @@ export default function ClientAppointment() {
               </Button>
               
               <div className="space-y-4">
-                <Label className="text-lg font-bold">Horários para {format(selectedDate!, "dd 'de' MMMM", { locale: ptBR })}</Label>
+                <Label className="text-lg font-bold">Horários para {selectedDate ? format(selectedDate, "dd 'de' MMMM", { locale: ptBR }) : ''}</Label>
                 {availableSlots.length > 0 ? (
                   <div className="grid grid-cols-3 gap-2">
                     {availableSlots.map(slot => (
