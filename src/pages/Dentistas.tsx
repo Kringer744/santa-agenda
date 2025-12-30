@@ -19,10 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Plus, Search, Trash2, Loader2, Smile, Stethoscope, Mail, Phone } from 'lucide-react'; // Replaced Tooth with Smile
+import { Plus, Search, Trash2, Loader2, Smile, Mail, Phone } from 'lucide-react'; 
 import { useDentistas, useCreateDentista, useDeleteDentista } from '@/hooks/useDentistas';
-import { usePacientes } from '@/hooks/usePacientes';
 import { cn } from '@/lib/utils';
 
 export default function Dentistas() {
@@ -31,7 +29,6 @@ export default function Dentistas() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
   const { data: dentistas = [], isLoading } = useDentistas();
-  const { data: pacientes = [] } = usePacientes();
   const createDentista = useCreateDentista();
   const deleteDentista = useDeleteDentista();
 
@@ -176,7 +173,7 @@ export default function Dentistas() {
                     "h-32 flex items-center justify-center text-6xl transition-transform duration-300 group-hover:scale-110 relative",
                     dentista.especialidade === 'ortodontia' ? 'bg-mint-light' : 'bg-coral-light'
                   )}>
-                    <Smile className="w-12 h-12 text-primary-foreground" /> {/* Replaced Tooth with Smile */}
+                    <Smile className="w-12 h-12 text-primary-foreground" />
                     <Button 
                       size="icon" 
                       variant="ghost" 

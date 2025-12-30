@@ -1,6 +1,6 @@
 import { Layout } from '@/components/layout/Layout';
 import { StatsCard } from '@/components/dashboard/StatsCard';
-import { Smile, CalendarCheck, Users, TrendingUp, Loader2, Stethoscope } from 'lucide-react'; // Replaced Tooth with Smile
+import { CalendarCheck, Users, TrendingUp, Loader2, Stethoscope } from 'lucide-react'; 
 import { useConsultas } from '@/hooks/useConsultas';
 import { useDentistas } from '@/hooks/useDentistas';
 import { usePacientes } from '@/hooks/usePacientes';
@@ -10,16 +10,6 @@ import { useAgendaDia } from '@/hooks/useAgendaDia';
 import { ConsultasList } from '@/components/dashboard/ConsultasList';
 import { ProcedimentosHoje } from '@/components/dashboard/ProcedimentosHoje';
 import { AgendaChart } from '@/components/dashboard/AgendaChart';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
-
-const statusColors: Record<string, string> = {
-  agendada: 'bg-honey-light text-accent-foreground',
-  confirmada: 'bg-mint-light text-secondary',
-  realizada: 'bg-coral-light text-primary',
-  cancelada: 'bg-destructive/10 text-destructive',
-  reagendada: 'bg-blush-light text-blush',
-};
 
 export default function Dashboard() {
   const hoje = new Date().toISOString().split('T')[0];

@@ -1,21 +1,20 @@
-import { AgendaDentista, Dentista, Clinica } from '@/types'; // Updated types
+import { AgendaDentista, Dentista } from '@/types'; // Removed Clinica
 import { cn } from '@/lib/utils';
 
 interface AgendaChartProps {
   agenda: AgendaDentista[]; // Changed from vagas
   dentistas: Dentista[];
-  clinicas: Clinica[];
+  clinicas: any[]; // Changed to any to satisfy the prop but kept simple
 }
 
-export function AgendaChart({ agenda, dentistas, clinicas }: AgendaChartProps) {
+export function AgendaChart({ agenda, dentistas }: AgendaChartProps) { // Removed clinicas from destructuring
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     return date.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit' });
   };
 
   const getDentistaName = (id: string) => dentistas.find(d => d.id === id)?.nome || 'Dentista Desconhecido';
-  const getClinicaName = (id: string) => clinicas.find(c => c.id === id)?.nome || 'Clínica Desconhecida';
-
+  
   return (
     <div className="bg-card rounded-2xl p-4 md:p-6 shadow-card animate-slide-up">
       <h3 className="text-base md:text-lg font-semibold text-foreground mb-4 md:mb-6">Agenda por Dentista</h3>

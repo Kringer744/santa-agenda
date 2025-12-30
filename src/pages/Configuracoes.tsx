@@ -6,19 +6,18 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Building2, Plus, DollarSign, Pencil, Trash2, Loader2, Stethoscope } from 'lucide-react'; // Updated icons
-import { useClinicas, useCreateClinica, useDeleteClinica } from '@/hooks/useClinicas'; // Updated hooks
-import { useProcedimentos, useCreateProcedimento } from '@/hooks/useProcedimentos'; // Updated hooks
-import { toast } from 'sonner';
+import { Building2, Plus, DollarSign, Pencil, Trash2, Loader2, Stethoscope } from 'lucide-react'; 
+import { useClinicas, useCreateClinica, useDeleteClinica } from '@/hooks/useClinicas'; 
+import { useProcedimentos, useCreateProcedimento } from '@/hooks/useProcedimentos'; 
 
 export default function Configuracoes() {
   const [isClinicaDialogOpen, setIsClinicaDialogOpen] = useState(false);
   const [isProcedimentoDialogOpen, setIsProcedimentoDialogOpen] = useState(false);
-  const { data: clinicas = [], isLoading: loadingClinicas } = useClinicas(); // Updated hook
-  const createClinica = useCreateClinica(); // Updated hook
-  const deleteClinica = useDeleteClinica(); // Updated hook
-  const { data: procedimentos = [], isLoading: loadingProcedimentos } = useProcedimentos(); // Updated hook
-  const createProcedimento = useCreateProcedimento(); // Updated hook
+  const { data: clinicas = [], isLoading: loadingClinicas } = useClinicas(); 
+  const createClinica = useCreateClinica(); 
+  const deleteClinica = useDeleteClinica(); 
+  const { data: procedimentos = [], isLoading: loadingProcedimentos } = useProcedimentos(); 
+  const createProcedimento = useCreateProcedimento(); 
 
   const handleAddClinica = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -28,7 +27,7 @@ export default function Configuracoes() {
       endereco: formData.get('endereco') as string || null,
       cidade: formData.get('cidade') as string || null,
       estado: formData.get('estado') as string || null,
-      capacidade_atendimentos: parseInt(formData.get('capacidade_atendimentos') as string) || 20, // Changed capacity
+      capacidade_atendimentos: parseInt(formData.get('capacidade_atendimentos') as string) || 20, 
     }, {
       onSuccess: () => setIsClinicaDialogOpen(false)
     });
@@ -40,7 +39,7 @@ export default function Configuracoes() {
     createProcedimento.mutate({
       nome: formData.get('nome') as string,
       preco: parseFloat(formData.get('preco') as string) || 0,
-      icone: formData.get('icone') as string || '🦷', // Default icon
+      icone: formData.get('icone') as string || '🦷', 
       ativo: true,
     }, {
       onSuccess: () => setIsProcedimentoDialogOpen(false)

@@ -3,19 +3,18 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
-import { Loader2, Stethoscope, Plus } from 'lucide-react'; // Updated icons
-import { Dentista } from '@/types'; // Updated type
-import { useCreateDentista } from '@/hooks/useDentistas'; // Updated hook
+import { Loader2, Stethoscope } from 'lucide-react'; 
+import { Dentista } from '@/types'; 
+import { useCreateDentista } from '@/hooks/useDentistas'; 
 import { toast } from 'sonner';
 
 interface DentistaSelectorAndCreatorProps {
-  selectedPacienteId: string | undefined; // Changed from selectedTutorId
-  selectedDentistaId: string | undefined; // Changed from selectedPetId
-  onSelectDentista: (dentistaId: string) => void; // Changed from onSelectPet
-  dentistas: Dentista[]; // Changed from pets
-  isLoadingDentistas: boolean; // Changed from isLoadingPets
+  selectedPacienteId: string | undefined; 
+  selectedDentistaId: string | undefined; 
+  onSelectDentista: (dentistaId: string) => void; 
+  dentistas: Dentista[]; 
+  isLoadingDentistas: boolean; 
 }
 
 export function DentistaSelectorAndCreator({
@@ -26,13 +25,13 @@ export function DentistaSelectorAndCreator({
   isLoadingDentistas,
 }: DentistaSelectorAndCreatorProps) {
   const [showNewDentistaForm, setShowNewDentistaForm] = useState(false);
-  const createDentista = useCreateDentista(); // Updated hook
+  const createDentista = useCreateDentista(); 
 
-  const availableDentistas = useMemo(() => dentistas, [dentistas]); // All dentists are available regardless of patient
+  const availableDentistas = useMemo(() => dentistas, [dentistas]); 
 
   const handleCreateNewDentista = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!selectedPacienteId) { // Still need a patient context for the appointment
+    if (!selectedPacienteId) { 
       toast.error('Selecione um paciente primeiro.');
       return;
     }

@@ -18,7 +18,7 @@ import {
   DialogTrigger 
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Calendar, Plus, Search, ChevronRight, Loader2, Smile, Stethoscope } from 'lucide-react'; // Replaced Tooth with Smile
+import { Calendar, Plus, Search, ChevronRight, Loader2, Stethoscope } from 'lucide-react'; 
 import { useConsultas, useCreateConsulta, useUpdateConsultaStatus } from '@/hooks/useConsultas';
 import { useDentistas } from '@/hooks/useDentistas';
 import { usePacientes } from '@/hooks/usePacientes';
@@ -33,14 +33,6 @@ const statusColors: Record<string, string> = {
   realizada: 'bg-coral-light text-primary border-coral',
   cancelada: 'bg-destructive/10 text-destructive border-destructive/30',
   reagendada: 'bg-blush-light text-blush border-blush',
-};
-
-const statusLabels: Record<string, string> = {
-  agendada: 'Agendada',
-  confirmada: 'Confirmada',
-  realizada: 'Realizada',
-  cancelada: 'Cancelada',
-  reagendada: 'Reagendada',
 };
 
 export default function Consultas() {
