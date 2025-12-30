@@ -159,14 +159,20 @@ export default function WhatsApp() {
         .select('*')
         .order('tipo');
         
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error loading templates:', error); // Log mais específico
+        throw error;
+      }
       
       if (data) {
         setTemplates(data as WhatsAppTemplate[]);
+      } else {
+        console.log('Nenhum dado retornado para whatsapp_templates, definindo array vazio.');
+        setTemplates([]);
       }
-    } catch (error) {
-      console.error('Erro ao carregar templates:', error);
-      toast.error('Erro ao carregar templates');
+    } catch (error: any) { // Captura qualquer tipo de erro
+      console.error('Erro geral ao carregar templates:', error);
+      toast.error(`Erro ao carregar templates: ${error.message || 'Detalhes desconhecidos'}`);
     }
   };
 
