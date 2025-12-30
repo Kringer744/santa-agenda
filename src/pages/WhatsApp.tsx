@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, } from '@/components/ui/card';
-import { MessageSquare, Send, CheckCircle, Clock, Zap, Smartphone, Upload, Users, Play, Pause, Trash2, FileSpreadsheet, Bot, List, Save } from 'lucide-react';
+import { MessageSquare, Send, CheckCircle, Clock, Zap, Smartphone, Upload, Users, Play, Pause, Trash2, FileSpreadsheet, Bot, List, Save, CalendarDays, Camera, Star, Gift } from 'lucide-react'; // Importar ícones Lucide
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -461,6 +461,16 @@ export default function WhatsApp() {
       toast.success('Menu enviado com sucesso!');
     } else {
       toast.error(result.error || 'Erro ao enviar menu');
+    }
+  };
+
+  const getTemplateIcon = (type: string) => {
+    switch (type) {
+      case 'pre-estadia': return <CalendarDays className="w-5 h-5 text-muted-foreground" />;
+      case 'durante': return <Camera className="w-5 h-5 text-muted-foreground" />;
+      case 'pos-estadia': return <Star className="w-5 h-5 text-muted-foreground" />;
+      case 'aniversario': return <Gift className="w-5 h-5 text-muted-foreground" />;
+      default: return <MessageSquare className="w-5 h-5 text-muted-foreground" />;
     }
   };
 
@@ -1017,61 +1027,46 @@ Ou: Nome,5511999999999"
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
               {templates.map((template, index) => (
                 <Card key={template.id} className="animate-slide-up" style={{ animationDelay: `${index * 50}ms` }}>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xl">
-                          {template.tipo === 'pre-estadia' ? '📅' : 
-                           template.tipo === 'durante' ? '📸' : 
-                           template.tipo === 'pos-estadia' ? '⭐' : 
-                           template.tipo === 'aniversario' ? '🎉' : '💬'}
-                        </span>
-                        <Input
-                          value={template.nome}
-                          onChange={(e) => handleUpdateTemplate(template.id, 'nome', e.target.value)}
-                          className="text-base md:text-lg font-bold text-foreground h-auto p-0 border-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                        />
-                      </div>
-                      <Switch
-                        checked={template.ativo || false}
-                        onCheckedChange={(checked) => handleUpdateTemplate(template.id, 'ativo', checked)}
-                      />
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <div className="flex items-center gap-2">
+                      {getTemplateIcon(template.tipo)}
+                      <h4 className="text-base md:text-lg font-bold text-foreground">
+                        {template.nome}
+                        {template.tipo === 'pre-estadia' && <span className="text-sm text-muted-foreground ml-2">(1 dia antes)</span>}
+                      </h4>
                     </div>
+                    <Switch
+                      checked={template.ativo || false}
+                      onCheckedChange={(checked) => handleUpdateTemplate(template.id, 'ativo', checked)}
+                    />
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-2">
-                      <Label className="text-xs text-muted-foreground">Descrição</Label>
-                      <Textarea
-                        value={template.descricao || ''}
-                        onChange={(e) => handleUpdateTemplate(template.id, 'descricao', e.target.value)}
-                        className="min-h-16 resize-none"
-                        placeholder="Descrição do template..."
-                      />
-                    </div>
-                    
-                    <div className="space-y-2 mt-3">
-                      <Label className="text-xs text-muted-foreground">Mensagem</Label>
+                    <div className="p-3 rounded-lg bg-muted/50 border border-border mb-3">
                       <Textarea
                         value={template.mensagem}
                         onChange={(e) => handleUpdateTemplate(template.id, 'mensagem', e.target.value)}
-                        className="min-h-24 resize-none"
+                        className="min-h-24 resize-none border-none focus-visible:ring-0 focus-visible:ring-offset-0 p-0 bg-transparent"
                         placeholder="Mensagem do template..."
                       />
                     </div>
                     
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <Badge variant="secondary" className="text-xs cursor-pointer hover:bg-secondary/80">
+                    <div className="flex flex-wrap gap-2">
+                      <Badge variant="secondary" className="bg-mint-light text-secondary text-xs">
                         {'{{nome_pet}}'}
                       </Badge>
-                      <Badge variant="secondary" className="text-xs cursor-pointer hover:bg-secondary/80">
+                      <Badge variant="secondary" className="bg-mint-light text-secondary text-xs">
                         {'{{nome_tutor}}'}
                       </Badge>
-                      <Badge variant="secondary" className="text-xs cursor-pointer hover:bg-secondary/80">
-                        {'{{data_checkin}}'}
-                      </Badge>
-                      <Badge variant="secondary" className="text-xs cursor-pointer hover:bg-secondary/80">
-                        {'{{data_checkout}}'}
-                      </Badge>
+                      {(template.tipo === 'pre-estadia' || template.tipo === 'durante') && (
+                        <Badge variant="secondary" className="bg-mint-light text-secondary text-xs">
+                          {'{{data_checkin}}'}
+                        </Badge>
+                      )}
+                      {template.tipo === 'pos-estadia' && (
+                        <Badge variant="secondary" className="bg-mint-light text-secondary text-xs">
+                          {'{{data_checkout}}'}
+                        </Badge>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
