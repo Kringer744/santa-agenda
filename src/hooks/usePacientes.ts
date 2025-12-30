@@ -1,36 +1,35 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
-import { Paciente } from '@/types'; // Updated type
+import { Paciente } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 
-export function usePacientes() { // Changed hook name
+export function usePacientes() {
   return useQuery<Paciente[]>({
-    queryKey: ['pacientes'], // Changed query key
+    queryKey: ['pacientes'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('pacientes').select('*'); // Changed table name
+      const { data, error } = await supabase.from('pacientes').select('*');
       if (error) throw error;
-      return data as Paciente[];
+      return data as any as Paciente[];
     },
   });
 }
 
-export function useCreatePaciente() { // Changed hook name
+export function useCreatePaciente() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
   return useMutation({
-    mutationFn: async (paciente: Omit<Paciente, 'id' | 'created_at' | 'updated_at'>) => { // Updated type
-      const { data, error } = await supabase
-        .from('pacientes') // Changed table name
+    mutationFn: async (paciente: Omit<Paciente, 'id' | 'created_at' | 'updated_at'>) => {
+      const { data, error } = await (supabase.from('pacientes') as any)
         .insert(paciente)
         .select()
         .single();
 
       if (error) throw error;
-      return data as Paciente;
+      return data as any as Paciente;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pacientes'] }); // Changed query key
+      queryClient.invalidateQueries({ queryKey: ['pacientes'] });
       toast({
         title: 'Paciente cadastrado com sucesso!'
       });
@@ -45,17 +44,17 @@ export function useCreatePaciente() { // Changed hook name
   });
 }
 
-export function useDeletePaciente() { // Changed hook name
+export function useDeletePaciente() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('pacientes').delete().eq('id', id); // Changed table name
+      const { error } = await supabase.from('pacientes').delete().eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pacientes'] }); // Changed query key
+      queryClient.invalidateQueries({ queryKey: ['pacientes'] });
       toast({
         title: 'Paciente excluído com sucesso!'
       });

@@ -1,36 +1,35 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
-import { Procedimento } from '@/types'; // Updated type
+import { Procedimento } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 
-export function useProcedimentos() { // Changed hook name
+export function useProcedimentos() {
   return useQuery<Procedimento[]>({
-    queryKey: ['procedimentos'], // Changed query key
+    queryKey: ['procedimentos'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('procedimentos').select('*'); // Changed table name
+      const { data, error } = await supabase.from('procedimentos').select('*');
       if (error) throw error;
-      return data as Procedimento[];
+      return data as any as Procedimento[];
     },
   });
 }
 
-export function useCreateProcedimento() { // Changed hook name
+export function useCreateProcedimento() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
   return useMutation({
-    mutationFn: async (procedimento: Omit<Procedimento, 'id' | 'created_at'>) => { // Updated type
-      const { data, error } = await supabase
-        .from('procedimentos') // Changed table name
+    mutationFn: async (procedimento: Omit<Procedimento, 'id' | 'created_at'>) => {
+      const { data, error } = await (supabase.from('procedimentos') as any)
         .insert(procedimento)
         .select()
         .single();
 
       if (error) throw error;
-      return data as Procedimento;
+      return data as any as Procedimento;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['procedimentos'] }); // Changed query key
+      queryClient.invalidateQueries({ queryKey: ['procedimentos'] });
       toast({
         title: 'Procedimento criado com sucesso!'
       });
@@ -45,24 +44,23 @@ export function useCreateProcedimento() { // Changed hook name
   });
 }
 
-export function useUpdateProcedimento() { // Changed hook name
+export function useUpdateProcedimento() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
   return useMutation({
-    mutationFn: async ({ id, ...procedimento }: Partial<Procedimento> & { id: string }) => { // Updated type
-      const { data, error } = await supabase
-        .from('procedimentos') // Changed table name
+    mutationFn: async ({ id, ...procedimento }: Partial<Procedimento> & { id: string }) => {
+      const { data, error } = await (supabase.from('procedimentos') as any)
         .update(procedimento)
         .eq('id', id)
         .select()
         .single();
 
       if (error) throw error;
-      return data as Procedimento;
+      return data as any as Procedimento;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['procedimentos'] }); // Changed query key
+      queryClient.invalidateQueries({ queryKey: ['procedimentos'] });
       toast({
         title: 'Procedimento atualizado!'
       });
