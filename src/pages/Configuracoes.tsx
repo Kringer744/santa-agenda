@@ -20,7 +20,10 @@ export default function Configuracoes() {
   const [loadingItauStatus, setLoadingItauStatus] = useState(true);
   
   const { data: unidades = [], isLoading: loadingUnidades } = useUnidades();
+  const createUnidade = useCreateUnidade(); // Adicionado: Inicializa o hook de mutação
+  const deleteUnidade = useDeleteUnidade(); // Adicionado: Inicializa o hook de mutação
   const { data: servicos = [], isLoading: loadingServicos } = useServicos();
+  const createServico = useCreateServico(); // Adicionado: Inicializa o hook de mutação
   const { data: itauSettings, isLoading: loadingItauSettings } = useItauSettings(); // Fetch Itaú settings
   const saveItauSettings = useSaveItauSettings(); // Hook to save Itaú settings
 
