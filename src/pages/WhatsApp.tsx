@@ -14,6 +14,8 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { testConnection, sendInteractiveMenu, createBulkCampaign } from '@/lib/uazap';
+import { getPatientsWithBirthdayToday, sendBirthdayMessage } from '@/lib/whatsappClinicAutomation'; // Corrected import path
+import { Paciente } from '@/types'; // Import Paciente type
 
 interface Lead {
   id: string;
@@ -116,9 +118,15 @@ export default function WhatsApp() {
   const [menuTestNumber, setMenuTestNumber] = useState('');
   const [selectedTemplateForBulk, setSelectedTemplateForBulk] = useState<string | undefined>(undefined);
 
+  // New states for birthday messages
+  const [birthdayPatientsToday, setBirthdayPatientsToday] = useState<Paciente[]>([]);
+  const [isSendingBirthdays, setIsSendingBirthdays] = useState(false);
+  const [selectedBirthdayTemplateId, setSelectedBirthdayTemplateId] = useState<string | undefined>(undefined);
+
   useEffect(() => {
     loadConfig();
     loadTemplates();
+    fetchBirthdayPatients();
   }, []);
 
   const loadConfig = async () => {
@@ -162,7 +170,6 @@ export default function WhatsApp() {
         
       if (error) {
         console.error('Supabase error loading templates:', error);
-        // Throw the error to be caught by the outer catch block
         throw new Error(error.message); 
       }
       
@@ -184,6 +191,16 @@ export default function WhatsApp() {
       }
     } finally {
       setIsLoadingTemplates(false);
+    }
+  };
+
+  const fetchBirthdayPatients = async () => {
+    const patients = await getPatientsWithBirthdayToday();
+    setBirthdayPatientsToday(patients);
+    // Automatically select the birthday template if only one exists
+    const birthdayTemplates = templates.filter(t => t.tipo === 'aniversario_paciente');
+    if (birthdayTemplates.length === 1) {
+      setSelectedBirthdayTemplateId(birthdayTemplates[0].id);
     }
   };
 
@@ -521,6 +538,56 @@ export default function WhatsApp() {
     }
   };
 
+  const handleSendBirthdayMessages = async () => {
+    if (connectionStatus !== 'connected') {
+      toast.error('Conecte a API primeiro para enviar mensagens de aniversário.');
+      return;
+    }
+    if (birthdayPatientsToday.length === 0) {
+      toast.info('Nenhum paciente faz aniversário hoje.');
+      return;
+    }
+    if (!selectedBirthdayTemplateId) {
+      toast.error('Selecione um template de aniversário para enviar as mensagens.');
+      return;
+    }
+
+    const birthdayTemplate = templates.find(t => t.id === selectedBirthdayTemplateId);
+    if (!birthdayTemplate) {
+      toast.error('Template de aniversário selecionado não encontrado.');
+      return;
+    }
+
+    setIsSendingBirthdays(true);
+    toast.loading(`Enviando mensagens de aniversário para ${birthdayPatientsToday.length} pacientes...`);
+
+    let sentCount = 0;
+    for (const patient of birthdayPatientsToday) {
+      const result = await sendBirthdayMessage(patient, birthdayTemplate, { apiUrl: config.api_url, instanceToken: config.instance_token });
+      if (result) {
+        sentCount++;
+      }
+      // Add a small delay to avoid hitting API rate limits
+      await new Promise(resolve => setTimeout(resolve, 1000)); 
+    }
+
+    if (sentCount > 0) {
+      toast.success(`Mensagens de aniversário enviadas para ${sentCount} pacientes!`);
+    } else {
+      toast.error('Nenhuma mensagem de aniversário foi enviada. Verifique os logs para mais detalhes.');
+    }
+    setIsSendingBirthdays(false);
+  };
+
+  const birthdayTemplates = useMemo(() => templates.filter(t => t.tipo === 'aniversario_paciente'), [templates]);
+
+  useEffect(() => {
+    // Set default birthday template if only one exists after templates load
+    if (birthdayTemplates.length === 1 && !selectedBirthdayTemplateId) {
+      setSelectedBirthdayTemplateId(birthdayTemplates[0].id);
+    }
+  }, [birthdayTemplates, selectedBirthdayTemplateId]);
+
   return (
     <Layout>
       <div className="space-y-6 md:space-y-8">
@@ -851,6 +918,85 @@ export default function WhatsApp() {
 
           <TabsContent value="disparos" className="mt-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+              {/* New Card for Birthday Messages */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+                    <Gift className="w-5 h-5 text-blush" />
+                    Disparos de Aniversário
+                  </CardTitle>
+                  <CardDescription className="text-sm md:text-base">
+                    Envie mensagens de feliz aniversário para pacientes comemorando hoje.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <p className="text-sm font-medium text-foreground">
+                      Pacientes com aniversário hoje:
+                    </p>
+                    <Badge variant="secondary" className="gap-1 text-sm">
+                      <Users className="w-3 h-3" />
+                      {birthdayPatientsToday.length}
+                    </Badge>
+                  </div>
+
+                  {birthdayPatientsToday.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-sm">Template de Aniversário</Label>
+                      <Select 
+                        value={selectedBirthdayTemplateId} 
+                        onValueChange={setSelectedBirthdayTemplateId}
+                        disabled={birthdayTemplates.length === 0 || isSendingBirthdays}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={birthdayTemplates.length === 0 ? "Nenhum template de aniversário disponível" : "Selecione um template"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {birthdayTemplates.map(template => (
+                            <SelectItem key={template.id} value={template.id}>
+                              {template.nome}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {birthdayTemplates.length === 0 && (
+                        <p className="text-xs text-destructive">
+                          Crie um template do tipo 'aniversario_paciente' na sua base de dados.
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  <Button
+                    className="w-full"
+                    onClick={handleSendBirthdayMessages}
+                    disabled={
+                      isSendingBirthdays || 
+                      connectionStatus !== 'connected' || 
+                      birthdayPatientsToday.length === 0 ||
+                      !selectedBirthdayTemplateId
+                    }
+                  >
+                    {isSendingBirthdays ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Enviando...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4 mr-2" />
+                        Enviar Mensagens de Aniversário
+                      </>
+                    )}
+                  </Button>
+                  {connectionStatus !== 'connected' && (
+                    <p className="text-xs text-center text-muted-foreground">
+                      Conecte a API primeiro para fazer disparos
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-lg md:text-xl">

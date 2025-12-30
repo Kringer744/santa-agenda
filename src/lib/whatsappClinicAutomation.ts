@@ -64,7 +64,7 @@ export async function getPaciente(pacienteId: string): Promise<Paciente | null> 
   try {
     const { data, error } = await supabase
       .from('pacientes') // Changed table name
-      .select('id, nome, telefone')
+      .select('id, nome, telefone, data_nascimento') // Added data_nascimento
       .eq('id', pacienteId)
       .maybeSingle();
       
@@ -92,6 +92,32 @@ export async function getDentista(dentistaId: string): Promise<Dentista | null> 
   } catch (error) {
     console.error('Erro ao carregar dentista:', error);
     return null;
+  }
+}
+
+// NEW: Obter pacientes com aniversário hoje
+export async function getPatientsWithBirthdayToday(): Promise<Paciente[]> {
+  try {
+    const today = new Date();
+    const currentMonth = today.getMonth() + 1; // getMonth() is 0-indexed
+    const currentDay = today.getDate();
+
+    const { data, error } = await supabase
+      .from('pacientes')
+      .select('id, nome, telefone, data_nascimento');
+
+    if (error) throw error;
+
+    const birthdayPatients = (data as Paciente[]).filter(paciente => {
+      if (!paciente.data_nascimento) return false;
+      const dob = new Date(paciente.data_nascimento);
+      return dob.getMonth() + 1 === currentMonth && dob.getDate() === currentDay;
+    });
+
+    return birthdayPatients;
+  } catch (error) {
+    console.error('Erro ao carregar pacientes com aniversário hoje:', error);
+    return [];
   }
 }
 
@@ -233,27 +259,18 @@ export async function checkAndSendAutomatedMessages(consulta: Consulta): Promise
 }
 
 // Enviar mensagem de aniversário do paciente
-export async function sendBirthdayMessage(pacienteId: string): Promise<boolean> { // Changed from petId
+export async function sendBirthdayMessage(paciente: Paciente, template: Template, config: WhatsAppConfig): Promise<boolean> { // Changed signature
   try {
-    // Carregar configuração e templates
-    const config = await loadWhatsAppConfig();
-    if (!config) {
-      console.error('Configuração do WhatsApp não encontrada');
+    if (!paciente) {
+      console.error('Paciente não encontrado para enviar mensagem de aniversário');
       return false;
     }
-    
-    const templates = await loadActiveTemplates();
-    const template = templates.find(t => t.tipo === 'aniversario_paciente'); // Changed type
-    
     if (!template) {
       console.error('Template de aniversário não encontrado');
       return false;
     }
-    
-    // Carregar dados do paciente
-    const paciente = await getPaciente(pacienteId); // Changed from pet
-    if (!paciente) {
-      console.error('Paciente não encontrado');
+    if (!config) {
+      console.error('Configuração do WhatsApp não encontrada');
       return false;
     }
     
