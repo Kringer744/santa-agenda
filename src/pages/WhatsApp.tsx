@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, } from '@/components/ui/card';
-import { MessageSquare, Send, CheckCircle, Clock, Zap, Smartphone, Upload, Users, Play, Pause, Trash2, FileSpreadsheet, Bot, List, Save, CalendarDays, Camera, Star, Gift, BellRing } from 'lucide-react'; // Importar ícones Lucide
+import { MessageSquare, Send, CheckCircle, Clock, Zap, Smartphone, Upload, Users, Play, Pause, Trash2, FileSpreadsheet, Bot, List, Save, CalendarDays, Camera, Star, Gift, BellRing, Loader2 } from 'lucide-react'; // Importar ícones Lucide
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -77,6 +77,7 @@ export default function WhatsApp() {
   });
 
   const [templates, setTemplates] = useState<WhatsAppTemplate[]>([]);
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(true); // Novo estado de carregamento
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
   const [isTesting, setIsTesting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -153,6 +154,7 @@ export default function WhatsApp() {
   };
 
   const loadTemplates = async () => {
+    setIsLoadingTemplates(true); // Inicia o carregamento
     try {
       const { data, error } = await supabase
         .from('whatsapp_templates')
@@ -160,7 +162,7 @@ export default function WhatsApp() {
         .order('tipo');
         
       if (error) {
-        console.error('Supabase error loading templates:', error); // Log mais específico
+        console.error('Supabase error loading templates:', error);
         throw error;
       }
       
@@ -170,9 +172,12 @@ export default function WhatsApp() {
         console.log('Nenhum dado retornado para whatsapp_templates, definindo array vazio.');
         setTemplates([]);
       }
-    } catch (error: any) { // Captura qualquer tipo de erro
+    } catch (error: any) {
       console.error('Erro geral ao carregar templates:', error);
       toast.error(`Erro ao carregar templates: ${error.message || 'Detalhes desconhecidos'}`);
+      setTemplates([]); // Garante que templates seja um array vazio em caso de erro
+    } finally {
+      setIsLoadingTemplates(false); // Finaliza o carregamento
     }
   };
 
@@ -847,53 +852,67 @@ export default function WhatsApp() {
 
           {/* Acompanhamento do Cliente */}
           <TabsContent value="acompanhamento" className="mt-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-              {templatesAcompanhamento.map((template, index) => (
-                <Card key={template.id} className="animate-slide-up" style={{ animationDelay: `${index * 50}ms` }}>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <div className="flex items-center gap-2">
-                      {getTemplateIcon(template.tipo)}
-                      <h4 className="text-base md:text-lg font-bold text-foreground">
-                        {getTemplateTitle(template.tipo)}
-                        <span className="text-sm text-muted-foreground ml-2">{getTemplateSubtitle(template.tipo)}</span>
-                      </h4>
-                    </div>
-                    <Switch
-                      checked={template.ativo || false}
-                      onCheckedChange={(checked) => handleUpdateTemplate(template.id, 'ativo', checked)}
-                    />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="p-3 rounded-lg bg-muted/50 border border-border mb-3">
-                      <Textarea
-                        value={template.mensagem}
-                        onChange={(e) => handleUpdateTemplate(template.id, 'mensagem', e.target.value)}
-                        className="min-h-24 resize-none border-none focus-visible:ring-0 focus-visible:ring-offset-0 p-0 bg-transparent"
-                        placeholder="Mensagem do template..."
-                      />
-                    </div>
-                    
-                    <div className="flex flex-wrap gap-2">
-                      {getTemplateVariables(template.tipo).map(variable => (
-                        <Badge key={variable} variant="secondary" className="bg-mint-light text-secondary text-xs">
-                          {variable}
-                        </Badge>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-            <div className="mt-6 flex justify-end">
-              <Button
-                className="w-full md:w-auto"
-                onClick={handleSaveAllTemplates}
-                disabled={isSaving}
-              >
-                <Save className="w-4 h-4 mr-2" />
-                {isSaving ? 'Salvando...' : 'Salvar Templates'}
-              </Button>
-            </div>
+            {isLoadingTemplates ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+            ) : templatesAcompanhamento.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <BellRing className="w-10 h-10 md:w-12 md:h-12 mx-auto mb-3 opacity-50" />
+                <p className="text-sm md:text-base">Nenhum template de acompanhamento encontrado.</p>
+                <p className="text-xs md:text-sm">Verifique se a tabela 'whatsapp_templates' foi criada e populada no Supabase.</p>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+                  {templatesAcompanhamento.map((template, index) => (
+                    <Card key={template.id} className="animate-slide-up" style={{ animationDelay: `${index * 50}ms` }}>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <div className="flex items-center gap-2">
+                          {getTemplateIcon(template.tipo)}
+                          <h4 className="text-base md:text-lg font-bold text-foreground">
+                            {getTemplateTitle(template.tipo)}
+                            <span className="text-sm text-muted-foreground ml-2">{getTemplateSubtitle(template.tipo)}</span>
+                          </h4>
+                        </div>
+                        <Switch
+                          checked={template.ativo || false}
+                          onCheckedChange={(checked) => handleUpdateTemplate(template.id, 'ativo', checked)}
+                        />
+                      </CardHeader>
+                      <CardContent>
+                        <div className="p-3 rounded-lg bg-muted/50 border border-border mb-3">
+                          <Textarea
+                            value={template.mensagem}
+                            onChange={(e) => handleUpdateTemplate(template.id, 'mensagem', e.target.value)}
+                            className="min-h-24 resize-none border-none focus-visible:ring-0 focus-visible:ring-offset-0 p-0 bg-transparent"
+                            placeholder="Mensagem do template..."
+                          />
+                        </div>
+                        
+                        <div className="flex flex-wrap gap-2">
+                          {getTemplateVariables(template.tipo).map(variable => (
+                            <Badge key={variable} variant="secondary" className="bg-mint-light text-secondary text-xs">
+                              {variable}
+                            </Badge>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+                <div className="mt-6 flex justify-end">
+                  <Button
+                    className="w-full md:w-auto"
+                    onClick={handleSaveAllTemplates}
+                    disabled={isSaving}
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                    {isSaving ? 'Salvando...' : 'Salvar Templates'}
+                  </Button>
+                </div>
+              </>
+            )}
           </TabsContent>
 
           {/* Disparos em Massa */}
