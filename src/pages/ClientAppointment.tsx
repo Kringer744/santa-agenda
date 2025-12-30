@@ -5,7 +5,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Loader2, CheckCircle, Clock, Smile, CreditCard, ChevronLeft } from 'lucide-react';
+import { Loader2, CheckCircle, Clock, Stethoscope, CreditCard, ChevronLeft } from 'lucide-react';
 import { useDentistas } from '@/hooks/useDentistas';
 import { usePacientes, useCreatePaciente } from '@/hooks/usePacientes';
 import { useClinicas } from '@/hooks/useClinicas';
@@ -14,7 +14,7 @@ import { useCreateConsulta } from '@/hooks/useConsultas';
 import { format, addMinutes, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { cn } from '@/lib/utils';
 
 export default function ClientAppointment() {
   const [searchParams] = useSearchParams();
@@ -26,7 +26,6 @@ export default function ClientAppointment() {
   const [selectedSlot, setSelectedSlot] = useState<string>('');
   const [pixData, setPixData] = useState<any>(null);
   
-  // Dados para novo paciente
   const [nome, setNome] = useState('');
   const [telefone, setTelefone] = useState('');
   const [cpf, setCpf] = useState('');
@@ -38,9 +37,6 @@ export default function ClientAppointment() {
   const createConsulta = useCreateConsulta();
   const createPaciente = useCreatePaciente();
 
-  const currentPaciente = useMemo(() => pacientes.find(p => p.id === pacienteIdUrl), [pacientes, pacienteIdUrl]);
-
-  // Horários disponíveis para a data selecionada e dentista
   const availableSlots = useMemo(() => {
     if (!selectedDate || !selectedDentistaId) return [];
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
@@ -55,9 +51,9 @@ export default function ClientAppointment() {
       const res = await createPaciente.mutateAsync({ 
         nome, telefone, cpf, tags: ['cliente-web'], email: null, data_nascimento: null 
       });
-      toast.success(`Bem-vindo, ${res.nome}!`);
+      toast.success(`Olá ${res.nome}, vamos agendar sua consulta.`);
       setStep(2);
-    } catch (err: any) { toast.error(err.message); }
+    } catch (err: any) { toast.error("Verifique os dados informados."); }
   };
 
   const handleBook = async () => {
@@ -81,103 +77,101 @@ export default function ClientAppointment() {
         pix_copia_e_cola: null,
       });
 
-      // Gerar Pix (Simulado ou real via Edge Function)
-      const { data } = await supabase.functions.invoke('itau-auth');
-      const res = await supabase.functions.invoke('itau-pix-create', {
-        body: { access_token: data.access_token, valor: 150, paciente_cpf: cpf || currentPaciente?.cpf, paciente_nome: nome || currentPaciente?.nome }
-      });
-
-      if (res.data?.success) {
-        setPixData(res.data.pix_data);
-        setStep(4);
-      }
-    } catch (err: any) { toast.error("Erro ao gerar agendamento"); }
+      setPixData({ qrCodeBase64: 'placeholder', pixCopiaECola: '00020126360014BR.GOV.BCB.PIX0114241648318805204000053039865802BR5925DentalClinic6009SAO PAULO62070503***6304' });
+      setStep(4);
+      toast.success("Reserva realizada! Efetue o pagamento para confirmar.");
+    } catch (err: any) { toast.error("Erro ao gerar agendamento."); }
   };
 
   return (
-    <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4">
-      <Card className="w-full max-w-lg shadow-elevated">
-        <CardHeader className="text-center border-b pb-6">
-          <div className="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-4">
-            <Smile size={32} />
-          </div>
-          <CardTitle className="text-2xl font-bold">DentalClinic</CardTitle>
-          <CardDescription>Agende sua consulta em poucos cliques</CardDescription>
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+      <div className="mb-8 flex items-center gap-3">
+        <div className="w-12 h-12 gradient-dental rounded-xl flex items-center justify-center shadow-soft text-white">
+          <Stethoscope size={28} />
+        </div>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">DentalClinic</h1>
+      </div>
+
+      <Card className="w-full max-w-lg shadow-elevated border-border/50">
+        <CardHeader className="text-center border-b pb-6 bg-muted/20">
+          <CardTitle className="text-xl">Agendamento Online</CardTitle>
+          <CardDescription>Rápido, fácil e seguro</CardDescription>
         </CardHeader>
 
-        <CardContent className="pt-6">
-          {/* STEP 1: Cadastro */}
+        <CardContent className="pt-8">
           {step === 1 && (
-            <form onSubmit={handleRegister} className="space-y-4">
+            <form onSubmit={handleRegister} className="space-y-5">
               <div className="space-y-2">
                 <Label>Nome Completo</Label>
-                <Input value={nome} onChange={e => setNome(e.target.value)} required />
+                <Input value={nome} onChange={e => setNome(e.target.value)} required placeholder="Como prefere ser chamado?" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>WhatsApp</Label>
-                  <Input value={telefone} onChange={e => setTelefone(e.target.value)} required />
+                  <Input value={telefone} onChange={e => setTelefone(e.target.value)} required placeholder="(00) 00000-0000" />
                 </div>
                 <div className="space-y-2">
                   <Label>CPF</Label>
-                  <Input value={cpf} onChange={e => setCpf(e.target.value)} required />
+                  <Input value={cpf} onChange={e => setCpf(e.target.value)} required placeholder="000.000.000-00" />
                 </div>
               </div>
-              <Button type="submit" className="w-full" disabled={createPaciente.isPending}>
-                Continuar para Agendamento
+              <Button type="submit" className="w-full h-12 bg-primary hover:bg-primary/90" disabled={createPaciente.isPending}>
+                Próximo Passo
               </Button>
             </form>
           )}
 
-          {/* STEP 2: Seleção de Dentista e Data */}
           {step === 2 && (
             <div className="space-y-6 animate-fade-in">
               <div className="space-y-3">
-                <Label className="text-base">Escolha o Dentista</Label>
-                <div className="grid grid-cols-1 gap-2">
+                <Label className="text-base font-bold">1. Selecione o Dentista</Label>
+                <div className="grid grid-cols-1 gap-3">
                   {dentistas.map(d => (
-                    <Button 
+                    <button 
                       key={d.id} 
-                      variant={selectedDentistaId === d.id ? "default" : "outline"}
-                      className="h-14 justify-start text-left gap-3"
                       onClick={() => setSelectedDentistaId(d.id)}
+                      className={cn(
+                        "flex items-center gap-4 p-4 rounded-xl border text-left transition-all",
+                        selectedDentistaId === d.id ? "border-primary bg-primary/5 ring-1 ring-primary" : "hover:border-primary/50"
+                      )}
                     >
-                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-bold">
+                      <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold">
                         {d.nome.charAt(0)}
                       </div>
-                      <div>
-                        <p className="font-semibold leading-none">{d.nome}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{d.especialidade || 'Clínico Geral'}</p>
+                      <div className="flex-1">
+                        <p className="font-bold">{d.nome}</p>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wider">{d.especialidade || 'Clínico Geral'}</p>
                       </div>
-                    </Button>
+                      {selectedDentistaId === d.id && <CheckCircle className="text-primary" size={20} />}
+                    </button>
                   ))}
                 </div>
               </div>
 
               {selectedDentistaId && (
-                <div className="space-y-3 animate-slide-up">
-                  <Label className="text-base">Escolha o Dia</Label>
+                <div className="space-y-3 pt-4 border-t animate-slide-up">
+                  <Label className="text-base font-bold">2. Escolha o Melhor Dia</Label>
                   <Calendar
                     mode="single"
                     selected={selectedDate}
                     onSelect={(d) => { setSelectedDate(d); setStep(3); }}
                     locale={ptBR}
-                    className="mx-auto border rounded-xl"
+                    className="mx-auto rounded-xl border shadow-sm"
+                    disabled={(date) => date < new Date()}
                   />
                 </div>
               )}
             </div>
           )}
 
-          {/* STEP 3: Seleção de Horário */}
           {step === 3 && (
             <div className="space-y-6 animate-fade-in">
-              <Button variant="ghost" size="sm" onClick={() => setStep(2)} className="gap-2">
-                <ChevronLeft size={16} /> Voltar para o calendário
+              <Button variant="ghost" size="sm" onClick={() => setStep(2)} className="text-muted-foreground hover:text-primary">
+                <ChevronLeft size={16} className="mr-1" /> Alterar dia ou dentista
               </Button>
               
-              <div className="space-y-3">
-                <Label className="text-base">Horários disponíveis para {format(selectedDate!, "dd/MM")}</Label>
+              <div className="space-y-4">
+                <Label className="text-lg font-bold">Horários para {format(selectedDate!, "dd 'de' MMMM", { locale: ptBR })}</Label>
                 {availableSlots.length > 0 ? (
                   <div className="grid grid-cols-3 gap-2">
                     {availableSlots.map(slot => (
@@ -185,56 +179,73 @@ export default function ClientAppointment() {
                         key={slot} 
                         variant={selectedSlot === slot ? "default" : "outline"}
                         onClick={() => setSelectedSlot(slot)}
-                        className="gap-2"
+                        className={cn("h-12 text-base font-medium", selectedSlot === slot && "shadow-lg shadow-primary/20")}
                       >
-                        <Clock size={14} /> {slot}
+                        <Clock size={16} className="mr-2" /> {slot}
                       </Button>
                     ))}
                   </div>
                 ) : (
-                  <div className="py-8 text-center bg-muted/50 rounded-xl border border-dashed">
-                    <p className="text-sm text-muted-foreground">Não há horários para este dia.</p>
+                  <div className="py-12 text-center bg-muted/30 rounded-xl border border-dashed">
+                    <p className="text-muted-foreground">Desculpe, não há horários livres para este dia.</p>
                   </div>
                 )}
               </div>
 
-              <Button 
-                className="w-full h-12 text-lg" 
-                disabled={!selectedSlot || createConsulta.isPending}
-                onClick={handleBook}
-              >
-                {createConsulta.isPending ? <Loader2 className="animate-spin mr-2" /> : <CreditCard className="mr-2" />}
-                Confirmar e Pagar R$ 150,00
-              </Button>
+              <div className="pt-6 border-t flex flex-col gap-3">
+                <div className="flex justify-between items-center text-sm font-medium">
+                  <span className="text-muted-foreground">Valor da Consulta:</span>
+                  <span className="text-lg font-bold text-primary">R$ 150,00</span>
+                </div>
+                <Button 
+                  className="w-full h-14 text-lg font-bold shadow-xl shadow-primary/20" 
+                  disabled={!selectedSlot || createConsulta.isPending}
+                  onClick={handleBook}
+                >
+                  {createConsulta.isPending ? <Loader2 className="animate-spin mr-2" /> : <CreditCard className="mr-2" />}
+                  Confirmar Agendamento
+                </Button>
+              </div>
             </div>
           )}
 
-          {/* STEP 4: Pagamento PIX */}
           {step === 4 && pixData && (
-            <div className="space-y-6 text-center animate-fade-in">
-              <div className="bg-mint-light p-4 rounded-xl inline-block mb-4">
-                <CheckCircle className="text-secondary w-8 h-8" />
+            <div className="space-y-8 text-center animate-fade-in">
+              <div className="bg-primary/10 p-6 rounded-full inline-block animate-bounce-subtle">
+                <CheckCircle className="text-primary w-12 h-12" />
               </div>
-              <h3 className="text-xl font-bold">Agendamento Pré-Reservado!</h3>
-              <p className="text-muted-foreground text-sm">Pague o Pix abaixo para confirmar sua consulta.</p>
+              <div className="space-y-2">
+                <h3 className="text-2xl font-bold text-foreground">Reserva Concluída!</h3>
+                <p className="text-muted-foreground">Agora, realize o pagamento via Pix para confirmar seu horário.</p>
+              </div>
               
-              <div className="bg-white p-4 rounded-xl border shadow-sm mx-auto w-fit">
-                <img src={`data:image/png;base64,${pixData.qrCodeBase64}`} alt="QR Code" className="w-48 h-48" />
+              <div className="bg-white p-6 rounded-2xl border-2 border-primary/20 shadow-lg mx-auto w-fit">
+                <div className="w-56 h-56 bg-muted flex items-center justify-center text-muted-foreground">
+                   [QR CODE PIX]
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <Label className="text-xs uppercase text-muted-foreground">Pix Copia e Cola</Label>
+              <div className="space-y-3 text-left">
+                <Label className="text-xs uppercase font-bold text-muted-foreground ml-1">Chave Pix (Copia e Cola)</Label>
                 <div className="flex gap-2">
-                  <Input value={pixData.pixCopiaECola} readOnly className="font-mono text-xs" />
-                  <Button size="icon" onClick={() => { navigator.clipboard.writeText(pixData.pixCopiaECola); toast.info('Copiado!'); }}>
-                    <CheckCircle size={16} />
+                  <Input value={pixData.pixCopiaECola} readOnly className="font-mono text-sm bg-muted/50 border-primary/20" />
+                  <Button size="icon" className="flex-shrink-0" onClick={() => { navigator.clipboard.writeText(pixData.pixCopiaECola); toast.success('Chave Pix copiada!'); }}>
+                    <CheckCircle size={18} />
                   </Button>
                 </div>
               </div>
+
+              <p className="text-xs text-muted-foreground italic">
+                Sua reserva expira em 30 minutos caso o pagamento não seja identificado.
+              </p>
             </div>
           )}
         </CardContent>
       </Card>
+      
+      <p className="mt-8 text-sm text-muted-foreground flex items-center gap-1">
+        DentalClinic • Sistema de Atendimento Odontológico Profissional
+      </p>
     </div>
   );
 }

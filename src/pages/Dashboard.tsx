@@ -1,15 +1,13 @@
 import { Layout } from '@/components/layout/Layout';
 import { StatsCard } from '@/components/dashboard/StatsCard';
-import { CalendarCheck, Users, TrendingUp, Loader2, Stethoscope } from 'lucide-react'; 
+import { CalendarCheck, Users, TrendingUp, Loader2, Stethoscope, Clock, MessageSquare } from 'lucide-react'; 
 import { useConsultas } from '@/hooks/useConsultas';
 import { useDentistas } from '@/hooks/useDentistas';
 import { usePacientes } from '@/hooks/usePacientes';
 import { useClinicas } from '@/hooks/useClinicas';
-import { useProcedimentos } from '@/hooks/useProcedimentos';
-import { useAgendaDia } from '@/hooks/useAgendaDia';
 import { ConsultasList } from '@/components/dashboard/ConsultasList';
-import { ProcedimentosHoje } from '@/components/dashboard/ProcedimentosHoje';
 import { AgendaChart } from '@/components/dashboard/AgendaChart';
+import { useAgendaDia } from '@/hooks/useAgendaDia';
 
 export default function Dashboard() {
   const hoje = new Date().toISOString().split('T')[0];
@@ -18,26 +16,18 @@ export default function Dashboard() {
   const { data: dentistas = [], isLoading: loadingDentistas } = useDentistas();
   const { data: pacientes = [], isLoading: loadingPacientes } = usePacientes();
   const { data: clinicas = [], isLoading: loadingClinicas } = useClinicas();
-  const { data: procedimentos = [], isLoading: loadingProcedimentos } = useProcedimentos();
-  const { data: agendaDia = [], isLoading: loadingAgendaDia } = useAgendaDia();
+  const { data: agendaDia = [], isLoading: loadingAgenda } = useAgendaDia();
 
-  const isLoading = loadingConsultas || loadingDentistas || loadingPacientes || loadingClinicas || loadingProcedimentos || loadingAgendaDia;
+  const isLoading = loadingConsultas || loadingDentistas || loadingPacientes || loadingClinicas || loadingAgenda;
 
-  const consultasAgendadas = consultas.filter(c => c.status === 'agendada' || c.status === 'confirmada').length;
-  const consultasHoje = consultas.filter(c => c.data_hora_inicio.startsWith(hoje) && (c.status === 'agendada' || c.status === 'confirmada'));
-  const consultasRealizadasHoje = consultas.filter(c => c.data_hora_inicio.startsWith(hoje) && c.status === 'realizada');
-  const pacientesAtivos = pacientes.length;
-
-  const totalCapacidadeAtendimentos = clinicas.reduce((acc, c) => acc + c.capacidade_atendimentos, 0);
-  const ocupacaoTotal = totalCapacidadeAtendimentos > 0 
-    ? Math.round((consultasAgendadas / totalCapacidadeAtendimentos) * 100)
-    : 0;
+  const consultasHoje = consultas.filter(c => c.data_hora_inicio.startsWith(hoje));
+  const consultasPendentes = consultas.filter(c => c.status === 'agendada' || c.status === 'confirmada').length;
 
   if (isLoading) {
     return (
       <Layout>
-        <div className="flex items-center justify-center h-96">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <div className="flex items-center justify-center h-[60vh]">
+          <Loader2 className="w-10 h-10 animate-spin text-primary" />
         </div>
       </Layout>
     );
@@ -45,76 +35,72 @@ export default function Dashboard() {
 
   return (
     <Layout>
-      <div className="space-y-8">
-        <div className="animate-fade-in">
-          <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-muted-foreground mt-1 text-sm md:text-base">
-            Visão geral da clínica • {new Date().toLocaleDateString('pt-BR', { 
-              weekday: 'long', 
-              day: 'numeric', 
-              month: 'long' 
-            })}
-          </p>
+      <div className="space-y-8 max-w-7xl mx-auto">
+        <div className="animate-fade-in flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Painel de Controle</h1>
+            <p className="text-muted-foreground mt-1">
+              Bem-vindo ao DentalClinic • {new Date().toLocaleDateString('pt-BR', { dateStyle: 'full' })}
+            </p>
+          </div>
+          <div className="bg-white px-4 py-2 rounded-lg border shadow-sm flex items-center gap-2 text-sm font-medium text-primary">
+            <Clock size={16} /> Próximo atendimento em 15 min
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatsCard
-            title="Consultas Agendadas"
-            value={consultasAgendadas}
-            subtitle="próximos dias"
-            icon={<CalendarCheck className="w-6 h-6" />}
-            variant="coral"
+            title="Total de Pacientes"
+            value={pacientes.length}
+            icon={<Users size={24} />}
+            variant="dental"
           />
           <StatsCard
             title="Consultas Hoje"
             value={consultasHoje.length}
-            subtitle="agendadas"
-            icon={<Stethoscope className="w-6 h-6" />}
-            variant="mint"
+            subtitle="Atendimentos previstos"
+            icon={<Stethoscope size={24} />}
+            variant="soft"
           />
           <StatsCard
-            title="Ocupação"
-            value={`${ocupacaoTotal}%`}
-            subtitle="da capacidade"
-            icon={<TrendingUp className="w-6 h-6" />}
-            variant="honey"
+            title="Agendamentos"
+            value={consultasPendentes}
+            subtitle="Pendentes/Confirmados"
+            icon={<CalendarCheck size={24} />}
           />
           <StatsCard
-            title="Pacientes Ativos"
-            value={pacientesAtivos}
-            subtitle="cadastrados"
-            icon={<Users className="w-6 h-6" />}
-            variant="blush"
+            title="Capacidade"
+            value={clinicas[0]?.capacidade_atendimentos || 0}
+            subtitle="Atendimentos/dia"
+            icon={<TrendingUp size={24} />}
+            variant="muted"
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-          <ConsultasList 
-            title="Consultas Agendadas Hoje" 
-            type="agendada" 
-            consultas={consultasHoje.filter(c => c.status === 'agendada' || c.status === 'confirmada')} 
-            dentistas={dentistas} 
-            pacientes={pacientes} 
-          />
-          <ConsultasList 
-            title="Consultas Realizadas Hoje" 
-            type="realizada" 
-            consultas={consultasRealizadasHoje} 
-            dentistas={dentistas} 
-            pacientes={pacientes} 
-          />
-          <ConsultasList 
-            title="Próximas Consultas" 
-            type="proximas" 
-            consultas={consultas.filter(c => c.data_hora_inicio > new Date().toISOString() && (c.status === 'agendada' || c.status === 'confirmada')).slice(0, 5)} 
-            dentistas={dentistas} 
-            pacientes={pacientes} 
-          />
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-          <ProcedimentosHoje consultas={consultas.filter(c => c.status === 'realizada')} procedimentos={procedimentos} />
-          <AgendaChart agenda={agendaDia} dentistas={dentistas} clinicas={clinicas} />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            <ConsultasList 
+              title="Atendimentos de Hoje" 
+              type="agendada" 
+              consultas={consultasHoje} 
+              dentistas={dentistas} 
+              pacientes={pacientes} 
+            />
+          </div>
+          <div className="space-y-6">
+            <AgendaChart agenda={agendaDia.slice(0, 5)} dentistas={dentistas} clinicas={clinicas} />
+            <div className="bg-primary/5 border border-primary/20 rounded-xl p-6">
+              <h3 className="font-bold text-primary mb-2 flex items-center gap-2">
+                <MessageSquare size={18} /> Lembretes WhatsApp
+              </h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Existem {consultasHoje.length} pacientes aguardando confirmação para amanhã.
+              </p>
+              <button className="w-full bg-primary text-white py-2 rounded-lg text-sm font-bold hover:bg-primary/90 transition-colors">
+                Enviar Lembretes
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </Layout>

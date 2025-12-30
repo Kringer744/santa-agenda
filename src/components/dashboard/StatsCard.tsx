@@ -6,56 +6,46 @@ interface StatsCardProps {
   value: string | number;
   subtitle?: string;
   icon: ReactNode;
-  trend?: {
-    value: number;
-    positive: boolean;
-  };
-  variant?: 'default' | 'coral' | 'mint' | 'honey' | 'blush';
+  variant?: 'default' | 'dental' | 'soft' | 'muted';
 }
 
 const variantStyles = {
-  default: 'bg-card',
-  coral: 'bg-coral-light',
-  mint: 'bg-mint-light',
-  honey: 'bg-honey-light',
-  blush: 'bg-blush-light',
+  default: 'bg-card border border-border',
+  dental: 'bg-primary text-white',
+  soft: 'bg-secondary/30 border border-secondary/50',
+  muted: 'bg-muted/50 border border-border',
 };
 
-const iconStyles = {
-  default: 'bg-muted text-muted-foreground',
-  coral: 'bg-primary/20 text-primary',
-  mint: 'bg-secondary/20 text-secondary',
-  honey: 'bg-accent/30 text-accent-foreground',
-  blush: 'bg-blush/20 text-blush',
+const iconContainerStyles = {
+  default: 'bg-primary/10 text-primary',
+  dental: 'bg-white/20 text-white',
+  soft: 'bg-primary/20 text-primary',
+  muted: 'bg-muted text-muted-foreground',
 };
 
-export function StatsCard({ title, value, subtitle, icon, trend, variant = 'default' }: StatsCardProps) {
+export function StatsCard({ title, value, subtitle, icon, variant = 'default' }: StatsCardProps) {
   return (
     <div 
       className={cn(
-        "rounded-2xl p-6 shadow-card transition-all duration-300 hover:shadow-elevated animate-fade-in",
+        "rounded-xl p-5 shadow-card transition-all duration-300 hover:shadow-elevated animate-fade-in",
         variantStyles[variant]
       )}
     >
       <div className="flex items-start justify-between">
-        <div>
-          <p className="text-sm font-medium text-muted-foreground">{title}</p>
-          <p className="mt-2 text-3xl font-bold text-foreground">{value}</p>
+        <div className="space-y-1">
+          <p className={cn("text-xs font-semibold uppercase tracking-wider", variant === 'dental' ? "text-white/80" : "text-muted-foreground")}>
+            {title}
+          </p>
+          <p className="text-3xl font-bold">{value}</p>
           {subtitle && (
-            <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
-          )}
-          {trend && (
-            <p className={cn(
-              "mt-2 text-sm font-medium",
-              trend.positive ? "text-secondary" : "text-destructive"
-            )}>
-              {trend.positive ? '↑' : '↓'} {Math.abs(trend.value)}% vs. semana passada
+            <p className={cn("text-xs", variant === 'dental' ? "text-white/70" : "text-muted-foreground")}>
+              {subtitle}
             </p>
           )}
         </div>
         <div className={cn(
-          "w-12 h-12 rounded-xl flex items-center justify-center",
-          iconStyles[variant]
+          "w-12 h-12 rounded-lg flex items-center justify-center shadow-sm",
+          iconContainerStyles[variant]
         )}>
           {icon}
         </div>
