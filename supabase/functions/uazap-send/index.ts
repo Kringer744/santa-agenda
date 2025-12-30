@@ -1,4 +1,7 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+// @ts-ignore: Deno environment
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"; // Revertido para 0.168.0
+// @ts-ignore: Deno environment
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'; // Adicionado para consistência
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,7 +26,7 @@ function pickDelayMs(minSeconds: number, maxSeconds: number) {
   return seconds * 1000;
 }
 
-serve(async (req) => {
+serve(async (req: Request) => { // 'req' tipado como Request
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -237,8 +240,9 @@ serve(async (req) => {
         console.log(`[UAZAP] Bulk send finished. Sent: ${sent}/${messages.length}`);
       };
 
+      // @ts-ignore: EdgeRuntime is a global in Deno Edge Functions
       EdgeRuntime?.waitUntil?.(run()) ?? run();
-
+      
       return jsonResponse({ success: true, started: true, total: messages.length });
     }
 
