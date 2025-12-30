@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, } from '@/components/ui/card';
-import { MessageSquare, Send, CheckCircle, Clock, Zap, Smartphone, Upload, Users, Play, Pause, Trash2, FileSpreadsheet, Bot, List, Save, CalendarDays, Camera, Star, Gift } from 'lucide-react'; // Importar ícones Lucide
+import { MessageSquare, Send, CheckCircle, Clock, Zap, Smartphone, Upload, Users, Play, Pause, Trash2, FileSpreadsheet, Bot, List, Save, CalendarDays, Camera, Star, Gift, BellRing } from 'lucide-react'; // Importar ícones Lucide
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -474,6 +474,41 @@ export default function WhatsApp() {
     }
   };
 
+  const getTemplateTitle = (type: string) => {
+    switch (type) {
+      case 'pre-estadia': return 'Antes da Hospedagem';
+      case 'durante': return 'Durante a Hospedagem';
+      case 'pos-estadia': return 'Pós-Hospedagem';
+      case 'aniversario': return 'Aniversário do Pet';
+      default: return 'Template Padrão';
+    }
+  };
+
+  const getTemplateSubtitle = (type: string) => {
+    switch (type) {
+      case 'pre-estadia': return '(1 dia antes do check-in)';
+      case 'durante': return "(Quando o status da reserva for 'hospedado')";
+      case 'pos-estadia': return "(Quando o status da reserva for 'finalizada')";
+      case 'aniversario': return '(No dia do aniversário do pet)';
+      default: return '';
+    }
+  };
+
+  const getTemplateVariables = (type: string) => {
+    const common = ['{{nome_pet}}', '{{nome_tutor}}'];
+    if (type === 'pre-estadia' || type === 'durante') {
+      return [...common, '{{data_checkin}}'];
+    }
+    if (type === 'pos-estadia') {
+      return [...common, '{{data_checkout}}'];
+    }
+    return common;
+  };
+
+  const templatesAcompanhamento = templates.filter(t => 
+    t.tipo === 'pre-estadia' || t.tipo === 'durante' || t.tipo === 'pos-estadia' || t.tipo === 'aniversario'
+  );
+
   return (
     <Layout>
       <div className="space-y-6 md:space-y-8">
@@ -502,13 +537,13 @@ export default function WhatsApp() {
               <Bot className="w-4 h-4" />
               Menu Conversa
             </TabsTrigger>
+            <TabsTrigger value="acompanhamento" className="gap-2 text-xs md:text-sm">
+              <BellRing className="w-4 h-4" />
+              Acompanhamento do Cliente
+            </TabsTrigger>
             <TabsTrigger value="disparos" className="gap-2 text-xs md:text-sm">
               <Send className="w-4 h-4" />
               Disparos
-            </TabsTrigger>
-            <TabsTrigger value="templates" className="gap-2 text-xs md:text-sm">
-              <MessageSquare className="w-4 h-4" />
-              Templates
             </TabsTrigger>
             <TabsTrigger value="historico" className="gap-2 text-xs md:text-sm">
               <Clock className="w-4 h-4" />
@@ -810,6 +845,57 @@ export default function WhatsApp() {
             </div>
           </TabsContent>
 
+          {/* Acompanhamento do Cliente */}
+          <TabsContent value="acompanhamento" className="mt-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+              {templatesAcompanhamento.map((template, index) => (
+                <Card key={template.id} className="animate-slide-up" style={{ animationDelay: `${index * 50}ms` }}>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <div className="flex items-center gap-2">
+                      {getTemplateIcon(template.tipo)}
+                      <h4 className="text-base md:text-lg font-bold text-foreground">
+                        {getTemplateTitle(template.tipo)}
+                        <span className="text-sm text-muted-foreground ml-2">{getTemplateSubtitle(template.tipo)}</span>
+                      </h4>
+                    </div>
+                    <Switch
+                      checked={template.ativo || false}
+                      onCheckedChange={(checked) => handleUpdateTemplate(template.id, 'ativo', checked)}
+                    />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="p-3 rounded-lg bg-muted/50 border border-border mb-3">
+                      <Textarea
+                        value={template.mensagem}
+                        onChange={(e) => handleUpdateTemplate(template.id, 'mensagem', e.target.value)}
+                        className="min-h-24 resize-none border-none focus-visible:ring-0 focus-visible:ring-offset-0 p-0 bg-transparent"
+                        placeholder="Mensagem do template..."
+                      />
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-2">
+                      {getTemplateVariables(template.tipo).map(variable => (
+                        <Badge key={variable} variant="secondary" className="bg-mint-light text-secondary text-xs">
+                          {variable}
+                        </Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+            <div className="mt-6 flex justify-end">
+              <Button
+                className="w-full md:w-auto"
+                onClick={handleSaveAllTemplates}
+                disabled={isSaving}
+              >
+                <Save className="w-4 h-4 mr-2" />
+                {isSaving ? 'Salvando...' : 'Salvar Templates'}
+              </Button>
+            </div>
+          </TabsContent>
+
           {/* Disparos em Massa */}
           <TabsContent value="disparos" className="mt-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
@@ -1019,68 +1105,6 @@ Ou: Nome,5511999999999"
                   )}
                 </CardContent>
               </Card>
-            </div>
-          </TabsContent>
-
-          {/* Templates */}
-          <TabsContent value="templates" className="mt-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-              {templates.map((template, index) => (
-                <Card key={template.id} className="animate-slide-up" style={{ animationDelay: `${index * 50}ms` }}>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <div className="flex items-center gap-2">
-                      {getTemplateIcon(template.tipo)}
-                      <h4 className="text-base md:text-lg font-bold text-foreground">
-                        {template.nome}
-                        {template.tipo === 'pre-estadia' && <span className="text-sm text-muted-foreground ml-2">(1 dia antes)</span>}
-                      </h4>
-                    </div>
-                    <Switch
-                      checked={template.ativo || false}
-                      onCheckedChange={(checked) => handleUpdateTemplate(template.id, 'ativo', checked)}
-                    />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="p-3 rounded-lg bg-muted/50 border border-border mb-3">
-                      <Textarea
-                        value={template.mensagem}
-                        onChange={(e) => handleUpdateTemplate(template.id, 'mensagem', e.target.value)}
-                        className="min-h-24 resize-none border-none focus-visible:ring-0 focus-visible:ring-offset-0 p-0 bg-transparent"
-                        placeholder="Mensagem do template..."
-                      />
-                    </div>
-                    
-                    <div className="flex flex-wrap gap-2">
-                      <Badge variant="secondary" className="bg-mint-light text-secondary text-xs">
-                        {'{{nome_pet}}'}
-                      </Badge>
-                      <Badge variant="secondary" className="bg-mint-light text-secondary text-xs">
-                        {'{{nome_tutor}}'}
-                      </Badge>
-                      {(template.tipo === 'pre-estadia' || template.tipo === 'durante') && (
-                        <Badge variant="secondary" className="bg-mint-light text-secondary text-xs">
-                          {'{{data_checkin}}'}
-                        </Badge>
-                      )}
-                      {template.tipo === 'pos-estadia' && (
-                        <Badge variant="secondary" className="bg-mint-light text-secondary text-xs">
-                          {'{{data_checkout}}'}
-                        </Badge>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-            <div className="mt-6 flex justify-end">
-              <Button
-                className="w-full md:w-auto"
-                onClick={handleSaveAllTemplates}
-                disabled={isSaving}
-              >
-                <Save className="w-4 h-4 mr-2" />
-                {isSaving ? 'Salvando...' : 'Salvar Templates'}
-              </Button>
             </div>
           </TabsContent>
 
