@@ -17,37 +17,26 @@ export type Database = {
       itau_settings: {
         Row: {
           id: string;
-          user_id: string; /* Adicionado user_id */
           created_at: string;
           client_id: string | null;
           client_secret: string | null;
-          updated_at: string; /* Adicionado updated_at */
+          updated_at: string;
         };
         Insert: {
           id?: string;
-          user_id: string; /* Adicionado user_id */
           created_at?: string;
           client_id?: string | null;
           client_secret?: string | null;
-          updated_at?: string; /* Adicionado updated_at */
+          updated_at?: string;
         };
         Update: {
           id?: string;
-          user_id?: string; /* Adicionado user_id */
           created_at?: string;
           client_id?: string | null;
           client_secret?: string | null;
-          updated_at?: string; /* Adicionado updated_at */
+          updated_at?: string;
         };
-        Relationships: [
-          {
-            foreignKeyName: "itau_settings_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ];
+        Relationships: [];
       };
       pets: {
         Row: {

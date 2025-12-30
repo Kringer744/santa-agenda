@@ -10,9 +10,7 @@ import Pets from "./pages/Pets";
 import WhatsApp from "./pages/WhatsApp";
 import Configuracoes from "./pages/Configuracoes";
 import ClientReservation from "./pages/ClientReservation";
-import Login from "./pages/Login"; // Importar a nova página de Login
 import NotFound from "./pages/NotFound";
-import { SessionContextProvider } from "./components/auth/SessionContextProvider"; // Importar o SessionContextProvider
 
 const queryClient = new QueryClient();
 
@@ -22,19 +20,16 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <SessionContextProvider> {/* Envolver as rotas com o SessionContextProvider */}
-          <Routes>
-            <Route path="/login" element={<Login />} /> {/* Adicionar a rota de login */}
-            <Route path="/" element={<Index />} />
-            <Route path="/reservas" element={<Reservas />} />
-            <Route path="/tutores" element={<Tutores />} />
-            <Route path="/pets" element={<Pets />} />
-            <Route path="/whatsapp" element={<WhatsApp />} />
-            <Route path="/configuracoes" element={<Configuracoes />} />
-            <Route path="/client-reservation" element={<ClientReservation />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </SessionContextProvider>
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/reservas" element={<Reservas />} />
+          <Route path="/tutores" element={<Tutores />} />
+          <Route path="/pets" element={<Pets />} />
+          <Route path="/whatsapp" element={<WhatsApp />} />
+          <Route path="/configuracoes" element={<Configuracoes />} />
+          <Route path="/client-reservation" element={<ClientReservation />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
