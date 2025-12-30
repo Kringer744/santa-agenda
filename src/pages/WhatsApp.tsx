@@ -170,25 +170,25 @@ export default function WhatsApp() {
         
       if (error) {
         console.error('Supabase error loading templates:', error);
-        throw new Error(error.message); 
-      }
-      
-      if (data) {
-        setTemplates(data as WhatsAppTemplate[]);
+        // Do NOT throw the error here, just log it and handle gracefully
+        // Also, do NOT show a toast for this specific error as requested
+        if (!error.message.includes("Could not find the table 'public.whatsapp_templates' in the schema cache")) {
+          toast.error(`Erro ao carregar templates: ${error.message || 'Detalhes desconhecidos'}`);
+        }
+        setTemplates([]); // Ensure templates are empty on error
       } else {
-        console.log('Nenhum dado retornado para whatsapp_templates, definindo array vazio.');
-        setTemplates([]);
+        if (data) {
+          setTemplates(data as WhatsAppTemplate[]);
+        } else {
+          console.log('Nenhum dado retornado para whatsapp_templates, definindo array vazio.');
+          setTemplates([]);
+        }
       }
     } catch (error: any) {
       console.error('Erro geral ao carregar templates:', error);
       setTemplates([]); // Ensure templates are empty on error
-
-      // Check for the specific schema cache error message
-      if (error.message && error.message.includes("Could not find the table 'public.whatsapp_templates' in the schema cache")) {
-        toast.error('Erro: Tabela de templates não encontrada no Supabase. Por favor, siga as instruções para criar a tabela e recarregar o schema cache.');
-      } else {
-        toast.error(`Erro ao carregar templates: ${error.message || 'Detalhes desconhecidos'}`);
-      }
+      // This catch block will now only handle unexpected errors, not the specific schema cache error
+      toast.error(`Erro ao carregar templates: ${error.message || 'Detalhes desconhecidos'}`);
     } finally {
       setIsLoadingTemplates(false);
     }
