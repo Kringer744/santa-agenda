@@ -45,7 +45,7 @@ export interface Database {
         }
         Relationships: []
       }
-      dentistas: {
+      public_dentistas: {
         Row: {
           id: string
           nome: string

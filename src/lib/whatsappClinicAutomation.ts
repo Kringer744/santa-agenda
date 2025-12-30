@@ -77,7 +77,7 @@ export async function getPaciente(pacienteId: string): Promise<Paciente | null> 
 export async function getDentista(dentistaId: string): Promise<Dentista | null> {
   try {
     const { data, error } = await supabase
-      .from('dentistas')
+      .from('public_dentistas')
       .select('*')
       .eq('id', dentistaId)
       .maybeSingle();
