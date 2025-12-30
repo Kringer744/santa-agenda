@@ -7,8 +7,13 @@ export function useDentistas() {
   return useQuery<Dentista[]>({
     queryKey: ['dentistas'],
     queryFn: async () => {
+      console.log("Iniciando busca por dentistas no Supabase...");
       const { data, error } = await supabase.from('dentistas').select('*').order('nome');
-      if (error) throw error;
+      if (error) {
+        console.error("Erro ao buscar dentistas:", error);
+        throw error;
+      }
+      console.log("Dentistas recebidos do Supabase:", data);
       return data as Dentista[];
     },
   });
