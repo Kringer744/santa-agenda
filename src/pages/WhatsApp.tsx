@@ -7,65 +7,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { 
-  MessageSquare, 
-  Send, 
-  CheckCircle, 
-  Clock,
-  Zap,
-  Smartphone,
-  Upload,
-  Users,
-  Play,
-  Pause,
-  Trash2,
-  FileSpreadsheet,
-  Bot,
-  List,
-  Save
-} from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, } from '@/components/ui/card';
+import { MessageSquare, Send, CheckCircle, Clock, Zap, Smartphone, Upload, Users, Play, Pause, Trash2, FileSpreadsheet, Bot, List, Save } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { testConnection, sendInteractiveMenu, createBulkCampaign } from '@/lib/uazap';
-
-const mensagensTemplate = [
-  {
-    id: 'pre-estadia',
-    titulo: 'Pré-estadia (1 dia antes)',
-    icone: '📅',
-    mensagem: 'Oi! 🐾 Amanhã esperamos o {{nome_pet}}. Qualquer dúvida estamos por aqui.',
-    ativo: true,
-  },
-  {
-    id: 'durante',
-    titulo: 'Durante a hospedagem',
-    icone: '📸',
-    mensagem: 'Olá! Segue uma foto do {{nome_pet}} curtindo o dia no hotel! 💙',
-    ativo: true,
-  },
-  {
-    id: 'pos-estadia',
-    titulo: 'Pós-estadia',
-    icone: '⭐',
-    mensagem: 'Foi um prazer cuidar do {{nome_pet}}! 💙 Avalie sua experiência.',
-    ativo: true,
-  },
-  {
-    id: 'aniversario',
-    titulo: 'Aniversário do Pet',
-    icone: '🎉',
-    mensagem: '🎉 Hoje é aniversário do {{nome_pet}}! Temos um presente especial pra ele 🐶🐱',
-    ativo: false,
-  },
-];
 
 interface Lead {
   id: string;
@@ -90,6 +37,17 @@ interface WhatsAppConfig {
   opcoes_menu: MenuOption[];
 }
 
+interface WhatsAppTemplate {
+  id: string;
+  nome: string;
+  descricao: string;
+  tipo: string;
+  mensagem: string;
+  ativo: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export default function WhatsApp() {
   const [config, setConfig] = useState<WhatsAppConfig>({
     api_url: '',
@@ -97,17 +55,32 @@ export default function WhatsApp() {
     menu_ativo: false,
     mensagem_boas_vindas: 'Olá! 🐾 Seja bem-vindo ao nosso Hotel para Pets. Como podemos cuidar do seu pet hoje?',
     opcoes_menu: [
-      { id: '1', texto: '🐶 Reservar hospedagem para meu pet', resposta: 'Ótimo! Vamos iniciar sua reserva. Qual a data de check-in?', ativo: true },
-      { id: '2', texto: '📅 Consultar disponibilidade', resposta: 'Vou verificar nossa disponibilidade. Para qual período você precisa?', ativo: true },
-      { id: '3', texto: '📞 Falar com atendimento', resposta: 'Vou transferir você para um atendente. Aguarde um momento!', ativo: true },
+      {
+        id: '1',
+        texto: '🐶 Reservar hospedagem para meu pet',
+        resposta: 'Ótimo! Vamos iniciar sua reserva. Qual a data de check-in?',
+        ativo: true
+      },
+      {
+        id: '2',
+        texto: '📅 Consultar disponibilidade',
+        resposta: 'Vou verificar nossa disponibilidade. Para qual período você precisa?',
+        ativo: true
+      },
+      {
+        id: '3',
+        texto: '📞 Falar com atendimento',
+        resposta: 'Vou transferir você para um atendente. Aguarde um momento!',
+        ativo: true
+      },
     ],
   });
-  
-  const [templates, setTemplates] = useState(mensagensTemplate);
+
+  const [templates, setTemplates] = useState<WhatsAppTemplate[]>([]);
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
   const [isTesting, setIsTesting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-
+  
   // Upload de leads
   const [leads, setLeads] = useState<Lead[]>([]);
   const [numerosManuais, setNumerosManuais] = useState('');
@@ -116,14 +89,14 @@ export default function WhatsApp() {
       .split(/\r?\n/)
       .map((l) => l.trim())
       .filter(Boolean);
-
+      
     return lines
       .map((line, idx) => {
         // Aceita "nome,telefone" ou apenas "telefone"
         const parts = line.split(',').map((p) => p.trim()).filter(Boolean);
         const telefone = parts.length >= 2 ? parts[1] : parts[0] || '';
         const nome = parts.length >= 2 ? (parts[0] || 'Contato') : 'Contato';
-
+        
         return {
           id: `manual-${idx}`,
           nome,
@@ -133,20 +106,19 @@ export default function WhatsApp() {
       })
       .filter((l) => l.telefone);
   }, [numerosManuais]);
-
+  
   const allLeads = useMemo(() => [...leads, ...manualLeads], [leads, manualLeads]);
-
   const [mensagemDisparo, setMensagemDisparo] = useState('');
   const [delayMin, setDelayMin] = useState(10);
   const [delayMax, setDelayMax] = useState(30);
   const [disparoAtivo, setDisparoAtivo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
   const [menuTestNumber, setMenuTestNumber] = useState('');
 
   // Carregar configuração salva
   useEffect(() => {
     loadConfig();
+    loadTemplates();
   }, []);
 
   const loadConfig = async () => {
@@ -156,13 +128,12 @@ export default function WhatsApp() {
         .select('*')
         .limit(1)
         .maybeSingle();
-
+        
       if (error) throw error;
-
+      
       if (data) {
-        const opcoesMenu = Array.isArray(data.opcoes_menu) 
-          ? (data.opcoes_menu as unknown as MenuOption[]) 
-          : [];
+        const opcoesMenu = Array.isArray(data.opcoes_menu) ? (data.opcoes_menu as unknown as MenuOption[]) : [];
+        
         setConfig({
           id: data.id,
           api_url: data.api_url,
@@ -181,13 +152,32 @@ export default function WhatsApp() {
     }
   };
 
+  const loadTemplates = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('whatsapp_templates')
+        .select('*')
+        .order('tipo');
+        
+      if (error) throw error;
+      
+      if (data) {
+        setTemplates(data as WhatsAppTemplate[]);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar templates:', error);
+      toast.error('Erro ao carregar templates');
+    }
+  };
+
   const handleSaveConfig = async () => {
     if (!config.api_url || !config.instance_token) {
       toast.error('Preencha a URL da API e o Token');
       return;
     }
-
+    
     setIsSaving(true);
+    
     try {
       if (config.id) {
         // Atualizar
@@ -201,7 +191,7 @@ export default function WhatsApp() {
             opcoes_menu: JSON.parse(JSON.stringify(config.opcoes_menu)),
           })
           .eq('id', config.id);
-
+          
         if (error) throw error;
       } else {
         // Inserir
@@ -216,17 +206,42 @@ export default function WhatsApp() {
           }])
           .select()
           .single();
-
+          
         if (error) throw error;
+        
         setConfig(prev => ({ ...prev, id: data.id }));
       }
-
+      
       toast.success('Configuração salva!');
     } catch (error) {
       console.error('Erro ao salvar:', error);
       toast.error('Erro ao salvar configuração');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleSaveTemplate = async (template: WhatsAppTemplate) => {
+    try {
+      const { error } = await supabase
+        .from('whatsapp_templates')
+        .update({
+          nome: template.nome,
+          descricao: template.descricao,
+          tipo: template.tipo,
+          mensagem: template.mensagem,
+          ativo: template.ativo,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', template.id);
+        
+      if (error) throw error;
+      
+      toast.success('Template salvo!');
+      loadTemplates(); // Recarregar templates
+    } catch (error) {
+      console.error('Erro ao salvar template:', error);
+      toast.error('Erro ao salvar template');
     }
   };
 
@@ -241,7 +256,7 @@ export default function WhatsApp() {
       toast.error('Preencha a URL da API e o Token da Instância');
       return;
     }
-
+    
     setIsTesting(true);
     setConnectionStatus('connecting');
     
@@ -249,7 +264,7 @@ export default function WhatsApp() {
       apiUrl: config.api_url,
       instanceToken: config.instance_token,
     });
-
+    
     if (result.success) {
       setConnectionStatus('connected');
       toast.success('Conexão testada com sucesso! API configurada.');
@@ -270,7 +285,7 @@ export default function WhatsApp() {
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
+    
     const reader = new FileReader();
     reader.onload = async (e) => {
       const text = e.target?.result as string;
@@ -285,7 +300,7 @@ export default function WhatsApp() {
           email: email || ''
         };
       }).filter(lead => lead.telefone);
-
+      
       // Salvar leads no banco
       try {
         const { error } = await supabase
@@ -295,7 +310,7 @@ export default function WhatsApp() {
             telefone: l.telefone,
             email: l.email,
           })));
-
+          
         if (error) throw error;
         
         setLeads(newLeads);
@@ -306,6 +321,7 @@ export default function WhatsApp() {
         toast.success(`${newLeads.length} leads carregados!`);
       }
     };
+    
     reader.readAsText(file);
   };
 
@@ -314,26 +330,31 @@ export default function WhatsApp() {
       toast.error('Digite a mensagem do disparo');
       return;
     }
+    
     if (allLeads.length === 0) {
       toast.error('Importe uma base de leads ou adicione números manualmente');
       return;
     }
+    
     if (connectionStatus !== 'connected') {
       toast.error('Configure a conexão primeiro');
       return;
     }
-
+    
     setDisparoAtivo(true);
     toast.loading('Criando campanha de disparo...');
-
+    
     const result = await createBulkCampaign(
-      { apiUrl: config.api_url, instanceToken: config.instance_token },
+      {
+        apiUrl: config.api_url,
+        instanceToken: config.instance_token,
+      },
       allLeads,
       mensagemDisparo,
       delayMin,
       delayMax
     );
-
+    
     if (result.success) {
       toast.success('Campanha criada e iniciada!');
       
@@ -349,7 +370,7 @@ export default function WhatsApp() {
     } else {
       toast.error(result.error || 'Erro ao criar campanha');
     }
-
+    
     setDisparoAtivo(false);
   };
 
@@ -367,7 +388,7 @@ export default function WhatsApp() {
   const handleToggleMenuOption = (id: string) => {
     setConfig(prev => ({
       ...prev,
-      opcoes_menu: prev.opcoes_menu.map(opt =>
+      opcoes_menu: prev.opcoes_menu.map(opt => 
         opt.id === id ? { ...opt, ativo: !opt.ativo } : opt
       )
     }));
@@ -376,7 +397,7 @@ export default function WhatsApp() {
   const handleUpdateMenuOption = (id: string, field: 'texto' | 'resposta', value: string) => {
     setConfig(prev => ({
       ...prev,
-      opcoes_menu: prev.opcoes_menu.map(opt =>
+      opcoes_menu: prev.opcoes_menu.map(opt => 
         opt.id === id ? { ...opt, [field]: value } : opt
       )
     }));
@@ -408,21 +429,24 @@ export default function WhatsApp() {
       toast.error('Informe um número para testar o menu');
       return;
     }
-
+    
     if (connectionStatus !== 'connected') {
       toast.error('Conecte a API primeiro');
       return;
     }
-
+    
     toast.loading('Enviando menu de teste...');
     
     const result = await sendInteractiveMenu(
-      { apiUrl: config.api_url, instanceToken: config.instance_token },
+      {
+        apiUrl: config.api_url,
+        instanceToken: config.instance_token,
+      },
       testNumber,
       config.mensagem_boas_vindas,
       config.opcoes_menu
     );
-
+    
     if (result.success) {
       toast.success('Menu enviado com sucesso!');
     } else {
@@ -488,7 +512,7 @@ export default function WhatsApp() {
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="api-url">URL da API *</Label>
-                    <Input 
+                    <Input
                       id="api-url"
                       placeholder="https://sua-instancia.uazapi.com"
                       value={config.api_url}
@@ -498,9 +522,10 @@ export default function WhatsApp() {
                       Ex: https://api.uazapi.com ou sua URL personalizada
                     </p>
                   </div>
+                  
                   <div className="space-y-2">
                     <Label htmlFor="instance-token">Token da Instância *</Label>
-                    <Input 
+                    <Input
                       id="instance-token"
                       type="password"
                       placeholder="Token gerado na sua instância UAZAP"
@@ -513,8 +538,8 @@ export default function WhatsApp() {
                   </div>
                   
                   <div className="flex flex-col sm:flex-row gap-2">
-                    <Button 
-                      className="flex-1" 
+                    <Button
+                      className="flex-1"
                       onClick={handleTestConnection}
                       disabled={!config.api_url || !config.instance_token || isTesting}
                     >
@@ -530,15 +555,20 @@ export default function WhatsApp() {
                         </>
                       )}
                     </Button>
+                    
                     {connectionStatus === 'connected' && (
-                      <Button variant="outline" onClick={handleDisconnect} className="flex-1 sm:flex-none">
+                      <Button
+                        variant="outline"
+                        onClick={handleDisconnect}
+                        className="flex-1 sm:flex-none"
+                      >
                         Desconectar
                       </Button>
                     )}
                   </div>
                 </CardContent>
               </Card>
-
+              
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg md:text-xl">Status da Conexão</CardTitle>
@@ -553,26 +583,39 @@ export default function WhatsApp() {
                   )}>
                     <div className={cn(
                       "w-14 h-14 md:w-16 md:h-16 rounded-full mx-auto mb-4 flex items-center justify-center",
-                      connectionStatus === 'connected' ? "bg-secondary" : 
-                      connectionStatus === 'connecting' ? "bg-honey" : "bg-muted-foreground/20"
+                      connectionStatus === 'connected' 
+                        ? "bg-secondary" 
+                        : connectionStatus === 'connecting' 
+                          ? "bg-honey" 
+                          : "bg-muted-foreground/20"
                     )}>
                       {connectionStatus === 'connecting' ? (
                         <Clock className="w-7 h-7 md:w-8 md:h-8 text-accent-foreground animate-spin" />
                       ) : (
                         <Smartphone className={cn(
                           "w-7 h-7 md:w-8 md:h-8",
-                          connectionStatus === 'connected' ? "text-secondary-foreground" : "text-muted-foreground"
+                          connectionStatus === 'connected' 
+                            ? "text-secondary-foreground" 
+                            : "text-muted-foreground"
                         )} />
                       )}
                     </div>
+                    
                     <p className={cn(
                       "font-semibold text-base md:text-lg",
-                      connectionStatus === 'connected' ? "text-secondary" : 
-                      connectionStatus === 'connecting' ? "text-accent-foreground" : "text-muted-foreground"
+                      connectionStatus === 'connected' 
+                        ? "text-secondary" 
+                        : connectionStatus === 'connecting' 
+                          ? "text-accent-foreground" 
+                          : "text-muted-foreground"
                     )}>
-                      {connectionStatus === 'connected' ? 'API Conectada' : 
-                       connectionStatus === 'connecting' ? 'Testando conexão...' : 'Não Configurado'}
+                      {connectionStatus === 'connected' 
+                        ? 'API Conectada' 
+                        : connectionStatus === 'connecting' 
+                          ? 'Testando conexão...' 
+                          : 'Não Configurado'}
                     </p>
+                    
                     <p className="text-xs md:text-sm text-muted-foreground mt-1">
                       {connectionStatus === 'connected' 
                         ? 'Pronto para enviar mensagens e usar automações' 
@@ -583,6 +626,7 @@ export default function WhatsApp() {
                       <div className="mt-4 p-3 rounded-lg bg-background/50 text-left space-y-2">
                         <p className="text-xs font-medium text-foreground mb-1">Configuração ativa:</p>
                         <p className="text-xs text-muted-foreground truncate">{config.api_url}</p>
+                        
                         <div className="border-t border-border/50 pt-2 mt-2">
                           <p className="text-xs font-medium text-foreground mb-1">URL do Webhook (configure no painel UAZAP):</p>
                           <code className="text-xs text-primary break-all select-all">
@@ -612,6 +656,7 @@ export default function WhatsApp() {
                         Configure o menu automático que aparece quando o lead envia mensagem
                       </CardDescription>
                     </div>
+                    
                     <div className="flex items-center gap-2">
                       <Label htmlFor="menu-ativo" className="text-sm">Menu Ativo</Label>
                       <Switch
@@ -622,6 +667,7 @@ export default function WhatsApp() {
                     </div>
                   </div>
                 </CardHeader>
+                
                 <CardContent className="space-y-6">
                   <div className="space-y-2">
                     <Label className="text-sm">Mensagem de Boas-vindas</Label>
@@ -632,7 +678,7 @@ export default function WhatsApp() {
                       placeholder="Olá! Seja bem-vindo..."
                     />
                   </div>
-
+                  
                   <div className="space-y-4">
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <Label className="text-sm">Opções do Menu</Label>
@@ -644,7 +690,7 @@ export default function WhatsApp() {
                     
                     {config.opcoes_menu.map((opcao, index) => (
                       <div 
-                        key={opcao.id}
+                        key={opcao.id} 
                         className="p-4 rounded-xl border bg-card space-y-3 animate-slide-up"
                         style={{ animationDelay: `${index * 50}ms` }}
                       >
@@ -655,6 +701,7 @@ export default function WhatsApp() {
                             onCheckedChange={() => handleToggleMenuOption(opcao.id)}
                           />
                         </div>
+                        
                         <div className="space-y-2">
                           <Label className="text-xs text-muted-foreground">Texto do botão</Label>
                           <Input
@@ -663,6 +710,7 @@ export default function WhatsApp() {
                             placeholder="Texto que aparece no botão..."
                           />
                         </div>
+                        
                         <div className="space-y-2">
                           <Label className="text-xs text-muted-foreground">Resposta automática</Label>
                           <Textarea
@@ -675,7 +723,7 @@ export default function WhatsApp() {
                       </div>
                     ))}
                   </div>
-
+                  
                   <div className="space-y-2">
                     <Label htmlFor="menu-test-number" className="text-sm">Número para enviar o menu</Label>
                     <Input
@@ -688,14 +736,19 @@ export default function WhatsApp() {
                       Dica: use DDI + DDD (ex: 55 + 11 + número)
                     </p>
                   </div>
-
+                  
                   <div className="flex flex-col sm:flex-row gap-2">
-                    <Button className="flex-1" onClick={handleSaveMenu} disabled={isSaving}>
+                    <Button
+                      className="flex-1"
+                      onClick={handleSaveMenu}
+                      disabled={isSaving}
+                    >
                       <Save className="w-4 h-4 mr-2" />
                       {isSaving ? 'Salvando...' : 'Salvar Menu'}
                     </Button>
-                    <Button 
-                      variant="outline" 
+                    
+                    <Button
+                      variant="outline"
                       onClick={handleTestMenu}
                       disabled={connectionStatus !== 'connected'}
                       className="flex-1 sm:flex-none"
@@ -706,7 +759,7 @@ export default function WhatsApp() {
                   </div>
                 </CardContent>
               </Card>
-
+              
               {/* Preview do Menu */}
               <Card>
                 <CardHeader>
@@ -720,9 +773,10 @@ export default function WhatsApp() {
                     <div className="bg-white dark:bg-card p-3 rounded-lg shadow-sm">
                       <p className="text-sm text-foreground">{config.mensagem_boas_vindas}</p>
                     </div>
+                    
                     <div className="mt-3 space-y-2">
                       {config.opcoes_menu.filter(o => o.ativo).map((opcao) => (
-                        <div 
+                        <div
                           key={opcao.id}
                           className="bg-white dark:bg-card p-2 rounded-lg shadow-sm text-center text-sm font-medium text-primary cursor-pointer hover:bg-primary/5 transition-colors"
                         >
@@ -758,7 +812,7 @@ export default function WhatsApp() {
                     className="hidden"
                   />
                   
-                  <div 
+                  <div
                     className="border-2 border-dashed border-muted-foreground/25 rounded-xl p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
                     onClick={() => fileInputRef.current?.click()}
                   >
@@ -770,7 +824,7 @@ export default function WhatsApp() {
                       Formato: CSV (nome,telefone,email)
                     </p>
                   </div>
-
+                  
                   <div className="space-y-2">
                     <div className="flex items-center justify-between gap-3 flex-wrap">
                       <Label htmlFor="manual-numbers" className="text-sm">Ou adicione números manualmente</Label>
@@ -781,13 +835,19 @@ export default function WhatsApp() {
                         </Badge>
                       )}
                     </div>
+                    
                     <Textarea
                       id="manual-numbers"
                       value={numerosManuais}
                       onChange={(e) => setNumerosManuais(e.target.value)}
                       className="min-h-24"
-                      placeholder="Cole um por linha:\n5511999999999\n5511988887777\n\nOu: Nome,5511999999999"
+                      placeholder="Cole um por linha:
+5511999999999
+5511988887777
+
+Ou: Nome,5511999999999"
                     />
+                    
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <p className="text-xs text-muted-foreground">
                         Um número por linha (com DDI). Opcional: "Nome,telefone".
@@ -804,7 +864,7 @@ export default function WhatsApp() {
                       </Button>
                     </div>
                   </div>
-
+                  
                   {leads.length > 0 && (
                     <div className="space-y-3">
                       <div className="flex items-center justify-between flex-wrap gap-2">
@@ -812,7 +872,11 @@ export default function WhatsApp() {
                           <Users className="w-3 h-3" />
                           {leads.length} leads
                         </Badge>
-                        <Button variant="ghost" size="sm" onClick={handleClearLeads}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleClearLeads}
+                        >
                           <Trash2 className="w-4 h-4 mr-1" />
                           Limpar
                         </Button>
@@ -820,7 +884,7 @@ export default function WhatsApp() {
                       
                       <div className="max-h-40 overflow-y-auto space-y-2">
                         {leads.slice(0, 5).map((lead) => (
-                          <div 
+                          <div
                             key={lead.id}
                             className="flex items-center gap-3 p-2 rounded-lg bg-muted/50 text-sm"
                           >
@@ -833,6 +897,7 @@ export default function WhatsApp() {
                             </div>
                           </div>
                         ))}
+                        
                         {leads.length > 5 && (
                           <p className="text-xs text-center text-muted-foreground">
                             + {leads.length - 5} leads...
@@ -841,7 +906,7 @@ export default function WhatsApp() {
                       </div>
                     </div>
                   )}
-
+                  
                   {(allLeads.length > 0) && (
                     <p className="text-xs text-muted-foreground text-center">
                       Total para disparo: <span className="font-medium text-foreground">{allLeads.length}</span>
@@ -849,7 +914,7 @@ export default function WhatsApp() {
                   )}
                 </CardContent>
               </Card>
-
+              
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
@@ -869,6 +934,7 @@ export default function WhatsApp() {
                       className="min-h-32"
                       placeholder="Olá {{nome}}! Temos uma novidade especial para você..."
                     />
+                    
                     <div className="flex flex-wrap gap-2">
                       <Badge variant="secondary" className="text-xs cursor-pointer hover:bg-secondary/80">
                         {'{{nome}}'}
@@ -881,7 +947,7 @@ export default function WhatsApp() {
                       </Badge>
                     </div>
                   </div>
-
+                  
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label className="text-sm">Delay Mínimo (seg)</Label>
@@ -892,6 +958,7 @@ export default function WhatsApp() {
                         min={5}
                       />
                     </div>
+                    
                     <div className="space-y-2">
                       <Label className="text-sm">Delay Máximo (seg)</Label>
                       <Input
@@ -902,11 +969,11 @@ export default function WhatsApp() {
                       />
                     </div>
                   </div>
-
+                  
                   <div className="flex flex-col sm:flex-row gap-2">
                     {disparoAtivo ? (
-                      <Button 
-                        className="flex-1" 
+                      <Button
+                        className="flex-1"
                         variant="destructive"
                         onClick={handleStopDisparo}
                       >
@@ -914,7 +981,7 @@ export default function WhatsApp() {
                         Pausar Disparo
                       </Button>
                     ) : (
-                      <Button 
+                      <Button
                         className="flex-1"
                         onClick={handleStartDisparo}
                         disabled={connectionStatus !== 'connected' || allLeads.length === 0}
@@ -924,7 +991,7 @@ export default function WhatsApp() {
                       </Button>
                     )}
                   </div>
-
+                  
                   {connectionStatus !== 'connected' && (
                     <p className="text-xs text-center text-muted-foreground">
                       Conecte a API primeiro para fazer disparos
@@ -939,39 +1006,65 @@ export default function WhatsApp() {
           <TabsContent value="templates" className="mt-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
               {templates.map((template, index) => (
-                <Card 
-                  key={template.id}
-                  className="animate-slide-up"
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
+                <Card key={template.id} className="animate-slide-up" style={{ animationDelay: `${index * 50}ms` }}>
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <CardTitle className="flex items-center gap-2 text-base md:text-lg">
-                        <span className="text-xl">{template.icone}</span>
-                        {template.titulo}
+                        <span className="text-xl">
+                          {template.tipo === 'pre-estadia' ? '📅' : 
+                           template.tipo === 'durante' ? '📸' : 
+                           template.tipo === 'pos-estadia' ? '⭐' : '🎉'}
+                        </span>
+                        {template.nome}
                       </CardTitle>
-                      <Switch 
+                      <Switch
                         checked={template.ativo}
                         onCheckedChange={() => handleToggleTemplate(template.id)}
                       />
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <Textarea 
-                      value={template.mensagem}
-                      className="min-h-24 resize-none"
-                      placeholder="Mensagem do template..."
-                    />
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">Descrição</Label>
+                      <p className="text-xs text-muted-foreground">{template.descricao}</p>
+                    </div>
+                    
+                    <div className="space-y-2 mt-3">
+                      <Label className="text-xs text-muted-foreground">Mensagem</Label>
+                      <Textarea
+                        value={template.mensagem}
+                        onChange={(e) => {
+                          const updatedTemplates = templates.map(t => 
+                            t.id === template.id ? {...t, mensagem: e.target.value} : t
+                          );
+                          setTemplates(updatedTemplates);
+                        }}
+                        className="min-h-24 resize-none"
+                        placeholder="Mensagem do template..."
+                      />
+                    </div>
+                    
                     <div className="mt-3 flex flex-wrap gap-2">
-                      <Badge variant="secondary" className="text-xs">
+                      <Badge variant="secondary" className="text-xs cursor-pointer hover:bg-secondary/80">
                         {'{{nome_pet}}'}
                       </Badge>
-                      <Badge variant="secondary" className="text-xs">
+                      <Badge variant="secondary" className="text-xs cursor-pointer hover:bg-secondary/80">
                         {'{{nome_tutor}}'}
                       </Badge>
-                      <Badge variant="secondary" className="text-xs">
+                      <Badge variant="secondary" className="text-xs cursor-pointer hover:bg-secondary/80">
                         {'{{data_checkin}}'}
                       </Badge>
+                    </div>
+                    
+                    <div className="mt-4 flex justify-end">
+                      <Button
+                        size="sm"
+                        onClick={() => handleSaveTemplate(template)}
+                        disabled={isSaving}
+                      >
+                        <Save className="w-4 h-4 mr-2" />
+                        Salvar
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
