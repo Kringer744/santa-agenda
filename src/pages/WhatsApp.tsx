@@ -221,27 +221,31 @@ export default function WhatsApp() {
     }
   };
 
-  const handleSaveTemplate = async (template: WhatsAppTemplate) => {
+  const handleSaveAllTemplates = async () => {
+    setIsSaving(true);
     try {
-      const { error } = await supabase
-        .from('whatsapp_templates')
-        .update({
-          nome: template.nome,
-          descricao: template.descricao,
-          tipo: template.tipo,
-          mensagem: template.mensagem,
-          ativo: template.ativo,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', template.id);
-        
-      if (error) throw error;
-      
-      toast.success('Template salvo!');
-      loadTemplates(); // Recarregar templates
+      for (const template of templates) {
+        const { error } = await supabase
+          .from('whatsapp_templates')
+          .update({
+            nome: template.nome,
+            descricao: template.descricao,
+            tipo: template.tipo,
+            mensagem: template.mensagem,
+            ativo: template.ativo,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', template.id);
+          
+        if (error) throw error;
+      }
+      toast.success('Templates salvos com sucesso!');
+      loadTemplates(); // Recarregar templates para garantir o estado mais recente
     } catch (error) {
-      console.error('Erro ao salvar template:', error);
-      toast.error('Erro ao salvar template');
+      console.error('Erro ao salvar templates:', error);
+      toast.error('Erro ao salvar templates');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -1063,20 +1067,19 @@ Ou: Nome,5511999999999"
                         {'{{data_checkout}}'}
                       </Badge>
                     </div>
-                    
-                    <div className="mt-4 flex justify-end">
-                      <Button
-                        size="sm"
-                        onClick={() => handleSaveTemplate(template)}
-                        disabled={isSaving}
-                      >
-                        <Save className="w-4 h-4 mr-2" />
-                        Salvar
-                      </Button>
-                    </div>
                   </CardContent>
                 </Card>
               ))}
+            </div>
+            <div className="mt-6 flex justify-end">
+              <Button
+                className="w-full md:w-auto"
+                onClick={handleSaveAllTemplates}
+                disabled={isSaving}
+              >
+                <Save className="w-4 h-4 mr-2" />
+                {isSaving ? 'Salvando...' : 'Salvar Templates'}
+              </Button>
             </div>
           </TabsContent>
 
