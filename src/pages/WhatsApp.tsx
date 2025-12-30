@@ -504,52 +504,54 @@ export default function WhatsApp() {
     }
   };
 
-  const getTemplateIcon = (type: string) => {
-    switch (type) {
-      case 'lembrete_consulta': return <CalendarDays className="w-5 h-5 text-muted-foreground" />;
-      case 'pos_consulta': return <Stethoscope className="w-5 h-5 text-muted-foreground" />;
-      case 'aniversario_paciente': return <Gift className="w-5 h-5 text-muted-foreground" />;
-      case 'promocao': return <Star className="w-5 h-5 text-muted-foreground" />;
-      default: return <MessageSquare className="w-5 h-5 text-muted-foreground" />;
-    }
-  };
+  // These functions were only used by the 'Acompanhamento do Paciente' tab, so they can be removed.
+  // const getTemplateIcon = (type: string) => {
+  //   switch (type) {
+  //     case 'lembrete_consulta': return <CalendarDays className="w-5 h-5 text-muted-foreground" />;
+  //     case 'pos_consulta': return <Stethoscope className="w-5 h-5 text-muted-foreground" />;
+  //     case 'aniversario_paciente': return <Gift className="w-5 h-5 text-muted-foreground" />;
+  //     case 'promocao': return <Star className="w-5 h-5 text-muted-foreground" />;
+  //     default: return <MessageSquare className="w-5 h-5 text-muted-foreground" />;
+  //   }
+  // };
 
-  const getTemplateTitle = (type: string) => {
-    switch (type) {
-      case 'lembrete_consulta': return 'Lembrete de Consulta';
-      case 'pos_consulta': return 'Pós-Consulta';
-      case 'aniversario_paciente': return 'Aniversário do Paciente';
-      case 'promocao': return 'Promoção';
-      default: return 'Template Padrão';
-    }
-  };
+  // const getTemplateTitle = (type: string) => {
+  //   switch (type) {
+  //     case 'lembrete_consulta': return 'Lembrete de Consulta';
+  //     case 'pos_consulta': return 'Pós-Consulta';
+  //     case 'aniversario_paciente': return 'Aniversário do Paciente';
+  //     case 'promocao': return 'Promoção';
+  //     default: return 'Template Padrão';
+  //   }
+  // };
 
-  const getTemplateSubtitle = (type: string) => {
-    switch (type) {
-      case 'lembrete_consulta': return '(1 dia antes da consulta)';
-      case 'pos_consulta': return "(Após a consulta ser 'realizada')";
-      case 'aniversario_paciente': return '(No dia do aniversário do paciente)';
-      case 'promocao': return '(Disparo manual)';
-      default: return '';
-    }
-  };
+  // const getTemplateSubtitle = (type: string) => {
+  //   switch (type) {
+  //     case 'lembrete_consulta': return '(1 dia antes da consulta)';
+  //     case 'pos_consulta': return "(Após a consulta ser 'realizada')";
+  //     case 'aniversario_paciente': return '(No dia do aniversário do paciente)';
+  //     case 'promocao': return '(Disparo manual)';
+  //     default: return '';
+  //   }
+  // };
 
-  const getTemplateVariables = (type: string) => {
-    const common = ['{{nome_paciente}}', '{{nome_dentista}}'];
-    if (type === 'lembrete_consulta') {
-      return [...common, '{{data_consulta}}', '{{hora_consulta}}'];
-    }
-    if (type === 'pos_consulta') {
-      return [...common, '{{data_consulta}}'];
-    }
-    return common;
-  };
+  // const getTemplateVariables = (type: string) => {
+  //   const common = ['{{nome_paciente}}', '{{nome_dentista}}'];
+  //   if (type === 'lembrete_consulta') {
+  //     return [...common, '{{data_consulta}}', '{{hora_consulta}}'];
+  //   }
+  //   if (type === 'pos_consulta') {
+  //     return [...common, '{{data_consulta}}'];
+  //   }
+  //   return common;
+  // };
 
-  const expectedAutomatedTemplateTypes = useMemo(() => [
-    { type: 'lembrete_consulta', name: 'Lembrete de Consulta', description: 'Mensagem enviada 1 dia antes da consulta', defaultMessage: 'Olá {{nome_paciente}}! 🗓️ Lembrete da sua consulta com {{nome_dentista}} amanhã, {{data_consulta}} às {{hora_consulta}}. Aguardamos você!' },
-    { type: 'pos_consulta', name: 'Pós-Consulta', description: 'Mensagem enviada após a consulta para feedback', defaultMessage: 'Olá {{nome_paciente}}! Esperamos que tenha tido uma ótima experiência com {{nome_dentista}} em {{data_consulta}}. Deixe seu feedback!' },
-    { type: 'aniversario_paciente', name: 'Aniversário do Paciente', description: 'Mensagem de parabéns no aniversário do paciente', defaultMessage: '🎉 Feliz Aniversário, {{nome_paciente}}! A DentalClinic deseja um dia especial e um sorriso ainda mais lindo!' },
-  ], []);
+  // This array was only used to render the cards in the 'Acompanhamento do Paciente' tab.
+  // const expectedAutomatedTemplateTypes = useMemo(() => [
+  //   { type: 'lembrete_consulta', name: 'Lembrete de Consulta', description: 'Mensagem enviada 1 dia antes da consulta', defaultMessage: 'Olá {{nome_paciente}}! 🗓️ Lembrete da sua consulta com {{nome_dentista}} amanhã, {{data_consulta}} às {{hora_consulta}}. Aguardamos você!' },
+  //   { type: 'pos_consulta', name: 'Pós-Consulta', description: 'Mensagem enviada após a consulta para feedback', defaultMessage: 'Olá {{nome_paciente}}! Esperamos que tenha tido uma ótima experiência com {{nome_dentista}} em {{data_consulta}}. Deixe seu feedback!' },
+  //   { type: 'aniversario_paciente', name: 'Aniversário do Paciente', description: 'Mensagem de parabéns no aniversário do paciente', defaultMessage: '🎉 Feliz Aniversário, {{nome_paciente}}! A DentalClinic deseja um dia especial e um sorriso ainda mais lindo!' },
+  // ], []);
 
   const handleSelectTemplateForBulk = (templateId: string) => {
     setSelectedTemplateForBulk(templateId);
@@ -588,10 +590,11 @@ export default function WhatsApp() {
               <Bot className="w-4 h-4" />
               Menu Conversa
             </TabsTrigger>
-            <TabsTrigger value="acompanhamento" className="gap-2 text-xs md:text-sm">
+            {/* Removed 'Acompanhamento do Paciente' tab trigger */}
+            {/* <TabsTrigger value="acompanhamento" className="gap-2 text-xs md:text-sm">
               <BellRing className="w-4 h-4" />
               Acompanhamento do Paciente
-            </TabsTrigger>
+            </TabsTrigger> */}
             <TabsTrigger value="disparos" className="gap-2 text-xs md:text-sm">
               <Send className="w-4 h-4" />
               Disparos
@@ -893,7 +896,8 @@ export default function WhatsApp() {
             </div>
           </TabsContent>
 
-          <TabsContent value="acompanhamento" className="mt-6">
+          {/* Removed 'Acompanhamento do Paciente' tab content */}
+          {/* <TabsContent value="acompanhamento" className="mt-6">
             {isLoadingTemplates ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -980,7 +984,7 @@ export default function WhatsApp() {
                 </p>
               </>
             )}
-          </TabsContent>
+          </TabsContent> */}
 
           <TabsContent value="disparos" className="mt-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
