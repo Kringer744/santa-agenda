@@ -7,7 +7,7 @@ export function usePacientes() {
   return useQuery<Paciente[]>({
     queryKey: ['pacientes'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('pacientes').select('*');
+      const { data, error } = await supabase.from('pacientes').select('*').order('nome');
       if (error) throw error;
       return data as Paciente[];
     },
@@ -26,16 +26,23 @@ export function useCreatePaciente() {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        // Trata erro de CPF duplicado (Postgres error 23505)
+        if (error.code === '23505') {
+          throw new Error('Este CPF já está cadastrado no sistema.');
+        }
+        throw error;
+      }
       return data as Paciente;
     },
     onSuccess: () => {
+      // Invalida o cache para atualizar a lista instantaneamente
       queryClient.invalidateQueries({ queryKey: ['pacientes'] });
       toast({ title: 'Paciente cadastrado com sucesso!' });
     },
     onError: (error: Error) => {
       toast({
-        title: 'Erro ao cadastrar paciente',
+        title: 'Erro ao cadastrar',
         description: error.message,
         variant: 'destructive'
       });
@@ -54,7 +61,7 @@ export function useDeletePaciente() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pacientes'] });
-      toast({ title: 'Paciente excluído com sucesso!' });
+      toast({ title: 'Paciente removido com sucesso.' });
     },
   });
 }

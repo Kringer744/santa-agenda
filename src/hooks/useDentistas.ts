@@ -7,12 +7,8 @@ export function useDentistas() {
   return useQuery<Dentista[]>({
     queryKey: ['dentistas'],
     queryFn: async () => {
-      // Chamada explícita para a tabela 'dentistas'
-      const { data, error } = await supabase.from('dentistas').select('*');
-      if (error) {
-        console.error('Erro ao buscar dentistas:', error);
-        throw error;
-      }
+      const { data, error } = await supabase.from('dentistas').select('*').order('nome');
+      if (error) throw error;
       return data as Dentista[];
     },
   });
@@ -31,7 +27,9 @@ export function useCreateDentista() {
         .single();
 
       if (error) {
-        console.error('Erro ao criar dentista:', error);
+        if (error.code === '23505') {
+          throw new Error('Este CRO já está cadastrado no sistema.');
+        }
         throw error;
       }
       return data as Dentista;
@@ -61,7 +59,7 @@ export function useDeleteDentista() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dentistas'] });
-      toast({ title: 'Dentista excluído com sucesso!' });
+      toast({ title: 'Dentista removido com sucesso.' });
     },
   });
 }
