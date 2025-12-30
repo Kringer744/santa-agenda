@@ -5,7 +5,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Loader2, CheckCircle, Clock, Stethoscope, CreditCard, ChevronLeft } from 'lucide-react';
+import { Loader2, CheckCircle, Clock, Stethoscope, CreditCard, ChevronLeft, Cake } from 'lucide-react';
 import { useDentistas } from '@/hooks/useDentistas';
 import { usePacientes, useCreatePaciente } from '@/hooks/usePacientes';
 import { useClinicas } from '@/hooks/useClinicas';
@@ -29,6 +29,7 @@ export default function ClientAppointment() {
   const [nome, setNome] = useState('');
   const [telefone, setTelefone] = useState('');
   const [cpf, setCpf] = useState('');
+  const [dataNascimento, setDataNascimento] = useState('');
 
   const { data: dentistas = [] } = useDentistas();
   const { data: clinicas = [] } = useClinicas();
@@ -48,12 +49,17 @@ export default function ClientAppointment() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      if (!nome || !telefone || !cpf) {
-        toast.error("Por favor, preencha todos os campos.");
+      if (!nome || !telefone || !cpf || !dataNascimento) {
+        toast.error("Por favor, preencha todos os campos, incluindo sua data de nascimento.");
         return;
       }
       const res = await createPaciente.mutateAsync({ 
-        nome, telefone, cpf, tags: ['cliente-web'], email: null, data_nascimento: null 
+        nome, 
+        telefone, 
+        cpf, 
+        data_nascimento: dataNascimento,
+        tags: ['cliente-web'], 
+        email: null 
       });
       toast.success(`Olá ${res.nome}, vamos agendar sua consulta.`);
       setStep(2);
@@ -67,7 +73,7 @@ export default function ClientAppointment() {
     const pacienteId = pacienteIdUrl || pacientes.find(p => p.telefone === telefone)?.id;
     
     if (clinicas.length === 0) {
-      toast.error("Erro interno: Clínica não configurada. Avise o suporte.");
+      toast.error("Erro interno: Clínica não configurada. O administrador precisa acessar as Configurações do sistema primeiro.");
       return;
     }
 
@@ -93,7 +99,10 @@ export default function ClientAppointment() {
         pix_copia_e_cola: null,
       });
 
-      setPixData({ qrCodeBase64: 'placeholder', pixCopiaECola: '00020126360014BR.GOV.BCB.PIX0114241648318805204000053039865802BR5925DentalClinic6009SAO PAULO62070503***6304' });
+      setPixData({ 
+        qrCodeBase64: 'placeholder', 
+        pixCopiaECola: '00020126360014BR.GOV.BCB.PIX0114241648318805204000053039865802BR5925DentalClinic6009SAO PAULO62070503***6304' 
+      });
       setStep(4);
       toast.success("Reserva realizada! Efetue o pagamento para confirmar.");
     } catch (err: any) { 
@@ -133,6 +142,17 @@ export default function ClientAppointment() {
                   <Label>CPF</Label>
                   <Input value={cpf} onChange={e => setCpf(e.target.value)} required placeholder="000.000.000-00" />
                 </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Cake size={14} className="text-primary" /> Data de Nascimento
+                </Label>
+                <Input 
+                  type="date" 
+                  value={dataNascimento} 
+                  onChange={e => setDataNascimento(e.target.value)} 
+                  required 
+                />
               </div>
               <Button type="submit" className="w-full h-12 bg-primary hover:bg-primary/90" disabled={createPaciente.isPending}>
                 {createPaciente.isPending ? <Loader2 className="animate-spin" /> : 'Próximo Passo'}
