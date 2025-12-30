@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      itau_settings: {
+        Row: {
+          id: string;
+          created_at: string;
+          client_id: string | null;
+          client_secret: string | null;
+          pix_chave: string | null;
+          api_key: string | null;
+          api_url: string | null;
+          auth_url: string | null;
+        };
+        Insert: {
+          id?: string;
+          created_at?: string;
+          client_id?: string | null;
+          client_secret?: string | null;
+          pix_chave?: string | null;
+          api_key?: string | null;
+          api_url?: string | null;
+          auth_url?: string | null;
+        };
+        Update: {
+          id?: string;
+          created_at?: string;
+          client_id?: string | null;
+          client_secret?: string | null;
+          pix_chave?: string | null;
+          api_key?: string | null;
+          api_url?: string | null;
+          auth_url?: string | null;
+        };
+        Relationships: [];
+      };
       pets: {
         Row: {
           created_at: string
@@ -76,6 +109,9 @@ export type Database = {
           id: string
           pagamento_status: string | null
           pet_id: string
+          pix_copia_e_cola: string | null
+          pix_qr_code_base64: string | null
+          pix_txid: string | null
           servicos_adicionais: string[] | null
           status: string
           tutor_id: string
@@ -91,6 +127,9 @@ export type Database = {
           id?: string
           pagamento_status?: string | null
           pet_id: string
+          pix_copia_e_cola?: string | null
+          pix_qr_code_base64?: string | null
+          pix_txid?: string | null
           servicos_adicionais?: string[] | null
           status?: string
           tutor_id: string
@@ -106,6 +145,9 @@ export type Database = {
           id?: string
           pagamento_status?: string | null
           pet_id?: string
+          pix_copia_e_cola?: string | null
+          pix_qr_code_base64?: string | null
+          pix_txid?: string | null
           servicos_adicionais?: string[] | null
           status?: string
           tutor_id?: string
@@ -204,8 +246,10 @@ export type Database = {
         Row: {
           capacidade_cachorro: number
           capacidade_gato: number
+          cidade: string | null
           created_at: string
           endereco: string | null
+          estado: string | null
           id: string
           nome: string
           updated_at: string
@@ -213,8 +257,10 @@ export type Database = {
         Insert: {
           capacidade_cachorro?: number
           capacidade_gato?: number
+          cidade?: string | null
           created_at?: string
           endereco?: string | null
+          estado?: string | null
           id?: string
           nome: string
           updated_at?: string
@@ -222,8 +268,10 @@ export type Database = {
         Update: {
           capacidade_cachorro?: number
           capacidade_gato?: number
+          cidade?: string | null
           created_at?: string
           endereco?: string | null
+          estado?: string | null
           id?: string
           nome?: string
           updated_at?: string

@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -17,13 +18,36 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
   try {
-    const ITAU_CLIENT_ID = Deno.env.get("ITAU_CLIENT_ID");
-    const ITAU_CLIENT_SECRET = Deno.env.get("ITAU_CLIENT_SECRET");
-    const ITAU_AUTH_URL = Deno.env.get("ITAU_AUTH_URL") || "https://oauth.itau.com.br/identity/oauth/access-token";
+    // Try to get settings from environment variables first (most secure)
+    let ITAU_CLIENT_ID = Deno.env.get("ITAU_CLIENT_ID");
+    let ITAU_CLIENT_SECRET = Deno.env.get("ITAU_CLIENT_SECRET");
+    let ITAU_AUTH_URL = Deno.env.get("ITAU_AUTH_URL") || "https://oauth.itau.com.br/identity/oauth/access-token";
+
+    // If not found in environment variables, try to fetch from database
+    if (!ITAU_CLIENT_ID || !ITAU_CLIENT_SECRET) {
+      const { data: itauSettings, error: dbError } = await supabase
+        .from('itau_settings')
+        .select('client_id, client_secret, auth_url')
+        .limit(1)
+        .maybeSingle();
+
+      if (dbError) {
+        console.error("[ITAU_AUTH] Erro ao buscar configurações do banco de dados:", dbError);
+        // Continue, as env vars might still be set
+      } else if (itauSettings) {
+        ITAU_CLIENT_ID = ITAU_CLIENT_ID || itauSettings.client_id;
+        ITAU_CLIENT_SECRET = ITAU_CLIENT_SECRET || itauSettings.client_secret;
+        ITAU_AUTH_URL = ITAU_AUTH_URL || itauSettings.auth_url || ITAU_AUTH_URL;
+      }
+    }
 
     if (!ITAU_CLIENT_ID || !ITAU_CLIENT_SECRET) {
-      return jsonResponse({ error: "ITAU_CLIENT_ID e ITAU_CLIENT_SECRET são obrigatórios" }, 400);
+      return jsonResponse({ error: "ITAU_CLIENT_ID e ITAU_CLIENT_SECRET são obrigatórios (env ou DB)" }, 400);
     }
 
     const authString = btoa(`${ITAU_CLIENT_ID}:${ITAU_CLIENT_SECRET}`);

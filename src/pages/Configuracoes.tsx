@@ -6,9 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Building2, Plus, DollarSign, Pencil, Trash2, Loader2, Banknote, CheckCircle, XCircle, Info } from 'lucide-react';
+import { Building2, Plus, DollarSign, Pencil, Trash2, Loader2, Banknote, CheckCircle, XCircle, Info, Save } from 'lucide-react';
 import { useUnidades, useCreateUnidade, useDeleteUnidade } from '@/hooks/useUnidades';
 import { useServicos, useCreateServico, useUpdateServico } from '@/hooks/useServicos';
+import { useItauSettings, useSaveItauSettings } from '@/hooks/useItauSettings'; // Import new hooks
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -20,17 +21,34 @@ export default function Configuracoes() {
   
   const { data: unidades = [], isLoading: loadingUnidades } = useUnidades();
   const { data: servicos = [], isLoading: loadingServicos } = useServicos();
-  
-  const createUnidade = useCreateUnidade();
-  const deleteUnidade = useDeleteUnidade();
-  const createServico = useCreateServico();
-  const updateServico = useUpdateServico();
+  const { data: itauSettings, isLoading: loadingItauSettings } = useItauSettings(); // Fetch Itaú settings
+  const saveItauSettings = useSaveItauSettings(); // Hook to save Itaú settings
+
+  // State for Itaú Pix form
+  const [itauClientId, setItauClientId] = useState('');
+  const [itauClientSecret, setItauClientSecret] = useState('');
+  const [itauPixChave, setItauPixChave] = useState('');
+  const [itauApiKey, setItauApiKey] = useState('');
+  const [itauApiUrl, setItauApiUrl] = useState('');
+  const [itauAuthUrl, setItauAuthUrl] = useState('');
+
+  useEffect(() => {
+    if (itauSettings) {
+      setItauClientId(itauSettings.client_id || '');
+      setItauClientSecret(itauSettings.client_secret || '');
+      setItauPixChave(itauSettings.pix_chave || '');
+      setItauApiKey(itauSettings.api_key || '');
+      setItauApiUrl(itauSettings.api_url || '');
+      setItauAuthUrl(itauSettings.auth_url || '');
+    }
+  }, [itauSettings]);
 
   useEffect(() => {
     const checkItauConfig = async () => {
       setLoadingItauStatus(true);
       try {
         // Tenta invocar a função de auth para verificar se as credenciais estão lá
+        // Esta função ainda depende das variáveis de ambiente para a verificação de status
         const { data, error } = await supabase.functions.invoke('itau-auth');
         if (error) {
           console.warn('Itaú Auth function error (likely missing env vars):', error.message);
@@ -49,7 +67,7 @@ export default function Configuracoes() {
     };
     
     checkItauConfig();
-  }, []);
+  }, [saveItauSettings.isSuccess]); // Re-check status after saving settings
 
   const handleAddUnidade = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -78,6 +96,18 @@ export default function Configuracoes() {
       ativo: true,
     }, {
       onSuccess: () => setIsServicoDialogOpen(false)
+    });
+  };
+
+  const handleSaveItauSettings = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    saveItauSettings.mutate({
+      client_id: itauClientId,
+      client_secret: itauClientSecret,
+      pix_chave: itauPixChave,
+      api_key: itauApiKey,
+      api_url: itauApiUrl,
+      auth_url: itauAuthUrl,
     });
   };
 
@@ -293,51 +323,84 @@ export default function Configuracoes() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {loadingItauStatus ? (
+              {loadingItauSettings || loadingItauStatus ? (
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                  <span className="ml-2 text-muted-foreground">Verificando status...</span>
+                  <span className="ml-2 text-muted-foreground">Carregando configurações...</span>
                 </div>
               ) : (
-                <div className="flex items-center gap-3 p-4 rounded-xl bg-muted/50">
-                  {itauConfigured ? (
-                    <CheckCircle className="w-6 h-6 text-secondary" />
-                  ) : (
-                    <XCircle className="w-6 h-6 text-destructive" />
-                  )}
-                  <div className="flex-1">
-                    <p className="font-semibold text-foreground">
-                      Status: {itauConfigured ? 'Conectado' : 'Não Configurado'}
+                <>
+                  <div className="flex items-center gap-3 p-4 rounded-xl bg-muted/50">
+                    {itauConfigured ? (
+                      <CheckCircle className="w-6 h-6 text-secondary" />
+                    ) : (
+                      <XCircle className="w-6 h-6 text-destructive" />
+                    )}
+                    <div className="flex-1">
+                      <p className="font-semibold text-foreground">
+                        Status da Conexão (Edge Functions): {itauConfigured ? 'Conectado' : 'Não Configurado'}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Este status reflete se as variáveis de ambiente estão configuradas nas suas Edge Functions.
+                      </p>
+                    </div>
+                  </div>
+
+                  <form onSubmit={handleSaveItauSettings} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="itau_client_id">Client ID</Label>
+                      <Input id="itau_client_id" value={itauClientId} onChange={(e) => setItauClientId(e.target.value)} placeholder="Seu Client ID do Itaú" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="itau_client_secret">Client Secret</Label>
+                      <Input id="itau_client_secret" type="password" value={itauClientSecret} onChange={(e) => setItauClientSecret(e.target.value)} placeholder="Seu Client Secret do Itaú" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="itau_pix_chave">Chave Pix</Label>
+                      <Input id="itau_pix_chave" value={itauPixChave} onChange={(e) => setItauPixChave(e.target.value)} placeholder="Sua chave Pix (ex: email@exemplo.com)" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="itau_api_key">API Key</Label>
+                      <Input id="itau_api_key" value={itauApiKey} onChange={(e) => setItauApiKey(e.target.value)} placeholder="Sua API Key do Itaú" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="itau_api_url">URL da API</Label>
+                      <Input id="itau_api_url" value={itauApiUrl} onChange={(e) => setItauApiUrl(e.target.value)} placeholder="Ex: https://api.itau.com.br/pix/v2" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="itau_auth_url">URL de Autenticação</Label>
+                      <Input id="itau_auth_url" value={itauAuthUrl} onChange={(e) => setItauAuthUrl(e.target.value)} placeholder="Ex: https://oauth.itau.com.br/identity/oauth/access-token" />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={saveItauSettings.isPending}>
+                      {saveItauSettings.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <><Save className="w-4 h-4 mr-2" /> Salvar Configurações</>}
+                    </Button>
+                  </form>
+
+                  <div className="space-y-2 p-4 bg-blue-50/50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <p className="font-semibold text-blue-700 dark:text-blue-300 flex items-center gap-2">
+                      <Info className="w-4 h-4" />
+                      Importante: Variáveis de Ambiente
                     </p>
-                    <p className="text-sm text-muted-foreground">
-                      {itauConfigured
-                        ? 'As credenciais do Itaú Pix estão configuradas.'
-                        : 'As variáveis de ambiente do Itaú Pix não foram encontradas.'}
+                    <p className="text-sm text-blue-600 dark:text-blue-400">
+                      Para máxima segurança, é **altamente recomendado** que você defina as credenciais do Itaú Pix como variáveis de ambiente (secrets) diretamente no seu projeto Supabase (em `Edge Functions > Secrets`).
+                    </p>
+                    <p className="text-sm text-blue-600 dark:text-blue-400">
+                      As Edge Functions tentarão ler as variáveis de ambiente primeiro. Se não as encontrarem, usarão as configurações salvas neste formulário.
+                    </p>
+                    <ul className="list-disc list-inside text-sm text-blue-600 dark:text-blue-400 space-y-1">
+                      <li>`ITAU_CLIENT_ID`</li>
+                      <li>`ITAU_CLIENT_SECRET`</li>
+                      <li>`ITAU_PIX_CHAVE`</li>
+                      <li>`ITAU_API_KEY`</li>
+                      <li>`ITAU_API_URL`</li>
+                      <li>`ITAU_AUTH_URL`</li>
+                    </ul>
+                    <p className="text-xs text-blue-500 dark:text-blue-500 mt-2">
+                      Após configurar as variáveis de ambiente, reinicie suas funções de Edge para que elas sejam carregadas.
                     </p>
                   </div>
-                </div>
+                </>
               )}
-              
-              <div className="space-y-2 p-4 bg-blue-50/50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                <p className="font-semibold text-blue-700 dark:text-blue-300 flex items-center gap-2">
-                  <Info className="w-4 h-4" />
-                  Instruções de Configuração
-                </p>
-                <p className="text-sm text-blue-600 dark:text-blue-400">
-                  Para conectar ao Itaú Pix, você precisa definir as seguintes variáveis de ambiente (secrets) no seu projeto Supabase (em `Edge Functions &gt; Secrets`):
-                </p>
-                <ul className="list-disc list-inside text-sm text-blue-600 dark:text-blue-400 space-y-1">
-                  <li>`ITAU_CLIENT_ID`: Seu Client ID do Itaú.</li>
-                  <li>`ITAU_CLIENT_SECRET`: Seu Client Secret do Itaú.</li>
-                  <li>`ITAU_PIX_CHAVE`: A chave Pix do seu estabelecimento.</li>
-                  <li>`ITAU_API_KEY`: Sua API Key do Itaú.</li>
-                  <li>`ITAU_API_URL`: URL base da API do Itaú (ex: `https://api.itau.com.br/pix/v2`).</li>
-                  <li>`ITAU_AUTH_URL`: URL de autenticação do Itaú (ex: `https://oauth.itau.com.br/identity/oauth/access-token`).</li>
-                </ul>
-                <p className="text-xs text-blue-500 dark:text-blue-500 mt-2">
-                  Após configurar, reinicie suas funções de Edge para que as variáveis sejam carregadas.
-                </p>
-              </div>
             </CardContent>
           </Card>
         </div>

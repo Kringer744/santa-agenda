@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -17,21 +18,43 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
   try {
     const { access_token, valor, tutor_cpf, tutor_nome, solicitacaoPagador } = await req.json();
 
-    const ITAU_API_URL = Deno.env.get("ITAU_API_URL") || "https://api.itau.com.br/pix/v2";
-    const ITAU_PIX_CHAVE = Deno.env.get("ITAU_PIX_CHAVE");
-    const ITAU_API_KEY = Deno.env.get("ITAU_API_KEY");
+    // Try to get settings from environment variables first (most secure)
+    let ITAU_API_URL = Deno.env.get("ITAU_API_URL") || "https://api.itau.com.br/pix/v2";
+    let ITAU_PIX_CHAVE = Deno.env.get("ITAU_PIX_CHAVE");
+    let ITAU_API_KEY = Deno.env.get("ITAU_API_KEY");
+
+    // If not found in environment variables, try to fetch from database
+    if (!ITAU_PIX_CHAVE || !ITAU_API_KEY) {
+      const { data: itauSettings, error: dbError } = await supabase
+        .from('itau_settings')
+        .select('pix_chave, api_key, api_url')
+        .limit(1)
+        .maybeSingle();
+
+      if (dbError) {
+        console.error("[ITAU_PIX_CREATE] Erro ao buscar configurações do banco de dados:", dbError);
+      } else if (itauSettings) {
+        ITAU_PIX_CHAVE = ITAU_PIX_CHAVE || itauSettings.pix_chave;
+        ITAU_API_KEY = ITAU_API_KEY || itauSettings.api_key;
+        ITAU_API_URL = ITAU_API_URL || itauSettings.api_url || ITAU_API_URL;
+      }
+    }
 
     if (!access_token || !valor || !tutor_cpf || !tutor_nome) {
       return jsonResponse({ error: "access_token, valor, tutor_cpf e tutor_nome são obrigatórios" }, 400);
     }
     if (!ITAU_PIX_CHAVE) {
-      return jsonResponse({ error: "ITAU_PIX_CHAVE não configurada" }, 400);
+      return jsonResponse({ error: "ITAU_PIX_CHAVE não configurada (env ou DB)" }, 400);
     }
     if (!ITAU_API_KEY) {
-      return jsonResponse({ error: "ITAU_API_KEY não configurada" }, 400);
+      return jsonResponse({ error: "ITAU_API_KEY não configurada (env ou DB)" }, 400);
     }
 
     const pixPayload = {
