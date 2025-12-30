@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
+import { TablesInsert } from '@/integrations/supabase/types';
 
 type ItauSettings = TablesInsert<'itau_settings'>;
 
@@ -11,7 +11,7 @@ export function useItauSettings() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('itau_settings')
-        .select('*')
+        .select('id, client_id, client_secret') // Only select client_id and client_secret
         .limit(1)
         .maybeSingle();
       if (error) throw error;
@@ -39,7 +39,10 @@ export function useSaveItauSettings() {
         // Update existing settings
         const { data, error } = await supabase
           .from('itau_settings')
-          .update(settings)
+          .update({
+            client_id: settings.client_id,
+            client_secret: settings.client_secret,
+          })
           .eq('id', existingSettings.id)
           .select()
           .single();
@@ -49,7 +52,10 @@ export function useSaveItauSettings() {
         // Insert new settings
         const { data, error } = await supabase
           .from('itau_settings')
-          .insert(settings)
+          .insert({
+            client_id: settings.client_id,
+            client_secret: settings.client_secret,
+          })
           .select()
           .single();
         if (error) throw error;

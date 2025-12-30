@@ -27,22 +27,14 @@ export default function Configuracoes() {
   const { data: itauSettings, isLoading: loadingItauSettings } = useItauSettings(); // Fetch Itaú settings
   const saveItauSettings = useSaveItauSettings(); // Hook to save Itaú settings
 
-  // State for Itaú Pix form
+  // State for Itaú Pix form (only Client ID and Secret)
   const [itauClientId, setItauClientId] = useState('');
   const [itauClientSecret, setItauClientSecret] = useState('');
-  const [itauPixChave, setItauPixChave] = useState('');
-  const [itauApiKey, setItauApiKey] = useState('');
-  const [itauApiUrl, setItauApiUrl] = useState('');
-  const [itauAuthUrl, setItauAuthUrl] = useState('');
 
   useEffect(() => {
     if (itauSettings) {
       setItauClientId(itauSettings.client_id || '');
       setItauClientSecret(itauSettings.client_secret || '');
-      setItauPixChave(itauSettings.pix_chave || '');
-      setItauApiKey(itauSettings.api_key || '');
-      setItauApiUrl(itauSettings.api_url || '');
-      setItauAuthUrl(itauSettings.auth_url || '');
     }
   }, [itauSettings]);
 
@@ -107,10 +99,7 @@ export default function Configuracoes() {
     saveItauSettings.mutate({
       client_id: itauClientId,
       client_secret: itauClientSecret,
-      pix_chave: itauPixChave,
-      api_key: itauApiKey,
-      api_url: itauApiUrl,
-      auth_url: itauAuthUrl,
+      // Removed pix_chave, api_key, api_url, auth_url as they are now env variables
     });
   };
 
@@ -358,24 +347,9 @@ export default function Configuracoes() {
                       <Label htmlFor="itau_client_secret">Client Secret</Label>
                       <Input id="itau_client_secret" type="password" value={itauClientSecret} onChange={(e) => setItauClientSecret(e.target.value)} placeholder="Seu Client Secret do Itaú" />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="itau_pix_chave">Chave Pix</Label>
-                      <Input id="itau_pix_chave" value={itauPixChave} onChange={(e) => setItauPixChave(e.target.value)} placeholder="Sua chave Pix (ex: email@exemplo.com)" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="itau_api_key">API Key</Label>
-                      <Input id="itau_api_key" value={itauApiKey} onChange={(e) => setItauApiKey(e.target.value)} placeholder="Sua API Key do Itaú" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="itau_api_url">URL da API</Label>
-                      <Input id="itau_api_url" value={itauApiUrl} onChange={(e) => setItauApiUrl(e.target.value)} placeholder="Ex: https://api.itau.com.br/pix/v2" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="itau_auth_url">URL de Autenticação</Label>
-                      <Input id="itau_auth_url" value={itauAuthUrl} onChange={(e) => setItauAuthUrl(e.target.value)} placeholder="Ex: https://oauth.itau.com.br/identity/oauth/access-token" />
-                    </div>
+                    {/* Removed inputs for Pix Key, API Key, API URL, Auth URL */}
                     <Button type="submit" className="w-full" disabled={saveItauSettings.isPending}>
-                      {saveItauSettings.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <><Save className="w-4 h-4 mr-2" /> Salvar Configurações</>}
+                      {saveItauSettings.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <><Save className="w-4 h-4 mr-2" /> Salvar Credenciais</>}
                     </Button>
                   </form>
 

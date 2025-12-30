@@ -23,26 +23,25 @@ serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
-    // Try to get settings from environment variables first (most secure)
+    // Always try to get settings from environment variables first (most secure)
     let ITAU_CLIENT_ID = Deno.env.get("ITAU_CLIENT_ID");
     let ITAU_CLIENT_SECRET = Deno.env.get("ITAU_CLIENT_SECRET");
     let ITAU_AUTH_URL = Deno.env.get("ITAU_AUTH_URL") || "https://oauth.itau.com.br/identity/oauth/access-token";
 
-    // If not found in environment variables, try to fetch from database
+    // If Client ID or Secret are not found in environment variables, try to fetch from database
+    // This fallback is kept for Client ID and Secret as they are managed by the UI
     if (!ITAU_CLIENT_ID || !ITAU_CLIENT_SECRET) {
       const { data: itauSettings, error: dbError } = await supabase
         .from('itau_settings')
-        .select('client_id, client_secret, auth_url')
+        .select('client_id, client_secret') // Only select client_id and client_secret
         .limit(1)
         .maybeSingle();
 
       if (dbError) {
         console.error("[ITAU_AUTH] Erro ao buscar configurações do banco de dados:", dbError);
-        // Continue, as env vars might still be set
       } else if (itauSettings) {
         ITAU_CLIENT_ID = ITAU_CLIENT_ID || itauSettings.client_id;
         ITAU_CLIENT_SECRET = ITAU_CLIENT_SECRET || itauSettings.client_secret;
-        ITAU_AUTH_URL = ITAU_AUTH_URL || itauSettings.auth_url || ITAU_AUTH_URL;
       }
     }
 

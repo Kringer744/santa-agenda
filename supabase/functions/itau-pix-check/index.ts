@@ -25,31 +25,15 @@ serve(async (req) => {
   try {
     const { access_token, txid } = await req.json();
 
-    // Try to get settings from environment variables first (most secure)
-    let ITAU_API_URL = Deno.env.get("ITAU_API_URL") || "https://api.itau.com.br/pix/v2";
-    let ITAU_API_KEY = Deno.env.get("ITAU_API_KEY");
-
-    // If not found in environment variables, try to fetch from database
-    if (!ITAU_API_KEY) {
-      const { data: itauSettings, error: dbError } = await supabase
-        .from('itau_settings')
-        .select('api_key, api_url')
-        .limit(1)
-        .maybeSingle();
-
-      if (dbError) {
-        console.error("[ITAU_PIX_CHECK] Erro ao buscar configurações do banco de dados:", dbError);
-      } else if (itauSettings) {
-        ITAU_API_KEY = ITAU_API_KEY || itauSettings.api_key;
-        ITAU_API_URL = ITAU_API_URL || itauSettings.api_url || ITAU_API_URL;
-      }
-    }
+    // Exclusively get API settings from environment variables
+    const ITAU_API_URL = Deno.env.get("ITAU_API_URL") || "https://api.itau.com.br/pix/v2";
+    const ITAU_API_KEY = Deno.env.get("ITAU_API_KEY");
 
     if (!access_token || !txid) {
       return jsonResponse({ error: "access_token e txid são obrigatórios" }, 400);
     }
     if (!ITAU_API_KEY) {
-      return jsonResponse({ error: "ITAU_API_KEY não configurada (env ou DB)" }, 400);
+      return jsonResponse({ error: "ITAU_API_KEY não configurada nas variáveis de ambiente" }, 400);
     }
 
     const response = await fetch(`${ITAU_API_URL}/cob/${txid}`, {

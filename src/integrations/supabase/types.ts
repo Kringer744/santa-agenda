@@ -20,30 +20,18 @@ export type Database = {
           created_at: string;
           client_id: string | null;
           client_secret: string | null;
-          pix_chave: string | null;
-          api_key: string | null;
-          api_url: string | null;
-          auth_url: string | null;
         };
         Insert: {
           id?: string;
           created_at?: string;
           client_id?: string | null;
           client_secret?: string | null;
-          pix_chave?: string | null;
-          api_key?: string | null;
-          api_url?: string | null;
-          auth_url?: string | null;
         };
         Update: {
           id?: string;
           created_at?: string;
           client_id?: string | null;
           client_secret?: string | null;
-          pix_chave?: string | null;
-          api_key?: string | null;
-          api_url?: string | null;
-          auth_url?: string | null;
         };
         Relationships: [];
       };
