@@ -24,8 +24,6 @@ const DEFAULT_TIME_SLOTS = [
 ];
 
 export default function Agenda() {
-  const [selectedDentistaId, setSelectedDentistaId] = useState<string | undefined>(undefined);
-  const [selectedClinicaId, setSelectedClinicaId] = useState<string | undefined>(undefined);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [isAgendaOpen, setIsAgendaOpen] = useState(true);
   const [customSlotsInput, setCustomSlotsInput] = useState('');
@@ -33,8 +31,12 @@ export default function Agenda() {
   const { data: dentistas = [], isLoading: loadingDentistas } = useDentistas();
   const { data: clinicas = [], isLoading: loadingClinicas } = useClinicas();
   
+  // Usar o primeiro dentista e clínica encontrados
+  const defaultDentistaId = dentistas[0]?.id;
+  const defaultClinicaId = clinicas[0]?.id;
+
   const formattedSelectedDate = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : undefined;
-  const { data: agendaDoDia, isLoading: loadingAgendaDoDia } = useAgendaDentistaDoDia(selectedDentistaId, formattedSelectedDate);
+  const { data: agendaDoDia, isLoading: loadingAgendaDoDia } = useAgendaDentistaDoDia(defaultDentistaId, formattedSelectedDate);
   
   const createAgenda = useCreateAgendaDentista();
   const updateAgenda = useUpdateAgendaDentista();
@@ -50,8 +52,8 @@ export default function Agenda() {
   }, [agendaDoDia]);
 
   const handleSaveAgenda = async () => {
-    if (!selectedDentistaId || !selectedClinicaId || !selectedDate) {
-      toast.error('Selecione um dentista, clínica e data para salvar a agenda.');
+    if (!defaultDentistaId || !defaultClinicaId || !selectedDate) {
+      toast.error('Dados do dentista ou clínica não carregados. Verifique as configurações.');
       return;
     }
 
@@ -60,8 +62,8 @@ export default function Agenda() {
       : [];
 
     const agendaData = {
-      dentista_id: selectedDentistaId,
-      clinica_id: selectedClinicaId,
+      dentista_id: defaultDentistaId,
+      clinica_id: defaultClinicaId,
       data: formattedSelectedDate!,
       horarios_disponiveis: slotsToSave,
       horarios_ocupados: agendaDoDia?.horarios_ocupados || [],
@@ -100,13 +102,16 @@ export default function Agenda() {
 
   const isLoading = loadingDentistas || loadingClinicas || loadingAgendaDoDia || createAgenda.isPending || updateAgenda.isPending;
 
+  const currentDentistaName = dentistas.find(d => d.id === defaultDentistaId)?.nome || 'Dentista';
+  const currentClinicaName = clinicas.find(c => c.id === defaultClinicaId)?.nome || 'Clínica';
+
   return (
     <Layout>
       <div className="space-y-6 md:space-y-8">
         <div className="animate-fade-in">
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">Gerenciar Agenda</h1>
           <p className="text-muted-foreground mt-1 text-sm md:text-base">
-            Defina a disponibilidade de horários para cada dentista e clínica.
+            Defina a disponibilidade de horários para {currentDentistaName} na {currentClinicaName}.
           </p>
         </div>
 
@@ -116,54 +121,33 @@ export default function Agenda() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
                 <Stethoscope className="w-5 h-5 text-primary" />
-                Selecionar Dentista e Clínica
+                Agenda de {currentDentistaName}
               </CardTitle>
               <CardDescription className="text-sm md:text-base">
-                Escolha o dentista e a clínica para gerenciar a agenda.
+                Selecione a data para gerenciar a disponibilidade.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="dentista_id">Dentista</Label>
-                <Select value={selectedDentistaId} onValueChange={setSelectedDentistaId} disabled={loadingDentistas}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o dentista" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {dentistas.map(dentista => (
-                      <SelectItem key={dentista.id} value={dentista.id}>
-                        {dentista.nome} ({dentista.especialidade || 'Geral'})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="clinica_id">Clínica</Label>
-                <Select value={selectedClinicaId} onValueChange={setSelectedClinicaId} disabled={loadingClinicas || !selectedDentistaId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a clínica" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clinicas.map(clinica => (
-                      <SelectItem key={clinica.id} value={clinica.id}>
-                        {clinica.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex justify-center">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={setSelectedDate}
-                  locale={ptBR}
-                  className="rounded-md border shadow-card p-3"
-                />
-              </div>
+              {(loadingDentistas || loadingClinicas) ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                  <p className="ml-2 text-muted-foreground">Carregando dados da clínica...</p>
+                </div>
+              ) : (!defaultDentistaId || !defaultClinicaId) ? (
+                <div className="text-center py-8 text-destructive">
+                  <p>Nenhum dentista ou clínica encontrados. Por favor, cadastre-os nas configurações.</p>
+                </div>
+              ) : (
+                <div className="flex justify-center">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={setSelectedDate}
+                    locale={ptBR}
+                    className="rounded-md border shadow-card p-3"
+                  />
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -172,16 +156,16 @@ export default function Agenda() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
                 <CalendarDays className="w-5 h-5 text-secondary" />
-                Configurar Disponibilidade para {selectedDate ? format(selectedDate, 'dd/MM/yyyy', { locale: ptBR }) : 'o dia'}
+                Disponibilidade para {selectedDate ? format(selectedDate, 'dd/MM/yyyy', { locale: ptBR }) : 'o dia'}
               </CardTitle>
               <CardDescription className="text-sm md:text-base">
                 Defina se a agenda está aberta ou fechada e os horários disponíveis.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {(!selectedDentistaId || !selectedClinicaId || !selectedDate) ? (
+              {(!defaultDentistaId || !defaultClinicaId || !selectedDate) ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  <p>Selecione um dentista, clínica e data para configurar a agenda.</p>
+                  <p>Selecione uma data para configurar a agenda.</p>
                 </div>
               ) : isLoading ? (
                 <div className="flex items-center justify-center py-8">
