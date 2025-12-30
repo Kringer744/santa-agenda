@@ -30,18 +30,23 @@ serve(async (req: Request) => {
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
   const supabase = createClient(supabaseUrl, supabaseKey);
 
+  // URL do preview para redirecionamento
   const APP_URL = "https://preview-ktepifvhpdgexdgvhxpq.lovable.app"; 
 
   try {
-    const body = await req.json();
+    const body = await req.json().catch(() => ({}));
     const message = body?.message ?? {};
+    
+    // Ignora mensagens enviadas pela própria instância
     if (message?.fromMe) return jsonResponse({ ok: true });
 
     const rawFrom = body?.chat?.phone ?? message?.sender ?? "";
-    const fromNumber = formatPhoneNumber(rawFrom);
+    if (!rawFrom) return jsonResponse({ ok: true });
 
+    const fromNumber = formatPhoneNumber(rawFrom);
     const receivedText = (message?.text ?? "").toLowerCase().trim();
 
+    // Lógica para agendamento via menu ou texto
     if (receivedText === "1" || receivedText.includes("agendar")) {
       const { data: paciente } = await supabase
         .from('pacientes')
@@ -49,7 +54,8 @@ serve(async (req: Request) => {
         .eq('telefone', fromNumber)
         .maybeSingle();
 
-      const { data: config } = await supabase.from('whatsapp_config').select('*').single();
+      const { data: config } = await supabase.from('whatsapp_config').select('*').limit(1).maybeSingle();
+      if (!config) throw new Error("Configuração do WhatsApp não encontrada");
 
       let link = `${APP_URL}/client-appointment`;
       let text = `Olá! Para agendar sua consulta na DentalClinic, acesse o link abaixo:\n\n${link}\n\nSelecione o dentista e o melhor horário para você.`;
@@ -61,7 +67,10 @@ serve(async (req: Request) => {
 
       await fetch(`${config.api_url}/send/text`, {
         method: "POST",
-        headers: { token: config.instance_token, "Content-Type": "application/json" },
+        headers: { 
+          token: config.instance_token, 
+          "Content-Type": "application/json" 
+        },
         body: JSON.stringify({ number: fromNumber, text }),
       });
 
@@ -70,6 +79,7 @@ serve(async (req: Request) => {
 
     return jsonResponse({ ok: true });
   } catch (err: any) {
+    console.error("[WEBHOOK ERROR]", err.message);
     return jsonResponse({ ok: false, error: err.message }, 500);
   }
 });

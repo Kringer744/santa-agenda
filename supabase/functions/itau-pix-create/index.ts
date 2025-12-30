@@ -17,11 +17,14 @@ serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { access_token, valor, paciente_cpf, paciente_nome, solicitacaoPagador } = await req.json();
+    const payload = await req.json().catch(() => null);
+    if (!payload) return jsonResponse({ error: "Payload inválido" }, 400);
+
+    const { access_token, valor, paciente_cpf, paciente_nome, solicitacaoPagador } = payload;
 
     const ITAU_API_URL = "https://api.itau.com.br/pix/v2";
     const ITAU_PIX_CHAVE = "24164831880";
-    const ITAU_API_KEY = "sua-api-key-aqui";
+    const ITAU_API_KEY = "sua-api-key-aqui"; // Certifique-se de configurar via Secrets no Supabase
 
     if (!access_token || !valor || !paciente_cpf || !paciente_nome) {
       return jsonResponse({ error: "Parâmetros obrigatórios ausentes" }, 400);
@@ -29,8 +32,8 @@ serve(async (req: Request) => {
 
     const pixPayload = {
       calendario: { expiracao: 3600 },
-      devedor: { cpf: paciente_cpf, nome: paciente_nome },
-      valor: { original: valor.toFixed(2) },
+      devedor: { cpf: paciente_cpf.replace(/\D/g, ''), nome: paciente_nome },
+      valor: { original: Number(valor).toFixed(2) },
       chave: ITAU_PIX_CHAVE,
       solicitacaoPagador: solicitacaoPagador || "Consulta Odontológica",
     };
@@ -46,7 +49,10 @@ serve(async (req: Request) => {
     });
 
     const createData = await createResp.json();
-    if (!createResp.ok) return jsonResponse({ error: createData.detail || "Erro na criação" }, createResp.status);
+    if (!createResp.ok) {
+      console.error("[ITAU ERROR]", createData);
+      return jsonResponse({ error: createData.detail || "Erro na criação da cobrança" }, createResp.status);
+    }
 
     const { loc } = createData;
     const qrResp = await fetch(`${ITAU_API_URL}/loc/${loc.id}/qrcode`, {
@@ -58,6 +64,8 @@ serve(async (req: Request) => {
     });
 
     const qrData = await qrResp.json();
+    if (!qrResp.ok) return jsonResponse({ error: "Erro ao gerar QR Code" }, qrResp.status);
+
     return jsonResponse({
       success: true,
       pix_data: {
@@ -67,6 +75,7 @@ serve(async (req: Request) => {
       }
     });
   } catch (err: any) {
+    console.error("[PIX CREATE ERROR]", err.message);
     return jsonResponse({ error: err.message }, 500);
   }
 });
