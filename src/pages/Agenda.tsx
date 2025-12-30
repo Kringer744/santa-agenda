@@ -23,15 +23,13 @@ const DEFAULT_TIME_SLOTS = [
 export default function Agenda() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedDentistaId, setSelectedDentistaId] = useState<string>('');
-  const [selectedClinicaId, setSelectedClinicaId] = useState<string>('');
   
   const { data: dentistas = [] } = useDentistas();
   const { data: clinicas = [] } = useClinicas();
 
   useEffect(() => {
     if (dentistas.length > 0 && !selectedDentistaId) setSelectedDentistaId(dentistas[0].id);
-    if (clinicas.length > 0 && !selectedClinicaId) setSelectedClinicaId(clinicas[0].id);
-  }, [dentistas, clinicas, selectedDentistaId, selectedClinicaId]);
+  }, [dentistas, selectedDentistaId]);
 
   const formattedDate = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '';
   const { data: agendaExistente, isLoading: loadingAgenda } = useAgendaDentistaDoDia(selectedDentistaId, formattedDate);
@@ -40,7 +38,7 @@ export default function Agenda() {
   const updateAgenda = useUpdateAgendaDentista();
 
   const handleToggleDay = async (open: boolean) => {
-    if (!selectedDentistaId || !selectedClinicaId || !formattedDate) return;
+    if (!selectedDentistaId || clinicas.length === 0 || !formattedDate) return;
     
     const slots = open ? DEFAULT_TIME_SLOTS : [];
     
@@ -53,7 +51,7 @@ export default function Agenda() {
     } else {
       await createAgenda.mutateAsync({
         dentista_id: selectedDentistaId,
-        clinica_id: selectedClinicaId,
+        clinica_id: clinicas[0].id, // Usa a única clínica disponível
         data: formattedDate,
         horarios_disponiveis: slots,
         horarios_ocupados: []
@@ -89,18 +87,18 @@ export default function Agenda() {
             <h1 className="text-2xl font-bold flex items-center gap-2">
               <CalendarDays className="text-primary" /> Gerenciar Agenda
             </h1>
-            <p className="text-muted-foreground">Defina quais horários estarão disponíveis para os clientes</p>
+            <p className="text-muted-foreground">Defina quais horários estarão disponíveis para agendamentos</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card className="lg:col-span-1">
             <CardHeader>
-              <CardTitle className="text-lg">Configuração</CardTitle>
+              <CardTitle className="text-lg">Filtros</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label>Dentista</Label>
+                <Label>Selecione o Dentista</Label>
                 <Select value={selectedDentistaId} onValueChange={setSelectedDentistaId}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o dentista" />
@@ -108,20 +106,6 @@ export default function Agenda() {
                   <SelectContent>
                     {dentistas.map(d => (
                       <SelectItem key={d.id} value={d.id}>{d.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Clínica</Label>
-                <Select value={selectedClinicaId} onValueChange={setSelectedClinicaId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a clínica" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clinicas.map(c => (
-                      <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -153,7 +137,7 @@ export default function Agenda() {
                   id="day-toggle"
                   checked={isDayOpen}
                   onCheckedChange={handleToggleDay}
-                  disabled={loadingAgenda || createAgenda.isPending || updateAgenda.isPending}
+                  disabled={loadingAgenda || createAgenda.isPending || updateAgenda.isPending || clinicas.length === 0}
                 />
               </div>
             </CardHeader>

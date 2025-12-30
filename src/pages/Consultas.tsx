@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { 
   Select,
   SelectContent,
@@ -23,7 +22,6 @@ import { useConsultas, useCreateConsulta, useUpdateConsultaStatus } from '@/hook
 import { useDentistas } from '@/hooks/useDentistas';
 import { usePacientes } from '@/hooks/usePacientes';
 import { useClinicas } from '@/hooks/useClinicas';
-import { useProcedimentos } from '@/hooks/useProcedimentos';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
@@ -45,16 +43,11 @@ export default function Consultas() {
   const { data: dentistas = [] } = useDentistas();
   const { data: pacientes = [] } = usePacientes();
   const { data: clinicas = [] } = useClinicas();
-  const { data: procedimentos = [] } = useProcedimentos();
   const createConsulta = useCreateConsulta();
   const updateStatus = useUpdateConsultaStatus();
 
   const getDentista = (dentistaId: string) => dentistas.find(d => d.id === dentistaId);
   const getPaciente = (pacienteId: string) => pacientes.find(p => p.id === pacienteId);
-  const getClinica = (clinicaId: string) => clinicas.find(c => c.id === clinicaId);
-  const getProcedimento = (procedimentoId: string) => procedimentos.find(p => p.id === procedimentoId);
-
-  const pacienteDentistas = dentistas;
 
   const filteredConsultas = consultas.filter(consulta => {
     const dentista = getDentista(consulta.dentista_id);
@@ -72,11 +65,13 @@ export default function Consultas() {
 
   const handleAddConsulta = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (clinicas.length === 0) return;
+
     const formData = new FormData(e.currentTarget);
     createConsulta.mutate({
       paciente_id: formData.get('paciente_id') as string,
       dentista_id: formData.get('dentista_id') as string,
-      clinica_id: formData.get('clinica_id') as string,
+      clinica_id: clinicas[0].id, 
       data_hora_inicio: formData.get('data_hora_inicio') as string,
       data_hora_fim: formData.get('data_hora_fim') as string,
       procedimentos: [],
@@ -137,24 +132,9 @@ export default function Consultas() {
                       <SelectValue placeholder={selectedPaciente ? "Selecione o dentista" : "Selecione o paciente primeiro"} />
                     </SelectTrigger>
                     <SelectContent>
-                      {pacienteDentistas.map(dentista => (
+                      {dentistas.map(dentista => (
                         <SelectItem key={dentista.id} value={dentista.id}>
                           <Stethoscope className="w-4 h-4 inline-block mr-2" /> {dentista.nome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="clinica_id">Clínica</Label>
-                  <Select name="clinica_id" required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione a clínica" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {clinicas.map(clinica => (
-                        <SelectItem key={clinica.id} value={clinica.id}>
-                          {clinica.nome}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -178,7 +158,7 @@ export default function Consultas() {
                   <Button type="button" variant="outline" className="flex-1" onClick={() => setIsDialogOpen(false)}>
                     Cancelar
                   </Button>
-                  <Button type="submit" className="flex-1" disabled={createConsulta.isPending}>
+                  <Button type="submit" className="flex-1" disabled={createConsulta.isPending || clinicas.length === 0}>
                     {createConsulta.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Criar Consulta'}
                   </Button>
                 </div>
@@ -226,7 +206,6 @@ export default function Consultas() {
             {filteredConsultas.map((consulta, index) => {
               const dentista = getDentista(consulta.dentista_id);
               const paciente = getPaciente(consulta.paciente_id);
-              const clinica = getClinica(consulta.clinica_id);
               
               return (
                 <div 
@@ -260,15 +239,10 @@ export default function Consultas() {
                             <SelectItem value="reagendada">Reagendada</SelectItem>
                           </SelectContent>
                         </Select>
-                        {consulta.codigo_consulta && (
-                          <span className="text-xs text-muted-foreground font-mono">
-                            {consulta.codigo_consulta}
-                          </span>
-                        )}
                       </div>
                       
                       <p className="text-xs md:text-sm text-muted-foreground mt-1">
-                        Dentista: {dentista?.nome || 'N/A'} • {clinica?.nome || 'N/A'}
+                        Dentista: {dentista?.nome || 'N/A'}
                       </p>
                       
                       <div className="flex flex-wrap items-center gap-2 md:gap-4 mt-2">
@@ -277,25 +251,8 @@ export default function Consultas() {
                           <span className="text-foreground font-medium">
                             {format(new Date(consulta.data_hora_inicio), 'dd/MM/yyyy HH:mm')}
                           </span>
-                          <span className="text-muted-foreground">→</span>
-                          <span className="text-foreground font-medium">
-                            {format(new Date(consulta.data_hora_fim), 'dd/MM/yyyy HH:mm')}
-                          </span>
                         </div>
                       </div>
-                      
-                      {consulta.procedimentos && consulta.procedimentos.length > 0 && (
-                        <div className="flex gap-2 mt-3 flex-wrap">
-                          {consulta.procedimentos.map(procedimentoId => {
-                            const procedimento = getProcedimento(procedimentoId);
-                            return procedimento ? (
-                              <Badge key={procedimentoId} variant="secondary" className="text-xs">
-                                {procedimento.nome}
-                              </Badge>
-                            ) : null;
-                          })}
-                        </div>
-                      )}
                     </div>
                     
                     <div className="flex items-center gap-4 mt-3 sm:mt-0">
@@ -303,19 +260,7 @@ export default function Consultas() {
                         <p className="text-xl md:text-2xl font-bold text-foreground">
                           R$ {Number(consulta.valor_total || 0).toFixed(2)}
                         </p>
-                        <Badge 
-                          variant={consulta.pagamento_status === 'aprovado' ? 'default' : 'secondary'}
-                          className={cn(
-                            "text-xs mt-1",
-                            consulta.pagamento_status === 'aprovado' 
-                              ? 'bg-secondary text-secondary-foreground' 
-                              : 'bg-honey-light text-accent-foreground'
-                          )}
-                        >
-                          {consulta.pagamento_status === 'aprovado' ? '✓ Pago' : '⏳ Pendente'}
-                        </Badge>
                       </div>
-                      
                       <ChevronRight className="w-4 h-4 md:w-5 md:h-5 text-muted-foreground group-hover:text-primary transition-colors" />
                     </div>
                   </div>
