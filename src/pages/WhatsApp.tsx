@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MessageSquare, Send, CheckCircle, Clock, Zap, Smartphone, Upload, Users, Play, Pause, Trash2, FileSpreadsheet, Bot, List, Save, CalendarDays, Camera, Star, Gift, BellRing, Loader2, Plus, Smile, Stethoscope } from 'lucide-react';
+import { MessageSquare, Send, CheckCircle, Clock, Zap, Smartphone, Upload, Users, Play, Pause, Trash2, FileSpreadsheet, Bot, List, Save, CalendarDays, Camera, Star, Gift, BellRing, Loader2, Plus, Smile, Stethoscope, Database } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -162,7 +162,8 @@ export default function WhatsApp() {
         
       if (error) {
         console.error('Supabase error loading templates:', error);
-        throw error;
+        // Throw the error to be caught by the outer catch block
+        throw new Error(error.message); 
       }
       
       if (data) {
@@ -173,8 +174,14 @@ export default function WhatsApp() {
       }
     } catch (error: any) {
       console.error('Erro geral ao carregar templates:', error);
-      toast.error(`Erro ao carregar templates: ${error.message || 'Detalhes desconhecidos'}`);
-      setTemplates([]);
+      setTemplates([]); // Ensure templates are empty on error
+
+      // Check for the specific schema cache error message
+      if (error.message && error.message.includes("Could not find the table 'public.whatsapp_templates' in the schema cache")) {
+        toast.error('Erro: Tabela de templates não encontrada no Supabase. Por favor, siga as instruções para criar a tabela e recarregar o schema cache.');
+      } else {
+        toast.error(`Erro ao carregar templates: ${error.message || 'Detalhes desconhecidos'}`);
+      }
     } finally {
       setIsLoadingTemplates(false);
     }
@@ -504,55 +511,6 @@ export default function WhatsApp() {
     }
   };
 
-  // These functions were only used by the 'Acompanhamento do Paciente' tab, so they can be removed.
-  // const getTemplateIcon = (type: string) => {
-  //   switch (type) {
-  //     case 'lembrete_consulta': return <CalendarDays className="w-5 h-5 text-muted-foreground" />;
-  //     case 'pos_consulta': return <Stethoscope className="w-5 h-5 text-muted-foreground" />;
-  //     case 'aniversario_paciente': return <Gift className="w-5 h-5 text-muted-foreground" />;
-  //     case 'promocao': return <Star className="w-5 h-5 text-muted-foreground" />;
-  //     default: return <MessageSquare className="w-5 h-5 text-muted-foreground" />;
-  //   }
-  // };
-
-  // const getTemplateTitle = (type: string) => {
-  //   switch (type) {
-  //     case 'lembrete_consulta': return 'Lembrete de Consulta';
-  //     case 'pos_consulta': return 'Pós-Consulta';
-  //     case 'aniversario_paciente': return 'Aniversário do Paciente';
-  //     case 'promocao': return 'Promoção';
-  //     default: return 'Template Padrão';
-  //   }
-  // };
-
-  // const getTemplateSubtitle = (type: string) => {
-  //   switch (type) {
-  //     case 'lembrete_consulta': return '(1 dia antes da consulta)';
-  //     case 'pos_consulta': return "(Após a consulta ser 'realizada')";
-  //     case 'aniversario_paciente': return '(No dia do aniversário do paciente)';
-  //     case 'promocao': return '(Disparo manual)';
-  //     default: return '';
-  //   }
-  // };
-
-  // const getTemplateVariables = (type: string) => {
-  //   const common = ['{{nome_paciente}}', '{{nome_dentista}}'];
-  //   if (type === 'lembrete_consulta') {
-  //     return [...common, '{{data_consulta}}', '{{hora_consulta}}'];
-  //   }
-  //   if (type === 'pos_consulta') {
-  //     return [...common, '{{data_consulta}}'];
-  //   }
-  //   return common;
-  // };
-
-  // This array was only used to render the cards in the 'Acompanhamento do Paciente' tab.
-  // const expectedAutomatedTemplateTypes = useMemo(() => [
-  //   { type: 'lembrete_consulta', name: 'Lembrete de Consulta', description: 'Mensagem enviada 1 dia antes da consulta', defaultMessage: 'Olá {{nome_paciente}}! 🗓️ Lembrete da sua consulta com {{nome_dentista}} amanhã, {{data_consulta}} às {{hora_consulta}}. Aguardamos você!' },
-  //   { type: 'pos_consulta', name: 'Pós-Consulta', description: 'Mensagem enviada após a consulta para feedback', defaultMessage: 'Olá {{nome_paciente}}! Esperamos que tenha tido uma ótima experiência com {{nome_dentista}} em {{data_consulta}}. Deixe seu feedback!' },
-  //   { type: 'aniversario_paciente', name: 'Aniversário do Paciente', description: 'Mensagem de parabéns no aniversário do paciente', defaultMessage: '🎉 Feliz Aniversário, {{nome_paciente}}! A DentalClinic deseja um dia especial e um sorriso ainda mais lindo!' },
-  // ], []);
-
   const handleSelectTemplateForBulk = (templateId: string) => {
     setSelectedTemplateForBulk(templateId);
     const selected = templates.find(t => t.id === templateId);
@@ -590,11 +548,6 @@ export default function WhatsApp() {
               <Bot className="w-4 h-4" />
               Menu Conversa
             </TabsTrigger>
-            {/* Removed 'Acompanhamento do Paciente' tab trigger */}
-            {/* <TabsTrigger value="acompanhamento" className="gap-2 text-xs md:text-sm">
-              <BellRing className="w-4 h-4" />
-              Acompanhamento do Paciente
-            </TabsTrigger> */}
             <TabsTrigger value="disparos" className="gap-2 text-xs md:text-sm">
               <Send className="w-4 h-4" />
               Disparos
@@ -896,96 +849,6 @@ export default function WhatsApp() {
             </div>
           </TabsContent>
 
-          {/* Removed 'Acompanhamento do Paciente' tab content */}
-          {/* <TabsContent value="acompanhamento" className="mt-6">
-            {isLoadingTemplates ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-primary" />
-              </div>
-            ) : (
-              <>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-                  {expectedAutomatedTemplateTypes.map((expectedTemplate, index) => {
-                    const template = templates.find(t => t.tipo === expectedTemplate.type);
-                    
-                    if (template) {
-                      return (
-                        <Card key={template.id} className="animate-slide-up" style={{ animationDelay: `${index * 50}ms` }}>
-                          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <div className="flex items-center gap-2">
-                              {getTemplateIcon(template.tipo)}
-                              <h4 className="text-base md:text-lg font-bold text-foreground">
-                                {getTemplateTitle(template.tipo)}
-                                <span className="text-sm text-muted-foreground ml-2">{getTemplateSubtitle(template.tipo)}</span>
-                              </h4>
-                            </div>
-                            <Switch
-                              checked={template.ativo || false}
-                              onCheckedChange={(checked) => handleUpdateTemplate(template.id, 'ativo', checked)}
-                            />
-                          </CardHeader>
-                          <CardContent>
-                            <div className="p-3 rounded-lg bg-muted/50 border border-border mb-3">
-                              <Textarea
-                                value={template.mensagem}
-                                onChange={(e) => handleUpdateTemplate(template.id, 'mensagem', e.target.value)}
-                                className="min-h-24 resize-none border-none focus-visible:ring-0 focus-visible:ring-offset-0 p-0 bg-transparent"
-                                placeholder="Mensagem do template..."
-                              />
-                            </div>
-                            
-                            <div className="flex flex-wrap gap-2">
-                              {getTemplateVariables(template.tipo).map(variable => (
-                                <Badge key={variable} variant="secondary" className="bg-mint-light text-secondary text-xs">
-                                  {variable}
-                                </Badge>
-                              ))}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      );
-                    } else {
-                      return (
-                        <Card key={expectedTemplate.type} className="animate-slide-up flex flex-col items-center justify-center p-6 text-center" style={{ animationDelay: `${index * 50}ms` }}>
-                          <Plus className="w-10 h-10 text-muted-foreground mb-3 opacity-50" />
-                          <h4 className="text-base md:text-lg font-bold text-foreground mb-2">
-                            {getTemplateTitle(expectedTemplate.type)}
-                          </h4>
-                          <p className="text-sm text-muted-foreground mb-4">
-                            {getTemplateSubtitle(expectedTemplate.type)}
-                          </p>
-                          <Button 
-                            onClick={() => handleAddTemplate(expectedTemplate.type, expectedTemplate.name, expectedTemplate.description, expectedTemplate.defaultMessage)}
-                            disabled={isSaving}
-                          >
-                            <Plus className="w-4 h-4 mr-2" />
-                            Adicionar Template
-                          </Button>
-                        </Card>
-                      );
-                    }
-                  })}
-                </div>
-                <div className="mt-6 flex justify-end">
-                  <Button
-                    className="w-full md:w-auto"
-                    onClick={handleSaveAllTemplates}
-                    disabled={isSaving}
-                  >
-                    <Save className="w-4 h-4 mr-2" />
-                    {isSaving ? 'Salvando...' : 'Salvar Templates'}
-                  </Button>
-                </div>
-                <p className="text-sm text-muted-foreground mt-8">
-                  * As mensagens de lembrete de consulta e pós-consulta são enviadas automaticamente quando o status da consulta é atualizado.
-                </p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  * Para o envio de mensagens de aniversário, você precisaria configurar uma função de agendamento (cron job) no seu backend (ex: Supabase Edge Function) para verificar os aniversários diariamente e chamar a função `sendBirthdayMessage` para os pacientes do dia.
-                </p>
-              </>
-            )}
-          </TabsContent> */}
-
           <TabsContent value="disparos" className="mt-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
               <Card>
@@ -1123,19 +986,31 @@ Ou: Nome,5511999999999"
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <Label className="text-sm">Selecionar Template (Opcional)</Label>
-                    <Select value={selectedTemplateForBulk} onValueChange={handleSelectTemplateForBulk}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Escolha um template para preencher a mensagem" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="custom">Mensagem Personalizada</SelectItem>
-                        {templates.map(template => (
-                          <SelectItem key={template.id} value={template.id}>
-                            {template.nome} ({template.tipo === 'promocao' ? 'Promoção' : 'Outro'})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    {isLoadingTemplates ? (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Loader2 className="w-4 h-4 animate-spin" /> Carregando templates...
+                      </div>
+                    ) : templates.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center p-4 rounded-md bg-muted text-muted-foreground text-sm text-center space-y-2">
+                        <Database className="w-6 h-6" />
+                        <p>Nenhum template encontrado.</p>
+                        <p className="text-xs">Verifique se a tabela `whatsapp_templates` existe no Supabase e se o schema cache foi recarregado.</p>
+                      </div>
+                    ) : (
+                      <Select value={selectedTemplateForBulk} onValueChange={handleSelectTemplateForBulk}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Escolha um template para preencher a mensagem" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="custom">Mensagem Personalizada</SelectItem>
+                          {templates.map(template => (
+                            <SelectItem key={template.id} value={template.id}>
+                              {template.nome} ({template.tipo === 'promocao' ? 'Promoção' : 'Outro'})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
 
                   <div className="space-y-2">
