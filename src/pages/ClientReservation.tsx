@@ -6,10 +6,11 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input'; // Added Input for tutor form
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Calendar as CalendarIcon, CheckCircle, QrCode, Copy, XCircle } from 'lucide-react';
+import { Loader2, Calendar as CalendarIcon, CheckCircle, QrCode, Copy, XCircle, UserPlus } from 'lucide-react'; // Added UserPlus icon
 import { usePets } from '@/hooks/usePets';
-import { useTutores } from '@/hooks/useTutores';
+import { useTutores, useCreateTutor } from '@/hooks/useTutores'; // Added useCreateTutor
 import { useUnidades } from '@/hooks/useUnidades';
 import { useVagasDia } from '@/hooks/useVagasDia';
 import { useCreateReserva, useUpdateReservaStatus } from '@/hooks/useReservas';
@@ -19,7 +20,6 @@ import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { sendImageMessage, sendTextMessage } from '@/lib/uazap';
-import { TutorSelectorAndCreator } from '@/components/reservation/TutorSelectorAndCreator';
 import { PetSelectorAndCreator } from '@/components/reservation/PetSelectorAndCreator';
 
 interface DateRange {
@@ -52,6 +52,13 @@ export default function ClientReservation() {
   const [reservaId, setReservaId] = useState<string | null>(null);
   const [pollingInterval, setPollingInterval] = useState<number | null>(null);
   const [whatsappConfig, setWhatsappConfig] = useState<WhatsAppConfig | null>(null);
+
+  // States for new tutor form
+  const [newTutorName, setNewTutorName] = useState('');
+  const [newTutorCpf, setNewTutorCpf] = useState('');
+  const [newTutorPhone, setNewTutorPhone] = useState('');
+  const [newTutorEmail, setNewTutorEmail] = useState('');
+  const [newTutorDob, setNewTutorDob] = useState('');
   
   const { data: pets = [], isLoading: loadingPets } = usePets();
   const { data: tutores = [], isLoading: loadingTutores } = useTutores();
@@ -59,6 +66,7 @@ export default function ClientReservation() {
   const { data: vagasDia = [], isLoading: loadingVagasDia } = useVagasDia();
   const createReserva = useCreateReserva();
   const updateReservaStatus = useUpdateReservaStatus();
+  const createTutor = useCreateTutor(); // Hook for creating new tutor
   
   const isLoading = loadingPets || loadingTutores || loadingUnidades || loadingVagasDia;
   
@@ -193,6 +201,30 @@ export default function ClientReservation() {
     setDateRange(range);
   };
 
+  const handleCreateTutorAndProceed = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    try {
+      const newTutor = await createTutor.mutateAsync({
+        nome: newTutorName,
+        cpf: newTutorCpf,
+        telefone: newTutorPhone,
+        email: newTutorEmail || null,
+        data_nascimento: newTutorDob || null,
+        tags: ['cliente-web'],
+      });
+      toast.success('Tutor cadastrado com sucesso!');
+      setSelectedTutorId(newTutor.id);
+      // Clear form fields after successful creation
+      setNewTutorName('');
+      setNewTutorCpf('');
+      setNewTutorPhone('');
+      setNewTutorEmail('');
+      setNewTutorDob('');
+    } catch (error: any) {
+      toast.error(`Erro ao cadastrar tutor: ${error.message}`);
+    }
+  };
+
   const handleConfirmReservation = async () => {
     if (!dateRange.from || !dateRange.to || !selectedUnidadeId || !currentPet || !currentTutor || reservationValue <= 0) {
       toast.error('Por favor, preencha todos os dados da reserva.');
@@ -286,7 +318,7 @@ export default function ClientReservation() {
           <p className="text-muted-foreground mt-2">
             {currentTutor && currentPet ? 
               `Olá ${currentTutor.nome}! Vamos reservar um lugar para ${currentPet.nome} (${currentPet.especie === 'cachorro' ? '🐶' : '🐱'}).` :
-              'Selecione o tutor e o pet para iniciar a reserva.'
+              'Preencha os dados do tutor e do pet para iniciar a reserva.'
             }
           </p>
         </div>
@@ -294,17 +326,48 @@ export default function ClientReservation() {
         {currentStep === 1 && (
           <Card className="animate-slide-up">
             <CardHeader>
-              <CardTitle>1. Selecione as Datas e Unidade</CardTitle>
-              <CardDescription>Escolha o tutor, pet, período de hospedagem e a unidade desejada.</CardDescription>
+              <CardTitle>1. Informações do Tutor, Pet e Datas</CardTitle>
+              <CardDescription>Preencha os dados do tutor, selecione o pet, período de hospedagem e a unidade desejada.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <TutorSelectorAndCreator
-                selectedTutorId={selectedTutorId}
-                onSelectTutor={setSelectedTutorId}
-                tutores={tutores}
-                isLoadingTutores={loadingTutores}
-              />
+              {/* Tutor Information Form */}
+              <Card>
+                <CardContent className="pt-6">
+                  <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <UserPlus className="w-5 h-5 text-primary" />
+                    INFORMAÇÕES DO TUTOR
+                  </h4>
+                  <form onSubmit={handleCreateTutorAndProceed} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="new_tutor_nome">Nome completo</Label>
+                      <Input id="new_tutor_nome" name="nome" required placeholder="Seu Nome Completo" value={newTutorName} onChange={(e) => setNewTutorName(e.target.value)} />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="new_tutor_cpf">CPF</Label>
+                        <Input id="new_tutor_cpf" name="cpf" required placeholder="000.000.000-00" value={newTutorCpf} onChange={(e) => setNewTutorCpf(e.target.value)} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="new_tutor_telefone">WhatsApp</Label>
+                        <Input id="new_tutor_telefone" name="telefone" required placeholder="5511999999999" value={newTutorPhone} onChange={(e) => setNewTutorPhone(e.target.value)} />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="new_tutor_email">E-mail (opcional)</Label>
+                      <Input id="new_tutor_email" name="email" type="email" placeholder="seu.email@exemplo.com" value={newTutorEmail} onChange={(e) => setNewTutorEmail(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="new_tutor_data_nascimento">Data de nascimento (opcional)</Label>
+                      <Input id="new_tutor_data_nascimento" name="data_nascimento" type="date" value={newTutorDob} onChange={(e) => setNewTutorDob(e.target.value)} />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={createTutor.isPending || !!selectedTutorId}>
+                      {createTutor.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : 'Cadastrar Tutor e Continuar'}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
 
+              {/* Pet Selector and Creator (only visible if tutor is selected) */}
               {selectedTutorId && (
                 <PetSelectorAndCreator
                   selectedTutorId={selectedTutorId}
