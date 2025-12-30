@@ -21,16 +21,15 @@ serve(async (req) => {
   }
 
   try {
-    const { access_token, valor, tutor_cpf, tutor_nome, solicitacaoPagador } = await req.json();
+    const { access_token, valor, tutor_cpf, tutor_nome, solicitacaoPagador } = await req.json(); // tutor_cpf and tutor_nome are now paciente_cpf and paciente_nome
 
-    // Usar credenciais diretamente no código (mais seguro)
     const ITAU_API_URL = "https://api.itau.com.br/pix/v2";
-    const ITAU_PIX_CHAVE = "24164831880"; // Chave Pix de teste
-    const ITAU_API_KEY = "sua-api-key-aqui"; // Substitua pela sua API Key real
+    const ITAU_PIX_CHAVE = "24164831880";
+    const ITAU_API_KEY = "sua-api-key-aqui";
 
     if (!access_token || !valor || !tutor_cpf || !tutor_nome) {
       return jsonResponse(
-        { error: "access_token, valor, tutor_cpf e tutor_nome são obrigatórios" },
+        { error: "access_token, valor, paciente_cpf e paciente_nome são obrigatórios" }, // Updated error message
         400
       );
     }
@@ -44,20 +43,19 @@ serve(async (req) => {
 
     const pixPayload = {
       calendario: {
-        expiracao: 3600, // 1 hora para expirar
+        expiracao: 3600,
       },
       devedor: {
-        cpf: tutor_cpf,
-        nome: tutor_nome,
+        cpf: tutor_cpf, // Using paciente CPF
+        nome: tutor_nome, // Using paciente nome
       },
       valor: {
         original: valor.toFixed(2),
       },
       chave: ITAU_PIX_CHAVE,
-      solicitacaoPagador: solicitacaoPagador || "Reserva PetHotel",
+      solicitacaoPagador: solicitacaoPagador || "Consulta Odontológica", // Updated default message
     };
 
-    // STEP 2: CREATE PIX CHARGE
     const createChargeResponse = await fetch(`${ITAU_API_URL}/cob`, {
       method: "POST",
       headers: {
@@ -86,7 +84,6 @@ serve(async (req) => {
       );
     }
 
-    // STEP 3: GENERATE QR CODE IMAGE
     const getQrCodeResponse = await fetch(`${ITAU_API_URL}/loc/${loc.id}/qrcode`, {
       method: "GET",
       headers: {

@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
-  Calendar, 
+  CalendarCheck, 
   Users, 
-  PawPrint, 
+  Tooth, 
   MessageSquare, 
   Settings, 
   Menu 
@@ -19,9 +19,9 @@ import {
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-  { icon: Calendar, label: 'Reservas', path: '/reservas' },
-  { icon: Users, label: 'Tutores', path: '/tutores' },
-  { icon: PawPrint, label: 'Pets', path: '/pets' },
+  { icon: CalendarCheck, label: 'Consultas', path: '/consultas' },
+  { icon: Users, label: 'Pacientes', path: '/pacientes' },
+  { icon: Tooth, label: 'Dentistas', path: '/dentistas' },
   { icon: MessageSquare, label: 'WhatsApp', path: '/whatsapp' },
   { icon: Settings, label: 'Configurações', path: '/configuracoes' },
 ];
@@ -34,9 +34,9 @@ export function MobileHeader() {
     <header className="sticky top-0 z-40 bg-card border-b border-border p-4 flex items-center justify-between lg:hidden">
       <div className="flex items-center gap-3">
         <div className="w-8 h-8 rounded-lg gradient-hero flex items-center justify-center shadow-soft">
-          <PawPrint className="w-4 h-4 text-primary-foreground" />
+          <Tooth className="w-4 h-4 text-primary-foreground" />
         </div>
-        <span className="font-bold text-lg text-foreground">PetHotel</span>
+        <span className="font-bold text-lg text-foreground">DentalClinic</span>
       </div>
 
       <Drawer open={isOpen} onOpenChange={setIsOpen} direction="left">
@@ -51,9 +51,9 @@ export function MobileHeader() {
             <div className="h-16 flex items-center justify-center border-b border-border px-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl gradient-hero flex items-center justify-center shadow-soft">
-                  <PawPrint className="w-6 h-6 text-primary-foreground" />
+                  <Tooth className="w-6 h-6 text-primary-foreground" />
                 </div>
-                <span className="font-bold text-lg text-foreground">PetHotel</span>
+                <span className="font-bold text-lg text-foreground">DentalClinic</span>
               </div>
             </div>
 
@@ -72,7 +72,7 @@ export function MobileHeader() {
                             ? "bg-coral-light text-primary font-semibold shadow-sm" 
                             : "text-muted-foreground hover:bg-muted hover:text-foreground"
                         )}
-                        onClick={() => setIsOpen(false)} // Fecha o drawer ao clicar
+                        onClick={() => setIsOpen(false)}
                       >
                         <item.icon className={cn("w-5 h-5 flex-shrink-0", isActive && "text-primary")} />
                         <span>{item.label}</span>

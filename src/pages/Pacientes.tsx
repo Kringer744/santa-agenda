@@ -11,32 +11,32 @@ import {
   DialogTrigger 
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Plus, Search, Phone, Mail, Calendar, Trash2, Loader2 } from 'lucide-react';
-import { useTutores, useCreateTutor, useDeleteTutor } from '@/hooks/useTutores';
-import { usePets } from '@/hooks/usePets';
+import { Plus, Search, Phone, Mail, Calendar, Trash2, Loader2, Tooth } from 'lucide-react'; // Updated icons
+import { usePacientes, useCreatePaciente, useDeletePaciente } from '@/hooks/usePacientes'; // Updated hooks
+import { useConsultas } from '@/hooks/useConsultas'; // Updated hook
 
-export default function Tutores() {
+export default function Pacientes() {
   const [search, setSearch] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
-  const { data: tutores = [], isLoading } = useTutores();
-  const { data: pets = [] } = usePets();
-  const createTutor = useCreateTutor();
-  const deleteTutor = useDeleteTutor();
+  const { data: pacientes = [], isLoading } = usePacientes(); // Updated hook
+  const { data: consultas = [] } = useConsultas(); // Updated hook
+  const createPaciente = useCreatePaciente(); // Updated hook
+  const deletePaciente = useDeletePaciente(); // Updated hook
   
-  const filteredTutores = tutores.filter(tutor => 
-    tutor.nome.toLowerCase().includes(search.toLowerCase()) ||
-    tutor.cpf.includes(search) ||
-    tutor.telefone.includes(search)
+  const filteredPacientes = pacientes.filter(paciente => 
+    paciente.nome.toLowerCase().includes(search.toLowerCase()) ||
+    paciente.cpf.includes(search) ||
+    paciente.telefone.includes(search)
   );
 
-  const getPetsByTutor = (tutorId: string) => 
-    pets.filter(pet => pet.tutor_id === tutorId);
+  const getConsultasByPaciente = (pacienteId: string) => 
+    consultas.filter(consulta => consulta.paciente_id === pacienteId);
 
-  const handleAddTutor = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleAddPaciente = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    createTutor.mutate({
+    createPaciente.mutate({
       nome: formData.get('nome') as string,
       cpf: formData.get('cpf') as string,
       telefone: formData.get('telefone') as string,
@@ -54,9 +54,9 @@ export default function Tutores() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 animate-fade-in">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Tutores</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Pacientes</h1>
             <p className="text-muted-foreground mt-1 text-sm md:text-base">
-              {tutores.length} tutores cadastrados
+              {pacientes.length} pacientes cadastrados
             </p>
           </div>
           
@@ -64,14 +64,14 @@ export default function Tutores() {
             <DialogTrigger asChild>
               <Button className="w-full md:w-auto">
                 <Plus className="w-4 h-4 mr-2" />
-                Novo Tutor
+                Novo Paciente
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
-                <DialogTitle>Cadastrar Tutor</DialogTitle>
+                <DialogTitle>Cadastrar Paciente</DialogTitle>
               </DialogHeader>
-              <form onSubmit={handleAddTutor} className="space-y-4 mt-4">
+              <form onSubmit={handleAddPaciente} className="space-y-4 mt-4">
                 <div className="space-y-2">
                   <Label htmlFor="nome">Nome completo</Label>
                   <Input id="nome" name="nome" required placeholder="Maria Silva" />
@@ -98,8 +98,8 @@ export default function Tutores() {
                   <Button type="button" variant="outline" className="flex-1" onClick={() => setIsDialogOpen(false)}>
                     Cancelar
                   </Button>
-                  <Button type="submit" className="flex-1" disabled={createTutor.isPending}>
-                    {createTutor.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar'}
+                  <Button type="submit" className="flex-1" disabled={createPaciente.isPending}>
+                    {createPaciente.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar'}
                   </Button>
                 </div>
               </form>
@@ -123,29 +123,29 @@ export default function Tutores() {
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
-        ) : filteredTutores.length === 0 ? (
+        ) : filteredPacientes.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-muted-foreground">Nenhum tutor encontrado</p>
+            <p className="text-muted-foreground">Nenhum paciente encontrado</p>
           </div>
         ) : (
-          /* Tutores Grid */
+          /* Pacientes Grid */
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-            {filteredTutores.map((tutor, index) => {
-              const tutorPets = getPetsByTutor(tutor.id);
+            {filteredPacientes.map((paciente, index) => {
+              const pacienteConsultas = getConsultasByPaciente(paciente.id);
               
               return (
                 <div 
-                  key={tutor.id}
+                  key={paciente.id}
                   className="bg-card rounded-2xl p-6 shadow-card hover:shadow-elevated transition-all duration-300 animate-slide-up"
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div className="w-14 h-14 rounded-xl gradient-hero flex items-center justify-center text-2xl font-bold text-primary-foreground">
-                      {tutor.nome.charAt(0)}
+                      {paciente.nome.charAt(0)}
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="flex gap-1 flex-wrap justify-end">
-                        {tutor.tags?.map(tag => (
+                        {paciente.tags?.map(tag => (
                           <Badge key={tag} variant="secondary" className="text-xs">
                             {tag}
                           </Badge>
@@ -155,40 +155,40 @@ export default function Tutores() {
                         size="icon" 
                         variant="ghost" 
                         className="h-8 w-8 text-destructive"
-                        onClick={() => deleteTutor.mutate(tutor.id)}
+                        onClick={() => deletePaciente.mutate(paciente.id)}
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                   </div>
                   
-                  <h3 className="text-lg font-semibold text-foreground">{tutor.nome}</h3>
-                  <p className="text-sm text-muted-foreground">CPF: {tutor.cpf}</p>
+                  <h3 className="text-lg font-semibold text-foreground">{paciente.nome}</h3>
+                  <p className="text-sm text-muted-foreground">CPF: {paciente.cpf}</p>
                   
                   <div className="mt-4 space-y-2">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Phone className="w-4 h-4" />
-                      <span>{tutor.telefone}</span>
+                      <span>{paciente.telefone}</span>
                     </div>
-                    {tutor.email && (
+                    {paciente.email && (
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Mail className="w-4 h-4" />
-                        <span className="truncate">{tutor.email}</span>
+                        <span className="truncate">{paciente.email}</span>
                       </div>
                     )}
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Calendar className="w-4 h-4" />
-                      <span>Cliente desde {new Date(tutor.created_at).toLocaleDateString('pt-BR')}</span>
+                      <span>Cliente desde {new Date(paciente.created_at).toLocaleDateString('pt-BR')}</span>
                     </div>
                   </div>
 
-                  {tutorPets.length > 0 && (
+                  {pacienteConsultas.length > 0 && (
                     <div className="mt-4 pt-4 border-t border-border">
-                      <p className="text-xs text-muted-foreground mb-2">Pets cadastrados</p>
+                      <p className="text-xs text-muted-foreground mb-2">Consultas agendadas</p>
                       <div className="flex gap-2 flex-wrap">
-                        {tutorPets.map(pet => (
-                          <Badge key={pet.id} className="bg-coral-light text-primary">
-                            {pet.especie === 'cachorro' ? '🐶' : '🐱'} {pet.nome}
+                        {pacienteConsultas.map(consulta => (
+                          <Badge key={consulta.id} className="bg-coral-light text-primary">
+                            <Tooth className="w-3 h-3 mr-1" /> {consulta.codigo_consulta}
                           </Badge>
                         ))}
                       </div>

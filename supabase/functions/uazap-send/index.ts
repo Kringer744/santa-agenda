@@ -24,7 +24,6 @@ function pickDelayMs(minSeconds: number, maxSeconds: number) {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -44,7 +43,6 @@ serve(async (req) => {
       "Content-Type": "application/json",
     };
 
-    // Testar conexão
     if (action === "test") {
       console.log("[UAZAP] Testing connection...");
       const response = await fetch(`${apiUrl}/instance/status`, {
@@ -75,7 +73,6 @@ serve(async (req) => {
       return jsonResponse({ success: true, data });
     }
 
-    // Enviar mensagem de texto simples
     if (action === "send-text") {
       const { number, text } = payload as { number?: string; text?: string };
 
@@ -97,7 +94,6 @@ serve(async (req) => {
       return jsonResponse({ success: response.ok, data }, response.ok ? 200 : 400);
     }
 
-    // Enviar imagem
     if (action === "send-image") {
       const { number, base64, caption } = payload as { number?: string; base64?: string; caption?: string };
 
@@ -119,7 +115,6 @@ serve(async (req) => {
       return jsonResponse({ success: response.ok, data }, response.ok ? 200 : 400);
     }
 
-    // Enviar menu interativo (lista nativa do WhatsApp)
     if (action === "send-menu") {
       const {
         number,
@@ -150,7 +145,7 @@ serve(async (req) => {
           text,
           choices,
           listButton: listButton || "Ver opções",
-          footerText: footerText || "",
+          footerText: footerText || "DentalClinic", // Updated default footer
         }),
       });
 
@@ -160,7 +155,6 @@ serve(async (req) => {
       return jsonResponse({ success: response.ok, data }, response.ok ? 200 : 400);
     }
 
-    // Enviar botões (fallback via texto)
     if (action === "send-buttons") {
       const { number, text, choices } = payload as {
         number?: string;
@@ -189,7 +183,6 @@ serve(async (req) => {
       return jsonResponse({ success: response.ok, data }, response.ok ? 200 : 400);
     }
 
-    // Criar campanha de disparo em massa (implementada aqui, sem depender do endpoint /sender/create)
     if (action === "create-campaign") {
       const {
         messages,
@@ -244,8 +237,6 @@ serve(async (req) => {
         console.log(`[UAZAP] Bulk send finished. Sent: ${sent}/${messages.length}`);
       };
 
-      // roda em background para não dar timeout no request
-      // @ts-ignore - EdgeRuntime existe no runtime de funções
       EdgeRuntime?.waitUntil?.(run()) ?? run();
 
       return jsonResponse({ success: true, started: true, total: messages.length });

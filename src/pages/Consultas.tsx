@@ -18,87 +18,84 @@ import {
   DialogTrigger 
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Calendar, Plus, Search, ChevronRight, Loader2 } from 'lucide-react';
-import { useReservas, useCreateReserva, useUpdateReservaStatus } from '@/hooks/useReservas';
-import { usePets } from '@/hooks/usePets';
-import { useTutores } from '@/hooks/useTutores';
-import { useUnidades } from '@/hooks/useUnidades';
-import { useServicos } from '@/hooks/useServicos';
+import { Calendar, Plus, Search, ChevronRight, Loader2, Tooth, Stethoscope } from 'lucide-react'; // Updated icons
+import { useConsultas, useCreateConsulta, useUpdateConsultaStatus } from '@/hooks/useConsultas'; // Updated hooks
+import { useDentistas } from '@/hooks/useDentistas'; // Updated hook
+import { usePacientes } from '@/hooks/usePacientes'; // Updated hook
+import { useClinicas } from '@/hooks/useClinicas'; // Updated hook
+import { useProcedimentos } from '@/hooks/useProcedimentos'; // Updated hook
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
 const statusColors: Record<string, string> = {
-  pendente: 'bg-honey-light text-accent-foreground border-honey',
+  agendada: 'bg-honey-light text-accent-foreground border-honey',
   confirmada: 'bg-mint-light text-secondary border-mint',
-  checkin: 'bg-coral-light text-primary border-coral',
-  hospedado: 'bg-secondary text-secondary-foreground border-secondary',
-  checkout: 'bg-honey text-accent-foreground border-honey',
-  finalizada: 'bg-muted text-muted-foreground border-muted',
+  realizada: 'bg-coral-light text-primary border-coral',
   cancelada: 'bg-destructive/10 text-destructive border-destructive/30',
+  reagendada: 'bg-blush-light text-blush border-blush',
 };
 
 const statusLabels: Record<string, string> = {
-  pendente: 'Pendente',
+  agendada: 'Agendada',
   confirmada: 'Confirmada',
-  checkin: 'Check-in',
-  hospedado: 'Hospedado',
-  checkout: 'Check-out',
-  finalizada: 'Finalizada',
+  realizada: 'Realizada',
   cancelada: 'Cancelada',
+  reagendada: 'Reagendada',
 };
 
-export default function Reservas() {
+export default function Consultas() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedTutor, setSelectedTutor] = useState('');
+  const [selectedPaciente, setSelectedPaciente] = useState('');
 
-  const { data: reservas = [], isLoading } = useReservas();
-  const { data: pets = [] } = usePets();
-  const { data: tutores = [] } = useTutores();
-  const { data: unidades = [] } = useUnidades();
-  const { data: servicos = [] } = useServicos();
-  const createReserva = useCreateReserva();
-  const updateStatus = useUpdateReservaStatus();
+  const { data: consultas = [], isLoading } = useConsultas(); // Updated hook
+  const { data: dentistas = [] } = useDentistas(); // Updated hook
+  const { data: pacientes = [] } = usePacientes(); // Updated hook
+  const { data: clinicas = [] } = useClinicas(); // Updated hook
+  const { data: procedimentos = [] } = useProcedimentos(); // Updated hook
+  const createConsulta = useCreateConsulta(); // Updated hook
+  const updateStatus = useUpdateConsultaStatus(); // Updated hook
 
-  const getPet = (petId: string) => pets.find(p => p.id === petId);
-  const getTutor = (tutorId: string) => tutores.find(t => t.id === tutorId);
-  const getUnidade = (unidadeId: string) => unidades.find(u => u.id === unidadeId);
-  const getServico = (servicoId: string) => servicos.find(s => s.id === servicoId);
+  const getDentista = (dentistaId: string) => dentistas.find(d => d.id === dentistaId);
+  const getPaciente = (pacienteId: string) => pacientes.find(p => p.id === pacienteId);
+  const getClinica = (clinicaId: string) => clinicas.find(c => c.id === clinicaId);
+  const getProcedimento = (procedimentoId: string) => procedimentos.find(p => p.id === procedimentoId);
 
-  const tutorPets = pets.filter(p => p.tutor_id === selectedTutor);
+  const pacienteDentistas = dentistas; // All dentists are available for a patient
 
-  const filteredReservas = reservas.filter(reserva => {
-    const pet = getPet(reserva.pet_id);
-    const tutor = getTutor(reserva.tutor_id);
+  const filteredConsultas = consultas.filter(consulta => {
+    const dentista = getDentista(consulta.dentista_id);
+    const paciente = getPaciente(consulta.paciente_id);
     
     const matchSearch = 
-      pet?.nome.toLowerCase().includes(search.toLowerCase()) ||
-      tutor?.nome.toLowerCase().includes(search.toLowerCase()) ||
-      reserva.codigo_estadia?.toLowerCase().includes(search.toLowerCase());
+      dentista?.nome.toLowerCase().includes(search.toLowerCase()) ||
+      paciente?.nome.toLowerCase().includes(search.toLowerCase()) ||
+      consulta.codigo_consulta?.toLowerCase().includes(search.toLowerCase());
     
-    const matchStatus = statusFilter === 'todos' || reserva.status === statusFilter;
+    const matchStatus = statusFilter === 'todos' || consulta.status === statusFilter;
     
     return matchSearch && matchStatus;
   });
 
-  const handleAddReserva = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleAddConsulta = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    createReserva.mutate({
-      tutor_id: formData.get('tutor_id') as string,
-      pet_id: formData.get('pet_id') as string,
-      unidade_id: formData.get('unidade_id') as string,
-      check_in: formData.get('check_in') as string,
-      check_out: formData.get('check_out') as string,
-      servicos_adicionais: [],
+    createConsulta.mutate({
+      paciente_id: formData.get('paciente_id') as string,
+      dentista_id: formData.get('dentista_id') as string,
+      clinica_id: formData.get('clinica_id') as string,
+      data_hora_inicio: formData.get('data_hora_inicio') as string,
+      data_hora_fim: formData.get('data_hora_fim') as string,
+      procedimentos: [],
       valor_total: parseFloat(formData.get('valor_total') as string) || 0,
-      pix_txid: null, // Explicitly set to null
-      pix_qr_code_base64: null, // Explicitly set to null
-      pix_copia_e_cola: null, // Explicitly set to null
+      pix_txid: null,
+      pix_qr_code_base64: null,
+      pix_copia_e_cola: null,
     }, {
       onSuccess: () => {
         setIsDialogOpen(false);
-        setSelectedTutor('');
+        setSelectedPaciente('');
       }
     });
   };
@@ -109,64 +106,64 @@ export default function Reservas() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 animate-fade-in">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Reservas</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Consultas</h1>
             <p className="text-muted-foreground mt-1 text-sm md:text-base">
-              {reservas.length} reservas no sistema
+              {consultas.length} consultas no sistema
             </p>
           </div>
           
-          <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) setSelectedTutor(''); }}>
+          <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) setSelectedPaciente(''); }}>
             <DialogTrigger asChild>
               <Button size="lg" className="w-full md:w-auto">
                 <Plus className="w-5 h-5 mr-2" />
-                Nova Reserva
+                Nova Consulta
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Nova Reserva</DialogTitle>
+                <DialogTitle>Nova Consulta</DialogTitle>
               </DialogHeader>
-              <form onSubmit={handleAddReserva} className="space-y-4 mt-4">
+              <form onSubmit={handleAddConsulta} className="space-y-4 mt-4">
                 <div className="space-y-2">
-                  <Label htmlFor="tutor_id">Tutor</Label>
-                  <Select name="tutor_id" required onValueChange={setSelectedTutor}>
+                  <Label htmlFor="paciente_id">Paciente</Label>
+                  <Select name="paciente_id" required onValueChange={setSelectedPaciente}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione o tutor" />
+                      <SelectValue placeholder="Selecione o paciente" />
                     </SelectTrigger>
                     <SelectContent>
-                      {tutores.map(tutor => (
-                        <SelectItem key={tutor.id} value={tutor.id}>
-                          {tutor.nome}
+                      {pacientes.map(paciente => (
+                        <SelectItem key={paciente.id} value={paciente.id}>
+                          {paciente.nome}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="pet_id">Pet</Label>
-                  <Select name="pet_id" required disabled={!selectedTutor}>
+                  <Label htmlFor="dentista_id">Dentista</Label>
+                  <Select name="dentista_id" required disabled={!selectedPaciente}>
                     <SelectTrigger>
-                      <SelectValue placeholder={selectedTutor ? "Selecione o pet" : "Selecione o tutor primeiro"} />
+                      <SelectValue placeholder={selectedPaciente ? "Selecione o dentista" : "Selecione o paciente primeiro"} />
                     </SelectTrigger>
                     <SelectContent>
-                      {tutorPets.map(pet => (
-                        <SelectItem key={pet.id} value={pet.id}>
-                          {pet.especie === 'cachorro' ? '🐶' : '🐱'} {pet.nome}
+                      {pacienteDentistas.map(dentista => (
+                        <SelectItem key={dentista.id} value={dentista.id}>
+                          <Stethoscope className="w-4 h-4 inline-block mr-2" /> {dentista.nome}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="unidade_id">Unidade</Label>
-                  <Select name="unidade_id" required>
+                  <Label htmlFor="clinica_id">Clínica</Label>
+                  <Select name="clinica_id" required>
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione a unidade" />
+                      <SelectValue placeholder="Selecione a clínica" />
                     </SelectTrigger>
                     <SelectContent>
-                      {unidades.map(unidade => (
-                        <SelectItem key={unidade.id} value={unidade.id}>
-                          {unidade.nome}
+                      {clinicas.map(clinica => (
+                        <SelectItem key={clinica.id} value={clinica.id}>
+                          {clinica.nome}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -174,12 +171,12 @@ export default function Reservas() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="check_in">Check-in</Label>
-                    <Input id="check_in" name="check_in" type="date" required />
+                    <Label htmlFor="data_hora_inicio">Data e Hora Início</Label>
+                    <Input id="data_hora_inicio" name="data_hora_inicio" type="datetime-local" required />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="check_out">Check-out</Label>
-                    <Input id="check_out" name="check_out" type="date" required />
+                    <Label htmlFor="data_hora_fim">Data e Hora Fim</Label>
+                    <Input id="data_hora_fim" name="data_hora_fim" type="datetime-local" required />
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -190,8 +187,8 @@ export default function Reservas() {
                   <Button type="button" variant="outline" className="flex-1" onClick={() => setIsDialogOpen(false)}>
                     Cancelar
                   </Button>
-                  <Button type="submit" className="flex-1" disabled={createReserva.isPending}>
-                    {createReserva.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Criar Reserva'}
+                  <Button type="submit" className="flex-1" disabled={createConsulta.isPending}>
+                    {createConsulta.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Criar Consulta'}
                   </Button>
                 </div>
               </form>
@@ -204,7 +201,7 @@ export default function Reservas() {
           <div className="relative flex-1 max-w-full md:max-w-md">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <Input 
-              placeholder="Buscar por pet, tutor ou código..."
+              placeholder="Buscar por paciente, dentista ou código..."
               className="pl-12 h-12 rounded-xl w-full"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -217,13 +214,11 @@ export default function Reservas() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos os status</SelectItem>
-              <SelectItem value="pendente">Pendente</SelectItem>
+              <SelectItem value="agendada">Agendada</SelectItem>
               <SelectItem value="confirmada">Confirmada</SelectItem>
-              <SelectItem value="checkin">Check-in</SelectItem>
-              <SelectItem value="hospedado">Hospedado</SelectItem>
-              <SelectItem value="checkout">Check-out</SelectItem>
-              <SelectItem value="finalizada">Finalizada</SelectItem>
+              <SelectItem value="realizada">Realizada</SelectItem>
               <SelectItem value="cancelada">Cancelada</SelectItem>
+              <SelectItem value="reagendada">Reagendada</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -233,85 +228,83 @@ export default function Reservas() {
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
-        ) : filteredReservas.length === 0 ? (
+        ) : filteredConsultas.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-muted-foreground">Nenhuma reserva encontrada</p>
+            <p className="text-muted-foreground">Nenhuma consulta encontrada</p>
           </div>
         ) : (
-          /* Reservas List */
+          /* Consultas List */
           <div className="space-y-4">
-            {filteredReservas.map((reserva, index) => {
-              const pet = getPet(reserva.pet_id);
-              const tutor = getTutor(reserva.tutor_id);
-              const unidade = getUnidade(reserva.unidade_id);
+            {filteredConsultas.map((consulta, index) => {
+              const dentista = getDentista(consulta.dentista_id);
+              const paciente = getPaciente(consulta.paciente_id);
+              const clinica = getClinica(consulta.clinica_id);
               
               return (
                 <div 
-                  key={reserva.id}
+                  key={consulta.id}
                   className="bg-card rounded-2xl p-4 md:p-6 shadow-card hover:shadow-elevated transition-all duration-300 animate-slide-up cursor-pointer group"
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center gap-3 md:gap-4">
-                    {/* Pet Avatar */}
+                    {/* Dentista Avatar */}
                     <div className={cn(
                       "w-14 h-14 sm:w-16 sm:h-16 rounded-xl flex items-center justify-center text-2xl sm:text-3xl flex-shrink-0",
-                      pet?.especie === 'cachorro' ? 'bg-coral-light' : 'bg-mint-light'
+                      dentista?.especialidade === 'ortodontia' ? 'bg-mint-light' : 'bg-coral-light'
                     )}>
-                      {pet?.especie === 'cachorro' ? '🐶' : '🐱'}
+                      🦷
                     </div>
                     
                     {/* Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2 md:gap-3">
-                        <h3 className="text-base md:text-lg font-bold text-foreground">{pet?.nome || 'Pet não encontrado'}</h3>
+                        <h3 className="text-base md:text-lg font-bold text-foreground">{paciente?.nome || 'Paciente não encontrado'}</h3>
                         <Select 
-                          value={reserva.status} 
-                          onValueChange={(value) => updateStatus.mutate({ id: reserva.id, status: value as any })}
+                          value={consulta.status} 
+                          onValueChange={(value) => updateStatus.mutate({ id: consulta.id, status: value as any })}
                         >
-                          <SelectTrigger className={cn("w-auto h-7 border text-xs", statusColors[reserva.status])}>
+                          <SelectTrigger className={cn("w-auto h-7 border text-xs", statusColors[consulta.status])}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="pendente">Pendente</SelectItem>
+                            <SelectItem value="agendada">Agendada</SelectItem>
                             <SelectItem value="confirmada">Confirmada</SelectItem>
-                            <SelectItem value="checkin">Check-in</SelectItem>
-                            <SelectItem value="hospedado">Hospedado</SelectItem>
-                            <SelectItem value="checkout">Check-out</SelectItem>
-                            <SelectItem value="finalizada">Finalizada</SelectItem>
+                            <SelectItem value="realizada">Realizada</SelectItem>
                             <SelectItem value="cancelada">Cancelada</SelectItem>
+                            <SelectItem value="reagendada">Reagendada</SelectItem>
                           </SelectContent>
                         </Select>
-                        {reserva.codigo_estadia && (
+                        {consulta.codigo_consulta && (
                           <span className="text-xs text-muted-foreground font-mono">
-                            {reserva.codigo_estadia}
+                            {consulta.codigo_consulta}
                           </span>
                         )}
                       </div>
                       
                       <p className="text-xs md:text-sm text-muted-foreground mt-1">
-                        Tutor: {tutor?.nome || 'N/A'} • {unidade?.nome || 'N/A'}
+                        Dentista: {dentista?.nome || 'N/A'} • {clinica?.nome || 'N/A'}
                       </p>
                       
                       <div className="flex flex-wrap items-center gap-2 md:gap-4 mt-2">
                         <div className="flex items-center gap-1 md:gap-2 text-xs md:text-sm">
                           <Calendar className="w-3 h-3 md:w-4 md:h-4 text-primary" />
                           <span className="text-foreground font-medium">
-                            {new Date(reserva.check_in).toLocaleDateString('pt-BR')}
+                            {format(new Date(consulta.data_hora_inicio), 'dd/MM/yyyy HH:mm')}
                           </span>
                           <span className="text-muted-foreground">→</span>
                           <span className="text-foreground font-medium">
-                            {new Date(reserva.check_out).toLocaleDateString('pt-BR')}
+                            {format(new Date(consulta.data_hora_fim), 'dd/MM/yyyy HH:mm')}
                           </span>
                         </div>
                       </div>
                       
-                      {reserva.servicos_adicionais && reserva.servicos_adicionais.length > 0 && (
+                      {consulta.procedimentos && consulta.procedimentos.length > 0 && (
                         <div className="flex gap-2 mt-3 flex-wrap">
-                          {reserva.servicos_adicionais.map(servicoId => {
-                            const servico = getServico(servicoId);
-                            return servico ? (
-                              <Badge key={servicoId} variant="secondary" className="text-xs">
-                                {servico.nome}
+                          {consulta.procedimentos.map(procedimentoId => {
+                            const procedimento = getProcedimento(procedimentoId);
+                            return procedimento ? (
+                              <Badge key={procedimentoId} variant="secondary" className="text-xs">
+                                {procedimento.nome}
                               </Badge>
                             ) : null;
                           })}
@@ -323,18 +316,18 @@ export default function Reservas() {
                     <div className="flex items-center gap-4 mt-3 sm:mt-0">
                       <div className="text-right">
                         <p className="text-xl md:text-2xl font-bold text-foreground">
-                          R$ {Number(reserva.valor_total || 0).toFixed(2)}
+                          R$ {Number(consulta.valor_total || 0).toFixed(2)}
                         </p>
                         <Badge 
-                          variant={reserva.pagamento_status === 'aprovado' ? 'default' : 'secondary'}
+                          variant={consulta.pagamento_status === 'aprovado' ? 'default' : 'secondary'}
                           className={cn(
                             "text-xs mt-1",
-                            reserva.pagamento_status === 'aprovado' 
+                            consulta.pagamento_status === 'aprovado' 
                               ? 'bg-secondary text-secondary-foreground' 
                               : 'bg-honey-light text-accent-foreground'
                           )}
                         >
-                          {reserva.pagamento_status === 'aprovado' ? '✓ Pago' : '⏳ Pendente'}
+                          {consulta.pagamento_status === 'aprovado' ? '✓ Pago' : '⏳ Pendente'}
                         </Badge>
                       </div>
                       

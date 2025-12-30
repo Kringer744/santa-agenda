@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
-  Calendar, 
+  CalendarCheck, 
   Users, 
-  PawPrint, 
+  Tooth, 
   MessageSquare, 
   Settings, 
   ChevronLeft,
@@ -12,13 +12,13 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { useIsMobile } from '@/hooks/use-mobile'; // Importar o hook useIsMobile
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-  { icon: Calendar, label: 'Reservas', path: '/reservas' },
-  { icon: Users, label: 'Tutores', path: '/tutores' },
-  { icon: PawPrint, label: 'Pets', path: '/pets' },
+  { icon: CalendarCheck, label: 'Consultas', path: '/consultas' },
+  { icon: Users, label: 'Pacientes', path: '/pacientes' },
+  { icon: Tooth, label: 'Dentistas', path: '/dentistas' },
   { icon: MessageSquare, label: 'WhatsApp', path: '/whatsapp' },
   { icon: Settings, label: 'Configurações', path: '/configuracoes' },
 ];
@@ -26,9 +26,8 @@ const menuItems = [
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
-  const isMobile = useIsMobile(); // Usar o hook para verificar se é mobile
+  const isMobile = useIsMobile();
 
-  // A sidebar fixa só aparece em telas não-mobile
   if (isMobile) {
     return null; 
   }
@@ -44,10 +43,10 @@ export function Sidebar() {
       <div className="h-16 flex items-center justify-center border-b border-border px-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl gradient-hero flex items-center justify-center shadow-soft">
-            <PawPrint className="w-6 h-6 text-primary-foreground" />
+            <Tooth className="w-6 h-6 text-primary-foreground" />
           </div>
           {!collapsed && (
-            <span className="font-bold text-lg text-foreground">PetHotel</span>
+            <span className="font-bold text-lg text-foreground">DentalClinic</span>
           )}
         </div>
       </div>

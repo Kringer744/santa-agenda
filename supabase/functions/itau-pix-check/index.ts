@@ -23,9 +23,8 @@ serve(async (req) => {
   try {
     const { access_token, txid } = await req.json();
 
-    // Usar credenciais diretamente no código (mais seguro)
     const ITAU_API_URL = "https://api.itau.com.br/pix/v2";
-    const ITAU_API_KEY = "sua-api-key-aqui"; // Substitua pela sua API Key real
+    const ITAU_API_KEY = "sua-api-key-aqui";
 
     if (!access_token || !txid) {
       return jsonResponse(

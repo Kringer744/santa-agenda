@@ -1,4 +1,4 @@
-export interface Tutor {
+export interface Paciente {
   id: string;
   nome: string;
   cpf: string;
@@ -6,82 +6,78 @@ export interface Tutor {
   email: string | null;
   data_nascimento: string | null;
   created_at: string;
-  updated_at: string; // Added updated_at to match Supabase type
+  updated_at: string;
   tags: string[];
 }
 
-export interface Pet {
+export interface Dentista {
   id: string;
-  tutor_id: string;
   nome: string;
-  especie: 'cachorro' | 'gato';
-  raca: string | null;
-  porte: 'pequeno' | 'medio' | 'grande' | null;
-  idade: number | null;
-  data_nascimento: string | null;
-  necessidades_especiais: string | null;
-  observacoes_comportamentais: string | null;
+  cro: string; // Conselho Regional de Odontologia
+  especialidade: string | null;
+  telefone: string | null;
+  email: string | null;
   created_at: string;
-  updated_at: string; // Added updated_at to match Supabase type
+  updated_at: string;
 }
 
-export interface Reserva {
+export interface Consulta {
   id: string;
-  tutor_id: string;
-  pet_id: string;
-  unidade_id: string;
-  check_in: string;
-  check_out: string;
-  servicos_adicionais: string[]; // Changed to string[] to store service IDs
-  status: 'pendente' | 'confirmada' | 'checkin' | 'hospedado' | 'checkout' | 'finalizada' | 'cancelada';
+  paciente_id: string;
+  dentista_id: string;
+  clinica_id: string;
+  data_hora_inicio: string; // Changed from check_in
+  data_hora_fim: string;    // Changed from check_out
+  procedimentos: string[]; // Changed from servicos_adicionais
+  status: 'agendada' | 'confirmada' | 'realizada' | 'cancelada' | 'reagendada'; // Updated statuses
   valor_total: number;
-  codigo_estadia: string | null;
+  codigo_consulta: string | null; // Changed from codigo_estadia
   pagamento_status: 'pendente' | 'aprovado' | 'recusado';
   created_at: string;
-  updated_at: string; // Added updated_at to match Supabase type
-  pix_txid: string | null; // Novo: ID da transação Pix
-  pix_qr_code_base64: string | null; // Novo: QR Code em base64
-  pix_copia_e_cola: string | null; // Novo: Chave Pix copia e cola
+  updated_at: string;
+  pix_txid: string | null;
+  pix_qr_code_base64: string | null;
+  pix_copia_e_cola: string | null;
 }
 
-export interface ServicoAdicional {
+export interface Procedimento {
   id: string;
   nome: string;
   preco: number;
   icone: string;
-  ativo: boolean; // Added ativo to match Supabase type
-  created_at: string; // Added created_at to match Supabase type
+  ativo: boolean;
+  created_at: string;
 }
 
-export interface Unidade {
+export interface Clinica {
   id: string;
   nome: string;
-  capacidade_cachorro: number;
-  capacidade_gato: number;
+  capacidade_atendimentos: number; // Changed from capacidade_cachorro/gato
   endereco: string | null;
-  cidade: string | null; // Added cidade
-  estado: string | null;  // Added estado
-  created_at: string; // Added created_at to match Supabase type
-  updated_at: string; // Added updated_at to match Supabase type
+  cidade: string | null;
+  estado: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
-export interface VagaDia {
-  id: string; // Added id to match Supabase type
-  data: string;
-  unidade_id: string;
-  vagas_cachorro_total: number;
-  vagas_cachorro_ocupadas: number;
-  vagas_gato_total: number;
-  vagas_gato_ocupadas: number;
-}
-
-export interface MensagemAgendada {
+export interface AgendaDentista { // Changed from VagaDia
   id: string;
-  tipo: 'pre-estadia' | 'durante' | 'pos-estadia' | 'aniversario';
-  reserva_id?: string; // Changed to snake_case
-  pet_id: string; // Changed to snake_case
-  tutor_id: string; // Changed to snake_case
-  data_envio: string; // Changed to snake_case
+  data: string;
+  dentista_id: string; // Link to Dentista
+  clinica_id: string; // Link to Clinica
+  horarios_disponiveis: string[]; // Array of time slots, e.g., ['09:00', '09:30']
+  horarios_ocupados: string[]; // Array of occupied time slots
+  created_at: string; // Added created_at
+  updated_at: string; // Added updated_at
+}
+
+export interface MensagemClinicaAgendada { // Changed from MensagemAgendada
+  id: string;
+  tipo: 'lembrete_consulta' | 'pos_consulta' | 'aniversario_paciente' | 'promocao'; // Updated types
+  consulta_id?: string;
+  paciente_id: string;
+  dentista_id?: string; // Added dentista_id
+  data_envio: string;
   status: 'agendada' | 'enviada' | 'erro';
   mensagem: string;
 }

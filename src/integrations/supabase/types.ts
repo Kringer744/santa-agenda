@@ -10,514 +10,447 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "13.0.5"
+    PostgrestVersion: "14.1"
   }
   public: {
     Tables: {
-      itau_settings: {
+      agenda_dentista: {
         Row: {
           id: string;
+          data: string;
+          dentista_id: string;
+          clinica_id: string;
+          horarios_disponiveis: string[] | null;
+          horarios_ocupados: string[] | null;
           created_at: string;
-          client_id: string | null;
-          client_secret: string | null;
           updated_at: string;
         };
         Insert: {
           id?: string;
+          data: string;
+          dentista_id: string;
+          clinica_id: string;
+          horarios_disponiveis?: string[] | null;
+          horarios_ocupados?: string[] | null;
           created_at?: string;
-          client_id?: string | null;
-          client_secret?: string | null;
           updated_at?: string;
         };
         Update: {
           id?: string;
+          data?: string;
+          dentista_id?: string;
+          clinica_id?: string;
+          horarios_disponiveis?: string[] | null;
+          horarios_ocupados?: string[] | null;
           created_at?: string;
-          client_id?: string | null;
-          client_secret?: string | null;
           updated_at?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "agenda_dentista_dentista_id_fkey"
+            columns: ["dentista_id"]
+            isOneToOne: false
+            referencedRelation: "dentistas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agenda_dentista_clinica_id_fkey"
+            columns: ["clinica_id"]
+            isOneToOne: false
+            referencedRelation: "clinicas"
+            referencedColumns: ["id"]
+          },
+        ];
       };
-      pets: {
-        Row: {
-          created_at: string
-          data_nascimento: string | null
-          especie: string
-          id: string
-          idade: number | null
-          necessidades_especiais: string | null
-          nome: string
-          observacoes_comportamentais: string | null
-          porte: string | null
-          raca: string | null
-          tutor_id: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          data_nascimento?: string | null
-          especie: string
-          id?: string
-          idade?: number | null
-          necessidades_especiais?: string | null
-          nome: string
-          observacoes_comportamentais?: string | null
-          porte?: string | null
-          raca?: string | null
-          tutor_id: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          data_nascimento?: string | null
-          especie?: string
-          id?: string
-          idade?: number | null
-          necessidades_especiais?: string | null
-          nome?: string
-          observacoes_comportamentais?: string | null
-          porte?: string | null
-          raca?: string | null
-          tutor_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "pets_tutor_id_fkey"
-            columns: ["tutor_id"]
-            isOneToOne: false
-            referencedRelation: "tutores"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      reservas: {
-        Row: {
-          check_in: string
-          check_out: string
-          codigo_estadia: string | null
-          created_at: string
-          id: string
-          pagamento_status: string | null
-          pet_id: string
-          pix_copia_e_cola: string | null
-          pix_qr_code_base64: string | null
-          pix_txid: string | null
-          servicos_adicionais: string[] | null
-          status: string
-          tutor_id: string
-          unidade_id: string
-          updated_at: string
-          valor_total: number | null
-        }
-        Insert: {
-          check_in: string
-          check_out: string
-          codigo_estadia?: string | null
-          created_at?: string
-          id?: string
-          pagamento_status?: string | null
-          pet_id: string
-          pix_copia_e_cola?: string | null
-          pix_qr_code_base64?: string | null
-          pix_txid?: string | null
-          servicos_adicionais?: string[] | null
-          status?: string
-          tutor_id: string
-          unidade_id: string
-          updated_at?: string
-          valor_total?: number | null
-        }
-        Update: {
-          check_in?: string
-          check_out?: string
-          codigo_estadia?: string | null
-          created_at?: string
-          id?: string
-          pagamento_status?: string | null
-          pet_id?: string
-          pix_copia_e_cola?: string | null
-          pix_qr_code_base64?: string | null
-          pix_txid?: string | null
-          servicos_adicionais?: string[] | null
-          status?: string
-          tutor_id?: string
-          unidade_id?: string
-          updated_at?: string
-          valor_total?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "reservas_pet_id_fkey"
-            columns: ["pet_id"]
-            isOneToOne: false
-            referencedRelation: "pets"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "reservas_tutor_id_fkey"
-            columns: ["tutor_id"]
-            isOneToOne: false
-            referencedRelation: "tutores"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "reservas_unidade_id_fkey"
-            columns: ["unidade_id"]
-            isOneToOne: false
-            referencedRelation: "unidades"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      servicos_adicionais: {
-        Row: {
-          ativo: boolean | null
-          created_at: string
-          icone: string | null
-          id: string
-          nome: string
-          preco: number
-        }
-        Insert: {
-          ativo?: boolean | null
-          created_at?: string
-          icone?: string | null
-          id?: string
-          nome: string
-          preco?: number
-        }
-        Update: {
-          ativo?: boolean | null
-          created_at?: string
-          icone?: string | null
-          id?: string
-          nome?: string
-          preco?: number
-        }
-        Relationships: []
-      }
-      tutores: {
-        Row: {
-          cpf: string
-          created_at: string
-          data_nascimento: string | null
-          email: string | null
-          id: string
-          nome: string
-          tags: string[] | null
-          telefone: string
-          updated_at: string
-        }
-        Insert: {
-          cpf: string
-          created_at?: string
-          data_nascimento?: string | null
-          email?: string | null
-          id?: string
-          nome: string
-          tags?: string[] | null
-          telefone: string
-          updated_at?: string
-        }
-        Update: {
-          cpf?: string
-          created_at?: string
-          data_nascimento?: string | null
-          email?: string | null
-          id?: string
-          nome?: string
-          tags?: string[] | null
-          telefone?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      unidades: {
-        Row: {
-          capacidade_cachorro: number
-          capacidade_gato: number
-          cidade: string | null
-          created_at: string
-          endereco: string | null
-          estado: string | null
-          id: string
-          nome: string
-          updated_at: string
-        }
-        Insert: {
-          capacidade_cachorro?: number
-          capacidade_gato?: number
-          cidade?: string | null
-          created_at?: string
-          endereco?: string | null
-          estado?: string | null
-          id?: string
-          nome: string
-          updated_at?: string
-        }
-        Update: {
-          capacidade_cachorro?: number
-          capacidade_gato?: number
-          cidade?: string | null
-          created_at?: string
-          endereco?: string | null
-          estado?: string | null
-          id?: string
-          nome?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      vagas_dia: {
-        Row: {
-          data: string
-          id: string
-          unidade_id: string
-          vagas_cachorro_ocupadas: number
-          vagas_cachorro_total: number
-          vagas_gato_ocupadas: number
-          vagas_gato_total: number
-        }
-        Insert: {
-          data: string
-          id?: string
-          unidade_id: string
-          vagas_cachorro_ocupadas?: number
-          vagas_cachorro_total?: number
-          vagas_gato_ocupadas?: number
-          vagas_gato_total?: number
-        }
-        Update: {
-          data?: string
-          id?: string
-          unidade_id?: string
-          vagas_cachorro_ocupadas?: number
-          vagas_cachorro_total?: number
-          vagas_gato_ocupadas?: number
-          vagas_gato_total?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "vagas_dia_unidade_id_fkey"
-            columns: ["unidade_id"]
-            isOneToOne: false
-            referencedRelation: "unidades"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      whatsapp_campaigns: {
-        Row: {
-          created_at: string
-          delay_max: number | null
-          delay_min: number | null
-          enviados: number | null
-          id: string
-          mensagem: string
-          nome: string
-          status: string | null
-          total_leads: number | null
-        }
-        Insert: {
-          created_at?: string
-          delay_max?: number | null
-          delay_min?: number | null
-          enviados?: number | null
-          id?: string
-          mensagem: string
-          nome: string
-          status?: string | null
-          total_leads?: number | null
-        }
-        Update: {
-          created_at?: string
-          delay_max?: number | null
-          delay_min?: number | null
-          enviados?: number | null
-          id?: string
-          mensagem?: string
-          nome?: string
-          status?: string | null
-          total_leads?: number | null
-        }
-        Relationships: []
-      }
-      whatsapp_config: {
-        Row: {
-          api_url: string
-          created_at: string
-          id: string
-          instance_token: string
-          mensagem_boas_vindas: string | null
-          menu_ativo: boolean | null
-          opcoes_menu: Json | null
-          updated_at: string
-        }
-        Insert: {
-          api_url: string
-          created_at?: string
-          id?: string
-          instance_token: string
-          mensagem_boas_vindas?: string | null
-          menu_ativo?: boolean | null
-          opcoes_menu?: Json | null
-          updated_at?: string
-        }
-        Update: {
-          api_url?: string
-          created_at?: string
-          id?: string
-          instance_token?: string
-          mensagem_boas_vindas?: string | null
-          menu_ativo?: boolean | null
-          opcoes_menu?: Json | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      whatsapp_conversas: {
-        Row: {
-          atendente_assumiu: boolean | null
-          created_at: string
-          id: string
-          menu_enviado_at: string | null
-          telefone: string
-          ultima_mensagem_at: string
-          updated_at: string
-        }
-        Insert: {
-          atendente_assumiu?: boolean | null
-          created_at?: string
-          id?: string
-          menu_enviado_at?: string | null
-          telefone: string
-          ultima_mensagem_at?: string
-          updated_at?: string
-        }
-        Update: {
-          atendente_assumiu?: boolean | null
-          created_at?: string
-          id?: string
-          menu_enviado_at?: string | null
-          telefone?: string
-          ultima_mensagem_at?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      whatsapp_leads: {
-        Row: {
-          created_at: string
-          email: string | null
-          id: string
-          nome: string
-          telefone: string
-        }
-        Insert: {
-          created_at?: string
-          email?: string | null
-          id?: string
-          nome: string
-          telefone: string
-        }
-        Update: {
-          created_at?: string
-          email?: string | null
-          id?: string
-          nome?: string
-          telefone?: string
-        }
-        Relationships: []
-      }
-      whatsapp_messages: {
-        Row: {
-          created_at: string
-          destinatario: string
-          id: string
-          mensagem: string
-          status: string | null
-          tipo: string
-          reserva_id: string | null;
-          pet_id: string | null;
-          tutor_id: string | null;
-        }
-        Insert: {
-          created_at?: string
-          destinatario: string
-          id?: string
-          mensagem: string
-          status?: string | null
-          tipo: string
-          reserva_id?: string | null;
-          pet_id?: string | null;
-          tutor_id?: string | null;
-        }
-        Update: {
-          created_at?: string
-          destinatario?: string
-          id?: string
-          mensagem?: string
-          status?: string | null
-          tipo?: string
-          reserva_id?: string | null;
-          pet_id?: string | null;
-          tutor_id?: string | null;
-        }
-        Relationships: [
-          {
-            foreignKeyName: "whatsapp_messages_pet_id_fkey"
-            columns: ["pet_id"]
-            isOneToOne: false
-            referencedRelation: "pets"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "whatsapp_messages_reserva_id_fkey"
-            columns: ["reserva_id"]
-            isOneToOne: false
-            referencedRelation: "reservas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "whatsapp_messages_tutor_id_fkey"
-            columns: ["tutor_id"]
-            isOneToOne: false
-            referencedRelation: "tutores"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      whatsapp_templates: {
+      clinicas: {
         Row: {
           id: string;
           nome: string;
-          descricao: string | null;
-          tipo: string;
-          mensagem: string;
-          ativo: boolean | null;
+          capacidade_atendimentos: number;
+          endereco: string | null;
+          cidade: string | null;
+          estado: string | null;
           created_at: string;
           updated_at: string;
         };
         Insert: {
           id?: string;
           nome: string;
-          descricao?: string | null;
-          tipo: string;
-          mensagem: string;
-          ativo?: boolean | null;
+          capacidade_atendimentos?: number;
+          endereco?: string | null;
+          cidade?: string | null;
+          estado?: string | null;
           created_at?: string;
           updated_at?: string;
         };
         Update: {
           id?: string;
           nome?: string;
-          descricao?: string | null;
-          tipo?: string;
-          mensagem?: string;
-          ativo?: boolean | null;
+          capacidade_atendimentos?: number;
+          endereco?: string | null;
+          cidade?: string | null;
+          estado?: string | null;
           created_at?: string;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      consultas: {
+        Row: {
+          id: string;
+          paciente_id: string;
+          dentista_id: string;
+          clinica_id: string;
+          data_hora_inicio: string;
+          data_hora_fim: string;
+          procedimentos: string[] | null;
+          status: string;
+          valor_total: number;
+          codigo_consulta: string | null;
+          pagamento_status: string;
+          created_at: string;
+          updated_at: string;
+          pix_txid: string | null;
+          pix_qr_code_base64: string | null;
+          pix_copia_e_cola: string | null;
+        };
+        Insert: {
+          id?: string;
+          paciente_id: string;
+          dentista_id: string;
+          clinica_id: string;
+          data_hora_inicio: string;
+          data_hora_fim: string;
+          procedimentos?: string[] | null;
+          status?: string;
+          valor_total: number;
+          codigo_consulta?: string | null;
+          pagamento_status?: string;
+          created_at?: string;
+          updated_at?: string;
+          pix_txid?: string | null;
+          pix_qr_code_base64?: string | null;
+          pix_copia_e_cola?: string | null;
+        };
+        Update: {
+          id?: string;
+          paciente_id?: string;
+          dentista_id?: string;
+          clinica_id?: string;
+          data_hora_inicio?: string;
+          data_hora_fim?: string;
+          procedimentos?: string[] | null;
+          status?: string;
+          valor_total?: number;
+          codigo_consulta?: string | null;
+          pagamento_status?: string;
+          created_at?: string;
+          updated_at?: string;
+          pix_txid?: string | null;
+          pix_qr_code_base64?: string | null;
+          pix_copia_e_cola?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "consultas_paciente_id_fkey"
+            columns: ["paciente_id"]
+            isOneToOne: false
+            referencedRelation: "pacientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultas_dentista_id_fkey"
+            columns: ["dentista_id"]
+            isOneToOne: false
+            referencedRelation: "dentistas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultas_clinica_id_fkey"
+            columns: ["clinica_id"]
+            isOneToOne: false
+            referencedRelation: "clinicas"
+            referencedColumns: ["id"]
+          },
+        ];
+      };
+      dentistas: {
+        Row: {
+          id: string;
+          nome: string;
+          cro: string;
+          especialidade: string | null;
+          telefone: string | null;
+          email: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          nome: string;
+          cro: string;
+          especialidade?: string | null;
+          telefone?: string | null;
+          email?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          nome?: string;
+          cro?: string;
+          especialidade?: string | null;
+          telefone?: string | null;
+          email?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      pacientes: {
+        Row: {
+          id: string;
+          nome: string;
+          cpf: string;
+          telefone: string;
+          email: string | null;
+          data_nascimento: string | null;
+          created_at: string;
+          updated_at: string;
+          tags: string[] | null;
+        };
+        Insert: {
+          id?: string;
+          nome: string;
+          cpf: string;
+          telefone: string;
+          email?: string | null;
+          data_nascimento?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          tags?: string[] | null;
+        };
+        Update: {
+          id?: string;
+          nome?: string;
+          cpf?: string;
+          telefone?: string;
+          email?: string | null;
+          data_nascimento?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          tags?: string[] | null;
+        };
+        Relationships: [];
+      };
+      procedimentos: {
+        Row: {
+          id: string;
+          nome: string;
+          preco: number;
+          icone: string;
+          ativo: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          nome: string;
+          preco: number;
+          icone?: string;
+          ativo?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          nome?: string;
+          preco?: number;
+          icone?: string;
+          ativo?: boolean;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      whatsapp_campaigns: {
+        Row: {
+          id: string;
+          nome: string;
+          mensagem: string;
+          delay_min: number;
+          delay_max: number;
+          status: string;
+          total_leads: number;
+          created_at: string;
+          updated_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          nome: string;
+          mensagem: string;
+          delay_min: number;
+          delay_max: number;
+          status?: string;
+          total_leads: number;
+          created_at?: string;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          nome?: string;
+          mensagem?: string;
+          delay_min?: number;
+          delay_max?: number;
+          status?: string;
+          total_leads?: number;
+          created_at?: string;
+          updated_at?: string | null;
+        };
+        Relationships: [];
+      };
+      whatsapp_config: {
+        Row: {
+          api_url: string;
+          created_at: string | null;
+          id: string;
+          instance_token: string;
+          mensagem_boas_vindas: string | null;
+          menu_ativo: boolean | null;
+          opcoes_menu: Json | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          api_url: string;
+          created_at?: string | null;
+          id?: string;
+          instance_token: string;
+          mensagem_boas_vindas?: string | null;
+          menu_ativo?: boolean | null;
+          opcoes_menu?: Json | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          api_url?: string;
+          created_at?: string | null;
+          id?: string;
+          instance_token?: string;
+          mensagem_boas_vindas?: string | null;
+          menu_ativo?: boolean | null;
+          opcoes_menu?: Json | null;
+          updated_at?: string | null;
+        };
+        Relationships: [];
+      };
+      whatsapp_leads: {
+        Row: {
+          id: string;
+          nome: string | null;
+          telefone: string;
+          email: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          nome?: string | null;
+          telefone: string;
+          email?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          nome?: string | null;
+          telefone?: string;
+          email?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      whatsapp_messages: {
+        Row: {
+          created_at: string | null;
+          destinatario: string;
+          id: string;
+          mensagem: string;
+          paciente_id: string | null;
+          consulta_id: string | null;
+          status: string | null;
+          tipo: string;
+          dentista_id: string | null;
+        };
+        Insert: {
+          created_at?: string | null;
+          destinatario: string;
+          id?: string;
+          mensagem: string;
+          paciente_id?: string | null;
+          consulta_id?: string | null;
+          status?: string | null;
+          tipo: string;
+          dentista_id?: string | null;
+        };
+        Update: {
+          created_at?: string | null;
+          destinatario?: string;
+          id?: string;
+          mensagem?: string;
+          paciente_id?: string | null;
+          consulta_id?: string | null;
+          status?: string | null;
+          tipo?: string;
+          dentista_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_messages_paciente_id_fkey"
+            columns: ["paciente_id"]
+            isOneToOne: false
+            referencedRelation: "pacientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_messages_consulta_id_fkey"
+            columns: ["consulta_id"]
+            isOneToOne: false
+            referencedRelation: "consultas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_messages_dentista_id_fkey"
+            columns: ["dentista_id"]
+            isOneToOne: false
+            referencedRelation: "dentistas"
+            referencedColumns: ["id"]
+          },
+        ];
+      };
+      whatsapp_templates: {
+        Row: {
+          ativo: boolean | null;
+          created_at: string | null;
+          descricao: string | null;
+          id: string;
+          mensagem: string;
+          nome: string;
+          tipo: string;
+          updated_at: string | null;
+        };
+        Insert: {
+          ativo?: boolean | null;
+          created_at?: string | null;
+          descricao?: string | null;
+          id?: string;
+          mensagem: string;
+          nome: string;
+          tipo: string;
+          updated_at?: string | null;
+        };
+        Update: {
+          ativo?: boolean | null;
+          created_at?: string | null;
+          descricao?: string | null;
+          id?: string;
+          mensagem?: string;
+          nome?: string;
+          tipo?: string;
+          updated_at?: string | null;
         };
         Relationships: [];
       };
@@ -526,7 +459,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      enviar_mensagens_agendadas: { Args: never; Returns: undefined }
     }
     Enums: {
       [_ in never]: never

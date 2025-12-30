@@ -2,6 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { sendTextMessage } from '@/lib/uazap';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { Consulta, Paciente, Dentista } from '@/types'; // Updated types
 
 interface WhatsAppConfig {
   apiUrl: string;
@@ -14,27 +15,6 @@ interface Template {
   tipo: string;
   mensagem: string;
   ativo: boolean;
-}
-
-interface Reserva {
-  id: string;
-  tutor_id: string;
-  pet_id: string;
-  check_in: string;
-  check_out: string;
-  status: string;
-}
-
-interface Tutor {
-  id: string;
-  nome: string;
-  telefone: string;
-}
-
-interface Pet {
-  id: string;
-  nome: string;
-  especie: string;
 }
 
 // Carregar configuração do WhatsApp
@@ -79,38 +59,38 @@ export async function loadActiveTemplates(): Promise<Template[]> {
   }
 }
 
-// Obter dados do tutor
-export async function getTutor(tutorId: string): Promise<Tutor | null> {
+// Obter dados do paciente
+export async function getPaciente(pacienteId: string): Promise<Paciente | null> { // Changed function name and type
   try {
     const { data, error } = await supabase
-      .from('tutores')
+      .from('pacientes') // Changed table name
       .select('id, nome, telefone')
-      .eq('id', tutorId)
+      .eq('id', pacienteId)
       .maybeSingle();
       
     if (error) throw error;
     
-    return data as Tutor;
+    return data as Paciente;
   } catch (error) {
-    console.error('Erro ao carregar tutor:', error);
+    console.error('Erro ao carregar paciente:', error);
     return null;
   }
 }
 
-// Obter dados do pet
-export async function getPet(petId: string): Promise<Pet | null> {
+// Obter dados do dentista
+export async function getDentista(dentistaId: string): Promise<Dentista | null> { // Changed function name and type
   try {
     const { data, error } = await supabase
-      .from('pets')
-      .select('id, nome, especie')
-      .eq('id', petId)
+      .from('dentistas') // Changed table name
+      .select('id, nome, especialidade')
+      .eq('id', dentistaId)
       .maybeSingle();
       
     if (error) throw error;
     
-    return data as Pet;
+    return data as Dentista;
   } catch (error) {
-    console.error('Erro ao carregar pet:', error);
+    console.error('Erro ao carregar dentista:', error);
     return null;
   }
 }
@@ -118,20 +98,31 @@ export async function getPet(petId: string): Promise<Pet | null> {
 // Substituir variáveis no template
 function replaceTemplateVariables(
   template: string,
-  tutor: Tutor,
-  pet: Pet,
-  reserva: Reserva
+  paciente: Paciente, // Changed from tutor
+  dentista: Dentista | null, // Changed from pet, now optional
+  consulta: Consulta | null // Changed from reserva, now optional
 ): string {
-  return template
-    .replace(/\{\{nome_pet\}\}/g, pet.nome)
-    .replace(/\{\{nome_tutor\}\}/g, tutor.nome)
-    .replace(/\{\{data_checkin\}\}/g, format(new Date(reserva.check_in), 'dd/MM/yyyy', { locale: ptBR }))
-    .replace(/\{\{data_checkout\}\}/g, format(new Date(reserva.check_out), 'dd/MM/yyyy', { locale: ptBR }));
+  let message = template
+    .replace(/\{\{nome_paciente\}\}/g, paciente.nome); // Changed from nome_tutor
+
+  if (dentista) {
+    message = message.replace(/\{\{nome_dentista\}\}/g, dentista.nome); // Changed from nome_pet
+  } else {
+    message = message.replace(/\{\{nome_dentista\}\}/g, 'o dentista');
+  }
+
+  if (consulta) {
+    message = message
+      .replace(/\{\{data_consulta\}\}/g, format(new Date(consulta.data_hora_inicio), 'dd/MM/yyyy', { locale: ptBR })) // Changed from data_checkin
+      .replace(/\{\{hora_consulta\}\}/g, format(new Date(consulta.data_hora_inicio), 'HH:mm', { locale: ptBR })); // New variable
+  }
+  
+  return message;
 }
 
 // Enviar mensagem automática com base no template
 export async function sendAutomatedMessage(
-  reserva: Reserva,
+  consulta: Consulta, // Changed from reserva
   templateType: string
 ): Promise<boolean> {
   try {
@@ -150,22 +141,22 @@ export async function sendAutomatedMessage(
       return false;
     }
     
-    // Carregar dados do tutor e pet
-    const tutor = await getTutor(reserva.tutor_id);
-    const pet = await getPet(reserva.pet_id);
+    // Carregar dados do paciente e dentista
+    const paciente = await getPaciente(consulta.paciente_id); // Changed from tutor
+    const dentista = await getDentista(consulta.dentista_id); // Changed from pet
     
-    if (!tutor || !pet) {
-      console.error('Dados do tutor ou pet não encontrados');
+    if (!paciente) { // Dentista can be null for some templates
+      console.error('Dados do paciente não encontrados');
       return false;
     }
     
     // Substituir variáveis no template
-    const message = replaceTemplateVariables(template.mensagem, tutor, pet, reserva);
+    const message = replaceTemplateVariables(template.mensagem, paciente, dentista, consulta);
     
     // Enviar mensagem
     const result = await sendTextMessage(
       config,
-      tutor.telefone,
+      paciente.telefone,
       message
     );
     
@@ -173,15 +164,15 @@ export async function sendAutomatedMessage(
       // Registrar mensagem enviada
       await supabase.from('whatsapp_messages').insert({
         tipo: templateType,
-        destinatario: tutor.telefone,
+        destinatario: paciente.telefone,
         mensagem: message,
         status: 'enviada',
-        reserva_id: reserva.id,
-        pet_id: pet.id,
-        tutor_id: tutor.id
+        consulta_id: consulta.id, // Changed from reserva_id
+        paciente_id: paciente.id, // Changed from pet_id
+        dentista_id: dentista?.id // Changed from tutor_id
       });
       
-      console.log(`Mensagem ${templateType} enviada com sucesso para ${tutor.telefone}`);
+      console.log(`Mensagem ${templateType} enviada com sucesso para ${paciente.telefone}`);
       return true;
     } else {
       console.error(`Erro ao enviar mensagem ${templateType}:`, result.error);
@@ -193,62 +184,47 @@ export async function sendAutomatedMessage(
   }
 }
 
-// Verificar e enviar mensagens automáticas com base no status da reserva
-export async function checkAndSendAutomatedMessages(reserva: Reserva): Promise<void> {
+// Verificar e enviar mensagens automáticas com base no status da consulta
+export async function checkAndSendAutomatedMessages(consulta: Consulta): Promise<void> { // Changed from reserva
   try {
-    // Verificar se deve enviar mensagem de pré-estadia (1 dia antes do check-in)
-    if (reserva.status === 'confirmada' && reserva.check_in) {
-      const checkInDate = new Date(reserva.check_in);
+    // Verificar se deve enviar lembrete de consulta (1 dia antes da data_hora_inicio)
+    if (consulta.status === 'confirmada' && consulta.data_hora_inicio) {
+      const consultaDate = new Date(consulta.data_hora_inicio);
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       
-      // Verificar se o check-in é amanhã
+      // Verificar se a consulta é amanhã
       if (
-        checkInDate.getDate() === tomorrow.getDate() &&
-        checkInDate.getMonth() === tomorrow.getMonth() &&
-        checkInDate.getFullYear() === tomorrow.getFullYear()
+        consultaDate.getDate() === tomorrow.getDate() &&
+        consultaDate.getMonth() === tomorrow.getMonth() &&
+        consultaDate.getFullYear() === tomorrow.getFullYear()
       ) {
         // Verificar se já foi enviada
         const { data: existingMessage } = await supabase
           .from('whatsapp_messages')
           .select('id')
-          .eq('reserva_id', reserva.id)
-          .eq('tipo', 'pre-estadia')
+          .eq('consulta_id', consulta.id)
+          .eq('tipo', 'lembrete_consulta')
           .eq('status', 'enviada');
         
         if (!existingMessage || existingMessage.length === 0) {
-          await sendAutomatedMessage(reserva, 'pre-estadia');
+          await sendAutomatedMessage(consulta, 'lembrete_consulta');
         }
       }
     }
     
-    // Verificar se deve enviar mensagem durante a estadia (quando o status mudar para 'hospedado')
-    if (reserva.status === 'hospedado') {
+    // Verificar se deve enviar mensagem pós-consulta (quando o status mudar para 'realizada')
+    if (consulta.status === 'realizada') {
       // Verificar se já foi enviada
       const { data: existingMessage } = await supabase
         .from('whatsapp_messages')
         .select('id')
-        .eq('reserva_id', reserva.id)
-        .eq('tipo', 'durante')
+        .eq('consulta_id', consulta.id)
+        .eq('tipo', 'pos_consulta')
         .eq('status', 'enviada');
       
       if (!existingMessage || existingMessage.length === 0) {
-        await sendAutomatedMessage(reserva, 'durante');
-      }
-    }
-    
-    // Verificar se deve enviar mensagem pós-estadia (quando o status mudar para 'finalizada')
-    if (reserva.status === 'finalizada') {
-      // Verificar se já foi enviada
-      const { data: existingMessage } = await supabase
-        .from('whatsapp_messages')
-        .select('id')
-        .eq('reserva_id', reserva.id)
-        .eq('tipo', 'pos-estadia')
-        .eq('status', 'enviada');
-      
-      if (!existingMessage || existingMessage.length === 0) {
-        await sendAutomatedMessage(reserva, 'pos-estadia');
+        await sendAutomatedMessage(consulta, 'pos_consulta');
       }
     }
   } catch (error) {
@@ -256,8 +232,8 @@ export async function checkAndSendAutomatedMessages(reserva: Reserva): Promise<v
   }
 }
 
-// Enviar mensagem de aniversário do pet
-export async function sendBirthdayMessage(petId: string): Promise<boolean> {
+// Enviar mensagem de aniversário do paciente
+export async function sendBirthdayMessage(pacienteId: string): Promise<boolean> { // Changed from petId
   try {
     // Carregar configuração e templates
     const config = await loadWhatsAppConfig();
@@ -267,61 +243,41 @@ export async function sendBirthdayMessage(petId: string): Promise<boolean> {
     }
     
     const templates = await loadActiveTemplates();
-    const template = templates.find(t => t.tipo === 'aniversario');
+    const template = templates.find(t => t.tipo === 'aniversario_paciente'); // Changed type
     
     if (!template) {
       console.error('Template de aniversário não encontrado');
       return false;
     }
     
-    // Carregar dados do pet e tutor
-    const pet = await getPet(petId);
-    if (!pet) {
-      console.error('Pet não encontrado');
-      return false;
-    }
-    
-    const { data: tutorData } = await supabase
-      .from('tutores')
-      .select('id, nome, telefone')
-      .eq('id', pet.id)
-      .maybeSingle();
-    
-    const tutor = tutorData as Tutor;
-    if (!tutor) {
-      console.error('Tutor não encontrado');
+    // Carregar dados do paciente
+    const paciente = await getPaciente(pacienteId); // Changed from pet
+    if (!paciente) {
+      console.error('Paciente não encontrado');
       return false;
     }
     
     // Substituir variáveis no template
-    const message = replaceTemplateVariables(template.mensagem, tutor, pet, {
-      id: '',
-      tutor_id: tutor.id,
-      pet_id: pet.id,
-      check_in: '',
-      check_out: '',
-      status: ''
-    } as Reserva);
+    const message = replaceTemplateVariables(template.mensagem, paciente, null, null); // No dentista or consulta context for birthday
     
     // Enviar mensagem
     const result = await sendTextMessage(
       config,
-      tutor.telefone,
+      paciente.telefone,
       message
     );
     
     if (result.success) {
       // Registrar mensagem enviada
       await supabase.from('whatsapp_messages').insert({
-        tipo: 'aniversario',
-        destinatario: tutor.telefone,
+        tipo: 'aniversario_paciente', // Changed type
+        destinatario: paciente.telefone,
         mensagem: message,
         status: 'enviada',
-        pet_id: pet.id,
-        tutor_id: tutor.id
+        paciente_id: paciente.id, // Changed from pet_id
       });
       
-      console.log(`Mensagem de aniversário enviada com sucesso para ${tutor.telefone}`);
+      console.log(`Mensagem de aniversário enviada com sucesso para ${paciente.telefone}`);
       return true;
     } else {
       console.error('Erro ao enviar mensagem de aniversário:', result.error);

@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, } from '@/components/ui/card';
-import { MessageSquare, Send, CheckCircle, Clock, Zap, Smartphone, Upload, Users, Play, Pause, Trash2, FileSpreadsheet, Bot, List, Save, CalendarDays, Camera, Star, Gift, BellRing, Loader2, Plus } from 'lucide-react'; // Importar ícones Lucide
+import { MessageSquare, Send, CheckCircle, Clock, Zap, Smartphone, Upload, Users, Play, Pause, Trash2, FileSpreadsheet, Bot, List, Save, CalendarDays, Camera, Star, Gift, BellRing, Loader2, Plus, Tooth, Stethoscope } from 'lucide-react'; // Updated icons
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -53,18 +53,18 @@ export default function WhatsApp() {
     api_url: '',
     instance_token: '',
     menu_ativo: false,
-    mensagem_boas_vindas: 'Olá! 🐾 Seja bem-vindo ao nosso Hotel para Pets. Como podemos cuidar do seu pet hoje?',
+    mensagem_boas_vindas: 'Olá! 🦷 Seja bem-vindo à nossa Clínica Odontológica. Como podemos cuidar do seu sorriso hoje?', // Updated message
     opcoes_menu: [
       {
         id: '1',
-        texto: '🐶 Reservar hospedagem para meu pet',
-        resposta: 'Ótimo! Vamos iniciar sua reserva. Qual a data de check-in?',
+        texto: '🗓️ Agendar uma consulta', // Updated text
+        resposta: 'Ótimo! Vamos iniciar seu agendamento. Qual a data e horário preferidos?', // Updated response
         ativo: true
       },
       {
         id: '2',
-        texto: '📅 Consultar disponibilidade',
-        resposta: 'Vou verificar nossa disponibilidade. Para qual período você precisa?',
+        texto: '🦷 Conhecer procedimentos', // Updated text
+        resposta: 'Temos diversos procedimentos para cuidar da sua saúde bucal. Qual você gostaria de saber mais?', // Updated response
         ativo: true
       },
       {
@@ -93,7 +93,6 @@ export default function WhatsApp() {
       
     return lines
       .map((line, idx) => {
-        // Aceita "nome,telefone" ou apenas "telefone"
         const parts = line.split(',').map((p) => p.trim()).filter(Boolean);
         const telefone = parts.length >= 2 ? parts[1] : parts[0] || '';
         const nome = parts.length >= 2 ? (parts[0] || 'Contato') : 'Contato';
@@ -236,7 +235,7 @@ export default function WhatsApp() {
     setIsSaving(true);
     try {
       for (const template of templates) {
-        if (template.id) { // Se tem ID, é um template existente, então atualiza
+        if (template.id) {
           const { error } = await supabase
             .from('whatsapp_templates')
             .update({
@@ -250,7 +249,7 @@ export default function WhatsApp() {
             .eq('id', template.id);
             
           if (error) throw error;
-        } else { // Se não tem ID, é um template novo, então insere
+        } else {
           const { error } = await supabase
             .from('whatsapp_templates')
             .insert({
@@ -264,7 +263,7 @@ export default function WhatsApp() {
         }
       }
       toast.success('Templates salvos com sucesso!');
-      loadTemplates(); // Recarregar templates para garantir o estado mais recente
+      loadTemplates();
     } catch (error) {
       console.error('Erro ao salvar templates:', error);
       toast.error('Erro ao salvar templates');
@@ -297,7 +296,7 @@ export default function WhatsApp() {
       if (error) throw error;
       
       toast.success(`Template '${defaultName}' adicionado!`);
-      loadTemplates(); // Recarregar para incluir o novo template
+      loadTemplates();
     } catch (error: any) {
       console.error('Erro ao adicionar template:', error);
       toast.error(`Erro ao adicionar template: ${error.message}`);
@@ -356,7 +355,6 @@ export default function WhatsApp() {
         };
       }).filter(lead => lead.telefone);
       
-      // Salvar leads no banco
       try {
         const { error } = await supabase
           .from('whatsapp_leads')
@@ -372,7 +370,7 @@ export default function WhatsApp() {
         toast.success(`${newLeads.length} leads importados com sucesso!`);
       } catch (error) {
         console.error('Erro ao salvar leads:', error);
-        setLeads(newLeads); // Ainda usar localmente
+        setLeads(newLeads);
         toast.success(`${newLeads.length} leads carregados!`);
       }
     };
@@ -413,7 +411,6 @@ export default function WhatsApp() {
     if (result.success) {
       toast.success('Campanha criada e iniciada!');
       
-      // Salvar campanha no histórico
       await supabase.from('whatsapp_campaigns').insert({
         nome: `Campanha ${new Date().toLocaleDateString('pt-BR')}`,
         mensagem: mensagemDisparo,
@@ -511,50 +508,50 @@ export default function WhatsApp() {
 
   const getTemplateIcon = (type: string) => {
     switch (type) {
-      case 'pre-estadia': return <CalendarDays className="w-5 h-5 text-muted-foreground" />;
-      case 'durante': return <Camera className="w-5 h-5 text-muted-foreground" />;
-      case 'pos-estadia': return <Star className="w-5 h-5 text-muted-foreground" />;
-      case 'aniversario': return <Gift className="w-5 h-5 text-muted-foreground" />;
+      case 'lembrete_consulta': return <CalendarDays className="w-5 h-5 text-muted-foreground" />;
+      case 'pos_consulta': return <Stethoscope className="w-5 h-5 text-muted-foreground" />;
+      case 'aniversario_paciente': return <Gift className="w-5 h-5 text-muted-foreground" />;
+      case 'promocao': return <Star className="w-5 h-5 text-muted-foreground" />;
       default: return <MessageSquare className="w-5 h-5 text-muted-foreground" />;
     }
   };
 
   const getTemplateTitle = (type: string) => {
     switch (type) {
-      case 'pre-estadia': return 'Antes da Hospedagem';
-      case 'durante': return 'Durante a Hospedagem';
-      case 'pos-estadia': return 'Pós-Hospedagem';
-      case 'aniversario': return 'Aniversário do Pet';
+      case 'lembrete_consulta': return 'Lembrete de Consulta';
+      case 'pos_consulta': return 'Pós-Consulta';
+      case 'aniversario_paciente': return 'Aniversário do Paciente';
+      case 'promocao': return 'Promoção';
       default: return 'Template Padrão';
     }
   };
 
   const getTemplateSubtitle = (type: string) => {
     switch (type) {
-      case 'pre-estadia': return '(1 dia antes do check-in)';
-      case 'durante': return "(Quando o status da reserva for 'hospedado')";
-      case 'pos-estadia': return "(Quando o status da reserva for 'finalizada')";
-      case 'aniversario': return '(No dia do aniversário do pet)';
+      case 'lembrete_consulta': return '(1 dia antes da consulta)';
+      case 'pos_consulta': return "(Após a consulta ser 'realizada')";
+      case 'aniversario_paciente': return '(No dia do aniversário do paciente)';
+      case 'promocao': return '(Disparo manual)';
       default: return '';
     }
   };
 
   const getTemplateVariables = (type: string) => {
-    const common = ['{{nome_pet}}', '{{nome_tutor}}'];
-    if (type === 'pre-estadia' || type === 'durante') {
-      return [...common, '{{data_checkin}}'];
+    const common = ['{{nome_paciente}}', '{{nome_dentista}}'];
+    if (type === 'lembrete_consulta') {
+      return [...common, '{{data_consulta}}', '{{hora_consulta}}'];
     }
-    if (type === 'pos-estadia') {
-      return [...common, '{{data_checkout}}'];
+    if (type === 'pos_consulta') {
+      return [...common, '{{data_consulta}}'];
     }
     return common;
   };
 
   const expectedTemplateTypes = useMemo(() => [
-    { type: 'pre-estadia', name: 'Pré-estadia', description: 'Mensagem enviada 1 dia antes da estadia', defaultMessage: 'Oi! 🐾 Amanhã esperamos o {{nome_pet}}. Qualquer dúvida estamos por aqui.' },
-    { type: 'durante', name: 'Durante a hospedagem', description: 'Mensagem enviada durante a estadia com foto do pet', defaultMessage: 'Olá! Segue uma foto do {{nome_pet}} curtindo o dia no hotel! 💙' },
-    { type: 'pos-estadia', name: 'Pós-hospedagem', description: 'Mensagem enviada após a estadia para avaliação', defaultMessage: 'Foi um prazer cuidar do {{nome_pet}}! 💙 Avalie sua experiência.' },
-    { type: 'aniversario', name: 'Aniversário do Pet', description: 'Mensagem de parabéns no aniversário do pet', defaultMessage: '🎉 Hoje é aniversário do {{nome_pet}}! Temos um presente especial pra ele 🐶🐱' },
+    { type: 'lembrete_consulta', name: 'Lembrete de Consulta', description: 'Mensagem enviada 1 dia antes da consulta', defaultMessage: 'Olá {{nome_paciente}}! 🗓️ Lembrete da sua consulta com {{nome_dentista}} amanhã, {{data_consulta}} às {{hora_consulta}}. Aguardamos você!' },
+    { type: 'pos_consulta', name: 'Pós-Consulta', description: 'Mensagem enviada após a consulta para feedback', defaultMessage: 'Olá {{nome_paciente}}! Esperamos que tenha tido uma ótima experiência com {{nome_dentista}} em {{data_consulta}}. Deixe seu feedback!' },
+    { type: 'aniversario_paciente', name: 'Aniversário do Paciente', description: 'Mensagem de parabéns no aniversário do paciente', defaultMessage: '🎉 Feliz Aniversário, {{nome_paciente}}! A DentalClinic deseja um dia especial e um sorriso ainda mais lindo!' },
+    { type: 'promocao', name: 'Promoção', description: 'Template para envio de promoções e novidades', defaultMessage: 'Olá {{nome_paciente}}! Temos uma novidade especial para você na DentalClinic. Confira!' },
   ], []);
 
   return (
@@ -569,7 +566,7 @@ export default function WhatsApp() {
             <div>
               <h1 className="text-2xl md:text-3xl font-bold text-foreground">WhatsApp</h1>
               <p className="text-muted-foreground text-sm md:text-base">
-                Integração com UAZAP para automações
+                Integração com UAZAP para automações da clínica
               </p>
             </div>
           </div>
@@ -587,7 +584,7 @@ export default function WhatsApp() {
             </TabsTrigger>
             <TabsTrigger value="acompanhamento" className="gap-2 text-xs md:text-sm">
               <BellRing className="w-4 h-4" />
-              Acompanhamento do Cliente
+              Acompanhamento do Paciente
             </TabsTrigger>
             <TabsTrigger value="disparos" className="gap-2 text-xs md:text-sm">
               <Send className="w-4 h-4" />
@@ -756,7 +753,7 @@ export default function WhatsApp() {
                         Menu Interativo
                       </CardTitle>
                       <CardDescription className="text-sm md:text-base">
-                        Configure o menu automático que aparece quando o lead envia mensagem
+                        Configure o menu automático que aparece quando o paciente envia mensagem
                       </CardDescription>
                     </div>
                     
@@ -893,7 +890,7 @@ export default function WhatsApp() {
             </div>
           </TabsContent>
 
-          {/* Acompanhamento do Cliente */}
+          {/* Acompanhamento do Paciente */}
           <TabsContent value="acompanhamento" className="mt-6">
             {isLoadingTemplates ? (
               <div className="flex items-center justify-center py-12">

@@ -17,14 +17,10 @@ const ONE_HOUR_MS = 60 * 60 * 1000;
 
 // Formatar número de telefone para formato brasileiro
 function formatPhoneNumber(phone: string): string {
-  // Remove tudo que não é número
   let cleaned = phone.replace(/\D/g, '');
-  
-  // Se não começa com 55, adiciona
   if (!cleaned.startsWith('55')) {
     cleaned = '55' + cleaned;
   }
-  
   return cleaned;
 }
 
@@ -33,25 +29,22 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Healthcheck (útil para testar a URL do webhook no navegador e no painel UAZAPI)
   if (req.method === "GET") {
-    return jsonResponse({ ok: true, service: "uazap-webhook" });
+    return jsonResponse({ ok: true, service: "uazap-webhook-clinic" }); // Updated service name
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
   const supabase = createClient(supabaseUrl, supabaseKey);
 
-  const APP_BASE_URL = Deno.env.get("APP_BASE_URL") || "https://localhost:8080"; // Default para desenvolvimento
+  const APP_BASE_URL = Deno.env.get("APP_BASE_URL") || "https://localhost:8080";
 
   try {
     const body = await req.json();
     console.log("[WEBHOOK] Received:", JSON.stringify(body));
 
-    // UAZAPI envia eventos com estrutura: { EventType, chat, message, ... }
     const eventType = body?.EventType ?? body?.event ?? body?.type ?? "";
     
-    // Só processar eventos de mensagem
     if (eventType !== "messages") {
       console.log("[WEBHOOK] Evento ignorado (não é mensagem):", eventType);
       return jsonResponse({ ok: true, skipped: true, reason: "not_message_event" });
@@ -60,23 +53,17 @@ serve(async (req) => {
     const chat = body?.chat ?? {};
     const message = body?.message ?? {};
 
-    // Ignorar mensagens enviadas por nós mesmos
     if (message?.fromMe === true) {
       console.log("[WEBHOOK] Mensagem enviada por mim, ignorando.");
       return jsonResponse({ ok: true, skipped: true });
     }
 
-    // Ignorar mensagens de grupos
     if (chat?.wa_isGroup === true || message?.isGroup === true) {
       console.log("[WEBHOOK] Mensagem de grupo, ignorando.");
       return jsonResponse({ ok: true, skipped: true });
     }
 
-    // Extrair número do remetente da estrutura UAZAPI
-    // Prioridade: chat.phone > chat.wa_chatid > message.chatid > message.sender
     let rawFrom = chat?.phone ?? chat?.wa_chatid ?? message?.chatid ?? message?.sender ?? "";
-    
-    // Remove sufixos @s.whatsapp.net / @c.us / @lid e caracteres não numéricos
     const fromNumber = formatPhoneNumber(rawFrom);
 
     if (!fromNumber) {
@@ -109,64 +96,39 @@ serve(async (req) => {
     const welcomeMessage = configRow.mensagem_boas_vindas ?? "";
     const opcoes = Array.isArray(configRow.opcoes_menu) ? configRow.opcoes_menu : [];
 
-    // Verificar se a mensagem recebida é uma resposta a uma opção do menu
     const receivedMessageText = message?.text?.toLowerCase().trim();
     const selectedOption = opcoes.find((o: any) => o.id === receivedMessageText);
 
-    if (selectedOption && selectedOption.id === '1') { // Opção "🐶 Reservar hospedagem para meu pet"
-      console.log("[WEBHOOK] Opção 'Reservar hospedagem' selecionada.");
+    if (selectedOption && selectedOption.id === '1') { // Opção "🗓️ Agendar uma consulta"
+      console.log("[WEBHOOK] Opção 'Agendar uma consulta' selecionada.");
 
-      // Buscar tutor pelo telefone
-      const { data: tutor, error: tutorError } = await supabase
-        .from('tutores')
+      // Buscar paciente pelo telefone
+      const { data: paciente, error: pacienteError } = await supabase
+        .from('pacientes') // Changed table name
         .select('id, nome')
         .eq('telefone', fromNumber)
         .maybeSingle();
 
-      if (tutorError) {
-        console.error("[WEBHOOK] Erro ao buscar tutor:", tutorError);
-        return jsonResponse({ ok: false, error: tutorError.message }, 500);
+      if (pacienteError) {
+        console.error("[WEBHOOK] Erro ao buscar paciente:", pacienteError);
+        return jsonResponse({ ok: false, error: pacienteError.message }, 500);
       }
 
-      if (!tutor) {
-        // Se não encontrar o tutor, envia link para cadastro de tutor
-        const registrationLink = `${APP_BASE_URL}/client-registration`;
-        const responseText = "Parece que você ainda não está cadastrado. Por favor, crie seu perfil de tutor aqui:\n\n" + registrationLink;
+      if (!paciente) {
+        // Se não encontrar o paciente, envia link para cadastro de paciente
+        const registrationLink = `${APP_BASE_URL}/client-registration`; // Consider creating a client-registration page
+        const responseText = "Parece que você ainda não está cadastrado. Por favor, crie seu perfil de paciente aqui:\n\n" + registrationLink;
         await fetch(`${apiUrl}/send/text`, {
           method: "POST",
           headers: { token: instanceToken, "Content-Type": "application/json" },
           body: JSON.stringify({ number: fromNumber, text: responseText }),
         });
-        return jsonResponse({ ok: true, messageSent: true, reason: "tutor_not_found" });
+        return jsonResponse({ ok: true, messageSent: true, reason: "paciente_not_found" });
       }
 
-      // Buscar pets do tutor
-      const { data: pets, error: petsError } = await supabase
-        .from('pets')
-        .select('id, nome, especie')
-        .eq('tutor_id', tutor.id);
-
-      if (petsError) {
-        console.error("[WEBHOOK] Erro ao buscar pets:", petsError);
-        return jsonResponse({ ok: false, error: petsError.message }, 500);
-      }
-
-      if (!pets || pets.length === 0) {
-        // Se o tutor não tem pets, envia link para cadastro de pet
-        const petRegistrationLink = `${APP_BASE_URL}/pet-registration?tutor_id=${tutor.id}`;
-        const responseText = `Olá ${tutor.nome}! Você ainda não tem pets cadastrados. Por favor, cadastre seu pet aqui:\n\n` + petRegistrationLink;
-        await fetch(`${apiUrl}/send/text`, {
-          method: "POST",
-          headers: { token: instanceToken, "Content-Type": "application/json" },
-          body: JSON.stringify({ number: fromNumber, text: responseText }),
-        });
-        return jsonResponse({ ok: true, messageSent: true, reason: "no_pets_found" });
-      }
-
-      // Se tutor e pets encontrados, envia link para reserva (pode listar pets para escolha ou pegar o primeiro)
-      const firstPet = pets[0]; // Por simplicidade, pegando o primeiro pet.
-      const reservationLink = `${APP_BASE_URL}/client-reservation?tutor_id=${tutor.id}&pet_id=${firstPet.id}`;
-      const responseText = `Olá ${tutor.nome}! Para reservar a hospedagem do seu pet ${firstPet.nome} (${firstPet.especie === 'cachorro' ? '🐶' : '🐱'}), acesse o link abaixo:\n\n${reservationLink}\n\nSelecione as datas e finalize sua reserva.`;
+      // Se paciente encontrado, envia link para agendamento
+      const appointmentLink = `${APP_BASE_URL}/client-appointment?paciente_id=${paciente.id}`; // Updated link
+      const responseText = `Olá ${paciente.nome}! Para agendar sua consulta, acesse o link abaixo:\n\n${appointmentLink}\n\nSelecione o dentista, data e horário.`;
 
       await fetch(`${apiUrl}/send/text`, {
         method: "POST",
@@ -174,7 +136,7 @@ serve(async (req) => {
         body: JSON.stringify({ number: fromNumber, text: responseText }),
       });
 
-      return jsonResponse({ ok: true, reservationLinkSent: true });
+      return jsonResponse({ ok: true, appointmentLinkSent: true });
     }
 
     if (!menuAtivo) {
@@ -218,9 +180,6 @@ serve(async (req) => {
         .eq("id", conversa.id);
     }
 
-    // Verificar se deve enviar o menu:
-    // 1) Atendente não assumiu
-    // 2) Nunca enviou menu OU enviou há mais de 1 hora
     const atendenteAssumiu = conversa.atendente_assumiu === true;
     const menuEnviadoAt = conversa.menu_enviado_at ? new Date(conversa.menu_enviado_at).getTime() : 0;
     const msSinceMenuSent = now.getTime() - menuEnviadoAt;
@@ -232,10 +191,8 @@ serve(async (req) => {
       return jsonResponse({ ok: true, skipped: true });
     }
 
-    // Montar menu no formato UAZAPI list
     const activeOptions = opcoes.filter((o: any) => o.ativo !== false);
     
-    // Formato: "[Seção]", "Título|id|Descrição"
     const choices: string[] = [
       "[Atendimento]",
       ...activeOptions.map((o: any) => {
@@ -248,7 +205,6 @@ serve(async (req) => {
 
     console.log("[WEBHOOK] Enviando menu para:", fromNumber);
 
-    // Enviar via UAZAP usando /send/menu com type: list
     const sendResp = await fetch(`${apiUrl}/send/menu`, {
       method: "POST",
       headers: {
@@ -261,14 +217,13 @@ serve(async (req) => {
         text: welcomeMessage,
         choices,
         listButton: "Menu de Atendimento",
-        footerText: "Hotel para Pets",
+        footerText: "DentalClinic", // Updated footer
       }),
     });
 
     const sendResult = await sendResp.json().catch(() => ({}));
     console.log("[WEBHOOK] Resultado envio:", sendResult);
 
-    // Atualizar menu_enviado_at
     await supabase
       .from("whatsapp_conversas")
       .update({ menu_enviado_at: now.toISOString() })

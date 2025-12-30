@@ -1,49 +1,47 @@
 import { Layout } from '@/components/layout/Layout';
 import { StatsCard } from '@/components/dashboard/StatsCard';
-import { PawPrint, Calendar, Users, TrendingUp, Loader2 } from 'lucide-react';
-import { useReservas } from '@/hooks/useReservas';
-import { usePets } from '@/hooks/usePets';
-import { useTutores } from '@/hooks/useTutores';
-import { useUnidades } from '@/hooks/useUnidades';
-import { useServicos } from '@/hooks/useServicos';
-import { useVagasDia } from '@/hooks/useVagasDia';
-import { ReservasList } from '@/components/dashboard/ReservasList';
-import { ServicosHoje } from '@/components/dashboard/ServicosHoje';
-import { VagasChart } from '@/components/dashboard/VagasChart';
+import { Tooth, CalendarCheck, Users, TrendingUp, Loader2, Stethoscope } from 'lucide-react'; // Updated icons
+import { useConsultas } from '@/hooks/useConsultas'; // Changed hook
+import { useDentistas } from '@/hooks/useDentistas'; // Changed hook
+import { usePacientes } from '@/hooks/usePacientes'; // Changed hook
+import { useClinicas } from '@/hooks/useClinicas'; // Changed hook
+import { useProcedimentos } from '@/hooks/useProcedimentos'; // Changed hook
+import { useAgendaDia } from '@/hooks/useAgendaDia'; // Changed hook
+import { ConsultasList } from '@/components/dashboard/ConsultasList'; // Changed component
+import { ProcedimentosHoje } from '@/components/dashboard/ProcedimentosHoje'; // Changed component
+import { AgendaChart } from '@/components/dashboard/AgendaChart'; // Changed component
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 const statusColors: Record<string, string> = {
-  pendente: 'bg-honey-light text-accent-foreground',
+  agendada: 'bg-honey-light text-accent-foreground',
   confirmada: 'bg-mint-light text-secondary',
-  checkin: 'bg-coral-light text-primary',
-  hospedado: 'bg-secondary text-secondary-foreground',
-  checkout: 'bg-honey text-accent-foreground',
-  finalizada: 'bg-muted text-muted-foreground',
+  realizada: 'bg-coral-light text-primary',
   cancelada: 'bg-destructive/10 text-destructive',
+  reagendada: 'bg-blush-light text-blush',
 };
 
 export default function Dashboard() {
   const hoje = new Date().toISOString().split('T')[0];
   
-  const { data: reservas = [], isLoading: loadingReservas } = useReservas();
-  const { data: pets = [], isLoading: loadingPets } = usePets();
-  const { data: tutores = [], isLoading: loadingTutores } = useTutores();
-  const { data: unidades = [], isLoading: loadingUnidades } = useUnidades();
-  const { data: servicosAdicionais = [], isLoading: loadingServicos } = useServicos();
-  const { data: vagasDia = [], isLoading: loadingVagasDia } = useVagasDia();
+  const { data: consultas = [], isLoading: loadingConsultas } = useConsultas();
+  const { data: dentistas = [], isLoading: loadingDentistas } = useDentistas();
+  const { data: pacientes = [], isLoading: loadingPacientes } = usePacientes();
+  const { data: clinicas = [], isLoading: loadingClinicas } = useClinicas();
+  const { data: procedimentos = [], isLoading: loadingProcedimentos } = useProcedimentos();
+  const { data: agendaDia = [], isLoading: loadingAgendaDia } = useAgendaDia();
 
-  const isLoading = loadingReservas || loadingPets || loadingTutores || loadingUnidades || loadingServicos || loadingVagasDia;
+  const isLoading = loadingConsultas || loadingDentistas || loadingPacientes || loadingClinicas || loadingProcedimentos || loadingAgendaDia;
 
-  const petsHospedados = reservas.filter(r => r.status === 'hospedado').length;
-  const checkinsHoje = reservas.filter(r => r.check_in === hoje && (r.status === 'confirmada' || r.status === 'pendente'));
-  const checkoutsHoje = reservas.filter(r => r.check_out === hoje && r.status === 'hospedado');
-  const hospedadosHoje = reservas.filter(r => r.status === 'hospedado');
+  const consultasAgendadas = consultas.filter(c => c.status === 'agendada' || c.status === 'confirmada').length;
+  const consultasHoje = consultas.filter(c => c.data_hora_inicio.startsWith(hoje) && (c.status === 'agendada' || c.status === 'confirmada'));
+  const consultasRealizadasHoje = consultas.filter(c => c.data_hora_inicio.startsWith(hoje) && c.status === 'realizada');
+  const pacientesAtivos = pacientes.length;
 
-  // Calcular ocupação
-  const totalCapacidade = unidades.reduce((acc, u) => acc + u.capacidade_cachorro + u.capacidade_gato, 0);
-  const ocupacaoTotal = totalCapacidade > 0 
-    ? Math.round((petsHospedados / totalCapacidade) * 100)
+  // Calcular ocupação (exemplo: baseado em consultas agendadas vs. capacidade total de atendimentos das clínicas)
+  const totalCapacidadeAtendimentos = clinicas.reduce((acc, c) => acc + c.capacidade_atendimentos, 0);
+  const ocupacaoTotal = totalCapacidadeAtendimentos > 0 
+    ? Math.round((consultasAgendadas / totalCapacidadeAtendimentos) * 100)
     : 0;
 
   if (isLoading) {
@@ -63,7 +61,7 @@ export default function Dashboard() {
         <div className="animate-fade-in">
           <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
           <p className="text-muted-foreground mt-1 text-sm md:text-base">
-            Visão geral do hotel • {new Date().toLocaleDateString('pt-BR', { 
+            Visão geral da clínica • {new Date().toLocaleDateString('pt-BR', { 
               weekday: 'long', 
               day: 'numeric', 
               month: 'long' 
@@ -74,17 +72,17 @@ export default function Dashboard() {
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
           <StatsCard
-            title="Pets Hospedados"
-            value={petsHospedados}
-            subtitle="agora no hotel"
-            icon={<PawPrint className="w-6 h-6" />}
+            title="Consultas Agendadas"
+            value={consultasAgendadas}
+            subtitle="próximos dias"
+            icon={<CalendarCheck className="w-6 h-6" />}
             variant="coral"
           />
           <StatsCard
-            title="Check-ins Hoje"
-            value={checkinsHoje.length}
-            subtitle="aguardando"
-            icon={<Calendar className="w-6 h-6" />}
+            title="Consultas Hoje"
+            value={consultasHoje.length}
+            subtitle="agendadas"
+            icon={<Stethoscope className="w-6 h-6" />}
             variant="mint"
           />
           <StatsCard
@@ -95,60 +93,50 @@ export default function Dashboard() {
             variant="honey"
           />
           <StatsCard
-            title="Tutores Ativos"
-            value={tutores.length}
+            title="Pacientes Ativos"
+            value={pacientesAtivos}
             subtitle="cadastrados"
             icon={<Users className="w-6 h-6" />}
             variant="blush"
           />
         </div>
 
-        {/* Reservas do dia */}
+        {/* Consultas do dia */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-          {/* Check-ins Hoje */}
-          <ReservasList 
-            title="Check-ins Hoje" 
-            type="checkin" 
-            reservas={checkinsHoje} 
-            pets={pets} 
-            tutores={tutores} 
+          {/* Consultas Agendadas Hoje */}
+          <ConsultasList 
+            title="Consultas Agendadas Hoje" 
+            type="agendada" 
+            consultas={consultasHoje.filter(c => c.status === 'agendada' || c.status === 'confirmada')} 
+            dentistas={dentistas} 
+            pacientes={pacientes} 
           />
 
-          {/* Hospedados */}
-          <ReservasList 
-            title="Hospedados" 
-            type="hospedados" 
-            reservas={hospedadosHoje} 
-            pets={pets} 
-            tutores={tutores} 
+          {/* Consultas Realizadas Hoje */}
+          <ConsultasList 
+            title="Consultas Realizadas Hoje" 
+            type="realizada" 
+            consultas={consultasRealizadasHoje} 
+            dentistas={dentistas} 
+            pacientes={pacientes} 
           />
 
-          {/* Check-outs Hoje */}
-          <ReservasList 
-            title="Check-outs Hoje" 
-            type="checkout" 
-            reservas={checkoutsHoje} 
-            pets={pets} 
-            tutores={tutores} 
+          {/* Próximas Consultas */}
+          <ConsultasList 
+            title="Próximas Consultas" 
+            type="proximas" 
+            consultas={consultas.filter(c => c.data_hora_inicio > new Date().toISOString() && (c.status === 'agendada' || c.status === 'confirmada')).slice(0, 5)} 
+            dentistas={dentistas} 
+            pacientes={pacientes} 
           />
         </div>
 
-        {/* Serviços e Vagas */}
+        {/* Procedimentos e Agenda */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-          <ServicosHoje reservas={reservas.filter(r => r.status === 'hospedado')} servicosAdicionais={servicosAdicionais} />
-          <VagasChart vagas={vagasDia} />
+          <ProcedimentosHoje consultas={consultas.filter(c => c.status === 'realizada')} procedimentos={procedimentos} />
+          <AgendaChart agenda={agendaDia} dentistas={dentistas} clinicas={clinicas} />
         </div>
       </div>
     </Layout>
   );
 }
-
-const statusLabels: Record<string, string> = {
-  pendente: 'Pendente',
-  confirmada: 'Confirmada',
-  checkin: 'Check-in',
-  hospedado: 'Hospedado',
-  checkout: 'Check-out',
-  finalizada: 'Finalizada',
-  cancelada: 'Cancelada',
-};
