@@ -4,11 +4,12 @@ import {
   LayoutDashboard, 
   CalendarCheck, 
   Users, 
-  Smile, // Replaced Tooth with Smile
+  Smile, 
   MessageSquare, 
   Settings, 
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  CalendarDays // Import CalendarDays icon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -17,8 +18,9 @@ import { useIsMobile } from '@/hooks/use-mobile';
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
   { icon: CalendarCheck, label: 'Consultas', path: '/consultas' },
+  { icon: CalendarDays, label: 'Agenda', path: '/agenda' }, // New Agenda item
   { icon: Users, label: 'Pacientes', path: '/pacientes' },
-  { icon: Smile, label: 'Dentistas', path: '/dentistas' }, // Replaced Tooth with Smile
+  { icon: Smile, label: 'Dentistas', path: '/dentistas' },
   { icon: MessageSquare, label: 'WhatsApp', path: '/whatsapp' },
   { icon: Settings, label: 'Configurações', path: '/configuracoes' },
 ];
@@ -42,7 +44,7 @@ export function Sidebar() {
       <div className="h-16 flex items-center justify-center border-b border-border px-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl gradient-hero flex items-center justify-center shadow-soft">
-            <Smile className="w-6 h-6 text-primary-foreground" /> {/* Replaced Tooth with Smile */}
+            <Smile className="w-6 h-6 text-primary-foreground" />
           </div>
           {!collapsed && (
             <span className="font-bold text-lg text-foreground">DentalClinic</span>

@@ -8,46 +8,43 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Calendar as CalendarIcon, CheckCircle, QrCode, Copy, XCircle, UserPlus, Stethoscope } from 'lucide-react'; // Updated icons
-import { useDentistas } from '@/hooks/useDentistas'; // Updated hook
-import { usePacientes, useCreatePaciente } from '@/hooks/usePacientes'; // Updated hooks
-import { useClinicas } from '@/hooks/useClinicas'; // Updated hook
-import { useAgendaDia } from '@/hooks/useAgendaDia'; // Updated hook
-import { useCreateConsulta, useUpdateConsultaStatus } from '@/hooks/useConsultas'; // Updated hooks
+import { Loader2, Calendar as CalendarIcon, CheckCircle, QrCode, Copy, XCircle, UserPlus, Stethoscope } from 'lucide-react';
+import { useDentistas } from '@/hooks/useDentistas';
+import { usePacientes, useCreatePaciente } from '@/hooks/usePacientes';
+import { useClinicas } from '@/hooks/useClinicas';
+import { useAgendaDia } from '@/hooks/useAgendaDia'; // This hook fetches all agenda_dentista entries
+import { useCreateConsulta, useUpdateConsultaStatus } from '@/hooks/useConsultas';
 import { cn } from '@/lib/utils';
-import { format, isBefore, isAfter, addDays, differenceInDays, parseISO } from 'date-fns'; // Added parseISO
+import { format, isBefore, addMinutes, parseISO, isSameDay } from 'date-fns'; // <-- Adicionado isSameDay aqui
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { sendImageMessage, sendTextMessage } from '@/lib/uazap';
-import { DentistaSelectorAndCreator } from '@/components/appointment/DentistaSelectorAndCreator'; // Corrected import path
-
-interface DateRange {
-  from: Date | undefined;
-  to: Date | undefined;
-}
+import { DentistaSelectorAndCreator } from '@/components/appointment/DentistaSelectorAndCreator';
 
 interface WhatsAppConfig {
   apiUrl: string;
   instanceToken: string;
 }
 
+const APPOINTMENT_DURATION_MINUTES = 30; // Define a duração padrão da consulta
+
 export default function ClientAppointment() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const initialPacienteId = searchParams.get('paciente_id'); // Changed from tutor_id
-  const initialDentistaId = searchParams.get('dentista_id'); // Changed from pet_id
+  const initialPacienteId = searchParams.get('paciente_id');
+  const initialDentistaId = searchParams.get('dentista_id');
   
   const [selectedPacienteId, setSelectedPacienteId] = useState<string | undefined>(initialPacienteId || undefined);
   const [selectedDentistaId, setSelectedDentistaId] = useState<string | undefined>(initialDentistaId || undefined);
-  const [selectedClinicaId, setSelectedClinicaId] = useState<string | undefined>(undefined); // Changed from selectedUnidadeId
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | undefined>(undefined); // New state for time slot
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined); // New state for single date selection
-  const [appointmentValue, setAppointmentValue] = useState<number>(0); // Changed from reservationValue
-  const [currentStep, setCurrentStep] = useState(1); // 1: Select Dates, 2: Confirm & Pay, 3: Payment Status
+  const [selectedClinicaId, setSelectedClinicaId] = useState<string | undefined>(undefined);
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | undefined>(undefined);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [appointmentValue, setAppointmentValue] = useState<number>(0);
+  const [currentStep, setCurrentStep] = useState(1);
   const [pixData, setPixData] = useState<{ qrCodeBase64: string; pixCopiaECola: string; txid: string } | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<'pending' | 'paid' | 'failed'>('pending');
-  const [consultaId, setConsultaId] = useState<string | null>(null); // Changed from reservaId
+  const [consultaId, setConsultaId] = useState<string | null>(null);
   const [pollingInterval, setPollingInterval] = useState<number | null>(null);
   const [whatsappConfig, setWhatsappConfig] = useState<WhatsAppConfig | null>(null);
 
@@ -58,13 +55,13 @@ export default function ClientAppointment() {
   const [newPacienteEmail, setNewPacienteEmail] = useState('');
   const [newPacienteDob, setNewPacienteDob] = useState('');
   
-  const { data: dentistas = [], isLoading: loadingDentistas } = useDentistas(); // Updated hook
-  const { data: pacientes = [], isLoading: loadingPacientes } = usePacientes(); // Updated hook
-  const { data: clinicas = [], isLoading: loadingClinicas } = useClinicas(); // Updated hook
-  const { data: agendaDia = [], isLoading: loadingAgendaDia } = useAgendaDia(); // Updated hook
-  const createConsulta = useCreateConsulta(); // Updated hook
-  const updateConsultaStatus = useUpdateConsultaStatus(); // Updated hook
-  const createPaciente = useCreatePaciente(); // Updated hook
+  const { data: dentistas = [], isLoading: loadingDentistas } = useDentistas();
+  const { data: pacientes = [], isLoading: loadingPacientes } = usePacientes();
+  const { data: clinicas = [], isLoading: loadingClinicas } = useClinicas();
+  const { data: agendaDia = [], isLoading: loadingAgendaDia } = useAgendaDia(); // This hook fetches all agenda_dentista entries
+  const createConsulta = useCreateConsulta();
+  const updateConsultaStatus = useUpdateConsultaStatus();
+  const createPaciente = useCreatePaciente();
   
   const isLoading = loadingDentistas || loadingPacientes || loadingClinicas || loadingAgendaDia;
   
@@ -177,15 +174,21 @@ export default function ClientAppointment() {
     const dateString = format(date, 'yyyy-MM-dd');
     const agendaDoDia = agendaDia.find(a => a.clinica_id === clinicaId && a.dentista_id === dentistaId && a.data === dateString);
     
-    if (!agendaDoDia) {
-      // Default slots if no specific agenda for the day
-      return ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30'];
+    if (!agendaDoDia || !agendaDoDia.horarios_disponiveis || agendaDoDia.horarios_disponiveis.length === 0) {
+      return []; // Agenda fechada ou sem horários definidos
     }
     
     const allSlots = agendaDoDia.horarios_disponiveis;
-    const occupiedSlots = agendaDoDia.horarios_ocupados;
+    const occupiedSlots = agendaDoDia.horarios_ocupados || [];
     
-    return allSlots.filter(slot => !occupiedSlots.includes(slot));
+    // Filtrar horários que já passaram (para o dia atual)
+    const now = new Date();
+    const currentHourMinute = format(now, 'HH:mm');
+
+    return allSlots.filter(slot => {
+      const slotDateTime = parseISO(dateString + 'T' + slot + ':00');
+      return !occupiedSlots.includes(slot) && (isBefore(now, slotDateTime) || !isSameDay(now, date));
+    });
   };
 
   const isDateUnavailable = (date: Date) => {
@@ -230,7 +233,7 @@ export default function ClientAppointment() {
     }
 
     const startDateTime = parseISO(format(selectedDate, 'yyyy-MM-dd') + 'T' + selectedTimeSlot + ':00');
-    const endDateTime = addDays(startDateTime, 0); // Assuming 30 min appointment for simplicity, adjust as needed
+    const endDateTime = addMinutes(startDateTime, APPOINTMENT_DURATION_MINUTES);
 
     // 1. Create pending consulta in DB
     const newConsultaData = {
@@ -263,8 +266,8 @@ export default function ClientAppointment() {
           access_token: authData.access_token,
           valor: appointmentValue,
           txid: txid,
-          tutor_cpf: currentPaciente.cpf, // Using paciente CPF
-          tutor_nome: currentPaciente.nome, // Using paciente nome
+          tutor_cpf: currentPaciente.cpf,
+          tutor_nome: currentPaciente.nome,
           solicitacaoPagador: `Consulta Odontológica - ${currentPaciente.nome} (${currentDentista.nome})`,
         },
       });
@@ -288,6 +291,17 @@ export default function ClientAppointment() {
             pagamento_status: 'pendente',
           })
           .eq('id', createdConsulta.id);
+
+        // Mark the time slot as occupied in agenda_dentista
+        const dateString = format(selectedDate, 'yyyy-MM-dd');
+        const agendaEntry = agendaDia.find(a => a.clinica_id === selectedClinicaId && a.dentista_id === selectedDentistaId && a.data === dateString);
+        if (agendaEntry) {
+          const updatedOccupiedSlots = [...(agendaEntry.horarios_ocupados || []), selectedTimeSlot].sort();
+          await supabase
+            .from('agenda_dentista')
+            .update({ horarios_ocupados: updatedOccupiedSlots })
+            .eq('id', agendaEntry.id);
+        }
 
         setCurrentStep(3); // Move to payment status step
       } else {
@@ -404,7 +418,7 @@ export default function ClientAppointment() {
               
               <div className="flex flex-col lg:flex-row gap-4 justify-center">
                 <Calendar
-                  mode="single" // Changed to single date selection
+                  mode="single"
                   selected={selectedDate}
                   onSelect={handleSelectDate}
                   disabled={(date) => isBefore(date, new Date()) || isDateUnavailable(date) || !selectedClinicaId || !currentDentista}

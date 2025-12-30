@@ -10,6 +10,7 @@ import Dentistas from "./pages/Dentistas";
 import WhatsApp from "./pages/WhatsApp";
 import Configuracoes from "./pages/Configuracoes";
 import ClientAppointment from "./pages/ClientAppointment";
+import Agenda from "./pages/Agenda"; // Import the new Agenda page
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/whatsapp" element={<WhatsApp />} />
           <Route path="/configuracoes" element={<Configuracoes />} />
           <Route path="/client-appointment" element={<ClientAppointment />} />
+          <Route path="/agenda" element={<Agenda />} /> {/* New Agenda route */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

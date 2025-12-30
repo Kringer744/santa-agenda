@@ -4,10 +4,11 @@ import {
   LayoutDashboard, 
   CalendarCheck, 
   Users, 
-  Smile, // Replaced Tooth with Smile
+  Smile, 
   MessageSquare, 
   Settings, 
-  Menu 
+  Menu,
+  CalendarDays // Import CalendarDays icon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -20,8 +21,9 @@ import {
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
   { icon: CalendarCheck, label: 'Consultas', path: '/consultas' },
+  { icon: CalendarDays, label: 'Agenda', path: '/agenda' }, // New Agenda item
   { icon: Users, label: 'Pacientes', path: '/pacientes' },
-  { icon: Smile, label: 'Dentistas', path: '/dentistas' }, // Replaced Tooth with Smile
+  { icon: Smile, label: 'Dentistas', path: '/dentistas' },
   { icon: MessageSquare, label: 'WhatsApp', path: '/whatsapp' },
   { icon: Settings, label: 'Configurações', path: '/configuracoes' },
 ];
@@ -34,7 +36,7 @@ export function MobileHeader() {
     <header className="sticky top-0 z-40 bg-card border-b border-border p-4 flex items-center justify-between lg:hidden">
       <div className="flex items-center gap-3">
         <div className="w-8 h-8 rounded-lg gradient-hero flex items-center justify-center shadow-soft">
-          <Smile className="w-4 h-4 text-primary-foreground" /> {/* Replaced Tooth with Smile */}
+          <Smile className="w-4 h-4 text-primary-foreground" />
         </div>
         <span className="font-bold text-lg text-foreground">DentalClinic</span>
       </div>
@@ -50,7 +52,7 @@ export function MobileHeader() {
             <div className="h-16 flex items-center justify-center border-b border-border px-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl gradient-hero flex items-center justify-center shadow-soft">
-                  <Smile className="w-6 h-6 text-primary-foreground" /> {/* Replaced Tooth with Smile */}
+                  <Smile className="w-6 h-6 text-primary-foreground" />
                 </div>
                 <span className="font-bold text-lg text-foreground">DentalClinic</span>
               </div>
