@@ -6,11 +6,11 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Input } from '@/components/ui/input'; // Added Input for tutor form
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Calendar as CalendarIcon, CheckCircle, QrCode, Copy, XCircle, UserPlus } from 'lucide-react'; // Added UserPlus icon
+import { Loader2, Calendar as CalendarIcon, CheckCircle, QrCode, Copy, XCircle, UserPlus } from 'lucide-react';
 import { usePets } from '@/hooks/usePets';
-import { useTutores, useCreateTutor } from '@/hooks/useTutores'; // Added useCreateTutor
+import { useTutores, useCreateTutor } from '@/hooks/useTutores';
 import { useUnidades } from '@/hooks/useUnidades';
 import { useVagasDia } from '@/hooks/useVagasDia';
 import { useCreateReserva, useUpdateReservaStatus } from '@/hooks/useReservas';
@@ -27,9 +27,10 @@ interface DateRange {
   to: Date | undefined;
 }
 
+// Alinhado com UazapConfig em src/lib/uazap.ts
 interface WhatsAppConfig {
-  api_url: string;
-  instance_token: string;
+  apiUrl: string;
+  instanceToken: string;
 }
 
 export default function ClientReservation() {
@@ -84,7 +85,11 @@ export default function ClientReservation() {
       if (error) {
         console.error('Error loading WhatsApp config:', error);
       } else if (data) {
-        setWhatsappConfig(data);
+        // Mapear para a interface WhatsAppConfig com a capitalização correta
+        setWhatsappConfig({
+          apiUrl: data.api_url,
+          instanceToken: data.instance_token,
+        });
       }
     };
     loadWhatsappConfig();
@@ -240,6 +245,9 @@ export default function ClientReservation() {
       check_out: format(dateRange.to, 'yyyy-MM-dd'),
       servicos_adicionais: [],
       valor_total: reservationValue,
+      pix_txid: null, // Explicitly set to null
+      pix_qr_code_base64: null, // Explicitly set to null
+      pix_copia_e_cola: null, // Explicitly set to null
     };
 
     try {

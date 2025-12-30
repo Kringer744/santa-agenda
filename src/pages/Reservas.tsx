@@ -92,6 +92,9 @@ export default function Reservas() {
       check_out: formData.get('check_out') as string,
       servicos_adicionais: [],
       valor_total: parseFloat(formData.get('valor_total') as string) || 0,
+      pix_txid: null, // Explicitly set to null
+      pix_qr_code_base64: null, // Explicitly set to null
+      pix_copia_e_cola: null, // Explicitly set to null
     }, {
       onSuccess: () => {
         setIsDialogOpen(false);
