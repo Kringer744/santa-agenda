@@ -438,6 +438,9 @@ export type Database = {
           mensagem: string
           status: string | null
           tipo: string
+          reserva_id: string | null;
+          pet_id: string | null;
+          tutor_id: string | null;
         }
         Insert: {
           created_at?: string
@@ -446,6 +449,9 @@ export type Database = {
           mensagem: string
           status?: string | null
           tipo: string
+          reserva_id?: string | null;
+          pet_id?: string | null;
+          tutor_id?: string | null;
         }
         Update: {
           created_at?: string
@@ -454,9 +460,67 @@ export type Database = {
           mensagem?: string
           status?: string | null
           tipo?: string
+          reserva_id?: string | null;
+          pet_id?: string | null;
+          tutor_id?: string | null;
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_messages_pet_id_fkey"
+            columns: ["pet_id"]
+            isOneToOne: false
+            referencedRelation: "pets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_messages_reserva_id_fkey"
+            columns: ["reserva_id"]
+            isOneToOne: false
+            referencedRelation: "reservas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_messages_tutor_id_fkey"
+            columns: ["tutor_id"]
+            isOneToOne: false
+            referencedRelation: "tutores"
+            referencedColumns: ["id"]
+          }
+        ]
       }
+      whatsapp_templates: {
+        Row: {
+          id: string;
+          nome: string;
+          descricao: string | null;
+          tipo: string;
+          mensagem: string;
+          ativo: boolean | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          nome: string;
+          descricao?: string | null;
+          tipo: string;
+          mensagem: string;
+          ativo?: boolean | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          nome?: string;
+          descricao?: string | null;
+          tipo?: string;
+          mensagem?: string;
+          ativo?: boolean | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     }
     Views: {
       [_ in never]: never
