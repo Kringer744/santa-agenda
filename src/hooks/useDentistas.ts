@@ -7,7 +7,7 @@ export function useDentistas() {
   return useQuery<Dentista[]>({
     queryKey: ['dentistas'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('public_dentistas').select('*');
+      const { data, error } = await supabase.from('dentistas').select('*');
       if (error) throw error;
       return data as Dentista[];
     },
@@ -21,7 +21,7 @@ export function useCreateDentista() {
   return useMutation({
     mutationFn: async (dentista: Omit<Dentista, 'id' | 'created_at' | 'updated_at'>) => {
       const { data, error } = await supabase
-        .from('public_dentistas')
+        .from('dentistas')
         .insert(dentista)
         .select()
         .single();
@@ -49,7 +49,7 @@ export function useDeleteDentista() {
   
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('public_dentistas').delete().eq('id', id);
+      const { error } = await supabase.from('dentistas').delete().eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {

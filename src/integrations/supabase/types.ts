@@ -45,7 +45,7 @@ export interface Database {
         }
         Relationships: []
       }
-      public_dentistas: {
+      dentistas: {
         Row: {
           id: string
           nome: string
@@ -326,63 +326,6 @@ export interface Database {
           consulta_id?: string | null
           paciente_id?: string | null
           dentista_id?: string | null
-          created_at?: string | null
-        }
-        Relationships: []
-      }
-      whatsapp_leads: {
-        Row: {
-          id: string
-          nome: string
-          telefone: string
-          email: string | null
-          created_at: string | null
-        }
-        Insert: {
-          id?: string
-          nome: string
-          telefone: string
-          email?: string | null
-          created_at?: string | null
-        }
-        Update: {
-          id?: string
-          nome?: string
-          telefone?: string
-          email?: string | null
-          created_at?: string | null
-        }
-        Relationships: []
-      }
-      whatsapp_campaigns: {
-        Row: {
-          id: string
-          nome: string
-          mensagem: string
-          delay_min: number
-          delay_max: number
-          status: string
-          total_leads: number
-          created_at: string | null
-        }
-        Insert: {
-          id?: string
-          nome: string
-          mensagem: string
-          delay_min: number
-          delay_max: number
-          status: string
-          total_leads: number
-          created_at?: string | null
-        }
-        Update: {
-          id?: string
-          nome?: string
-          mensagem?: string
-          delay_min?: number
-          delay_max?: number
-          status?: string
-          total_leads?: number
           created_at?: string | null
         }
         Relationships: []
