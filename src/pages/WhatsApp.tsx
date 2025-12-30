@@ -13,8 +13,8 @@ import { Label } from '@/components/ui/label';
 import { MessageSquare, Play, Pause, Plus, Trash2, Save, Wifi, WifiOff, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { testConnection, createBulkCampaign } from '@/lib/uazap';
-import { getPatientsWithBirthdayToday, sendBirthdayMessage } from '@/lib/whatsappClinicAutomation';
+import { testConnection, createBulkCampaign, sendTextMessage } from '@/lib/uazap';
+import { getPatientsWithBirthdayToday } from '@/lib/whatsappClinicAutomation';
 import { Paciente } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -71,14 +71,15 @@ export default function WhatsApp() {
   const [isSaving, setIsSaving] = useState(false);
   
   const [leads, setLeads] = useState<Lead[]>([]);
-  const allLeads = useMemo(() => leads, [leads]);
+  const [manualNumbers, setManualNumbers] = useState('');
   const [mensagemDisparo, setMensagemDisparo] = useState('');
   const [disparoAtivo, setDisparoAtivo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [birthdayPatientsToday, setBirthdayPatientsToday] = useState<Paciente[]>([]);
   const [isSendingBirthdays, setIsSendingBirthdays] = useState(false);
-  const [selectedBirthdayTemplateId, setSelectedBirthdayTemplateId] = useState<string | undefined>(undefined);
+  const [selectedBirthdayTemplateId, setSelectedBirthdayTemplateId] = useState<string>('');
+  const [birthdayMessageEdit, setBirthdayMessageEdit] = useState('');
 
   useEffect(() => {
     loadConfig();
@@ -202,18 +203,35 @@ export default function WhatsApp() {
         return { id: `lead-${index}`, nome: nome || 'Sem nome', telefone: telefone || '', email: email || '' };
       }).filter(lead => lead.telefone);
       setLeads(newLeads);
-      toast.success(`${newLeads.length} leads carregados!`);
+      toast.success(`${newLeads.length} contatos carregados do arquivo!`);
     };
     reader.readAsText(file);
   };
 
   const handleStartDisparo = async () => {
-    if (!mensagemDisparo.trim() || allLeads.length === 0) {
-      toast.error('Preencha a mensagem e adicione leads');
+    // Combinar leads do arquivo com números manuais
+    const manualLeads: Lead[] = manualNumbers
+      .split(/[\n,]/)
+      .map(n => n.trim())
+      .filter(n => n)
+      .map((num, idx) => ({ id: `manual-${idx}`, nome: 'Cliente', telefone: num }));
+
+    const allLeadsCombined = [...leads, ...manualLeads];
+
+    if (!mensagemDisparo.trim() || allLeadsCombined.length === 0) {
+      toast.error('Preencha a mensagem e adicione ao menos um número ou arquivo.');
       return;
     }
+    
     setDisparoAtivo(true);
-    const result = await createBulkCampaign({ apiUrl: config.api_url, instanceToken: config.instance_token }, allLeads, mensagemDisparo, 10, 30);
+    const result = await createBulkCampaign(
+      { apiUrl: config.api_url, instanceToken: config.instance_token }, 
+      allLeadsCombined, 
+      mensagemDisparo, 
+      10, 
+      30
+    );
+    
     if (result.success) {
       toast.success('Campanha iniciada com sucesso!');
       await (supabase.from('whatsapp_campaigns') as any).insert({
@@ -222,22 +240,49 @@ export default function WhatsApp() {
         delay_min: 10,
         delay_max: 30,
         status: 'sending',
-        total_leads: allLeads.length,
+        total_leads: allLeadsCombined.length,
       });
-    } else { toast.error(result.error || 'Erro ao criar campanha'); }
+    } else { 
+      toast.error(result.error || 'Erro ao criar campanha'); 
+    }
     setDisparoAtivo(false);
   };
 
   const handleSendBirthdayMessages = async () => {
-    if (connectionStatus !== 'connected' || birthdayPatientsToday.length === 0 || !selectedBirthdayTemplateId) return;
-    const template = templates.find(t => t.id === selectedBirthdayTemplateId);
-    if (!template) return;
-    setIsSendingBirthdays(true);
-    for (const patient of birthdayPatientsToday) {
-      await sendBirthdayMessage(patient, { ...template, ativo: template.ativo || false }, { apiUrl: config.api_url, instanceToken: config.instance_token });
+    if (connectionStatus !== 'connected' || birthdayPatientsToday.length === 0) {
+      toast.error('Verifique a conexão e se há aniversariantes.');
+      return;
     }
-    toast.success('Mensagens de aniversário enviadas!');
+    
+    if (!birthdayMessageEdit.trim()) {
+      toast.error('O texto da mensagem de aniversário não pode estar vazio.');
+      return;
+    }
+
+    setIsSendingBirthdays(true);
+    let successCount = 0;
+
+    for (const patient of birthdayPatientsToday) {
+      // Substituir {{nome}} se houver no texto customizado
+      const finalMsg = birthdayMessageEdit.replace(/\{\{nome\}\}/gi, patient.nome);
+      const res = await sendTextMessage(
+        { apiUrl: config.api_url, instanceToken: config.instance_token },
+        patient.telefone,
+        finalMsg
+      );
+      if (res.success) successCount++;
+    }
+
+    toast.success(`${successCount} mensagens de aniversário enviadas!`);
     setIsSendingBirthdays(false);
+  };
+
+  const handleTemplateSelect = (id: string) => {
+    setSelectedBirthdayTemplateId(id);
+    const template = templates.find(t => t.id === id);
+    if (template) {
+      setBirthdayMessageEdit(template.mensagem);
+    }
   };
 
   const birthdayTemplates = useMemo(() => templates.filter(t => t.tipo === 'aniversario_paciente'), [templates]);
@@ -406,10 +451,25 @@ export default function WhatsApp() {
                   <CardDescription>Envie parabéns automático para os aniversariantes do dia.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <Select value={selectedBirthdayTemplateId} onValueChange={setSelectedBirthdayTemplateId}>
-                    <SelectTrigger className="bg-muted/30"><SelectValue placeholder="Selecione o template" /></SelectTrigger>
-                    <SelectContent>{birthdayTemplates.map(t => <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>)}</SelectContent>
-                  </Select>
+                  <div className="space-y-2">
+                    <Label>Escolher um Template</Label>
+                    <Select value={selectedBirthdayTemplateId} onValueChange={handleTemplateSelect}>
+                      <SelectTrigger className="bg-muted/30"><SelectValue placeholder="Selecione o template" /></SelectTrigger>
+                      <SelectContent>{birthdayTemplates.map(t => <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Texto da Mensagem</Label>
+                    <Textarea 
+                      placeholder="Digite ou edite a mensagem de parabéns..."
+                      value={birthdayMessageEdit}
+                      onChange={e => setBirthdayMessageEdit(e.target.value)}
+                      className="min-h-[100px] bg-muted/20"
+                    />
+                    <p className="text-[10px] text-muted-foreground">Use {'{{nome}}'} para inserir o nome do paciente.</p>
+                  </div>
+
                   <Button className="w-full" onClick={handleSendBirthdayMessages} disabled={isSendingBirthdays || birthdayPatientsToday.length === 0}>
                     {isSendingBirthdays ? <Loader2 className="animate-spin mr-2" /> : <MessageSquare size={16} className="mr-2" />}
                     {isSendingBirthdays ? 'Enviando...' : 'Enviar Mensagens de Parabéns'}
@@ -423,14 +483,31 @@ export default function WhatsApp() {
                   <CardDescription>Envie mensagens personalizadas para uma lista de contatos.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Números Manuais</Label>
+                    <Textarea 
+                      placeholder="Cole os números aqui (Ex: 11999999999, 11888888888)"
+                      value={manualNumbers}
+                      onChange={e => setManualNumbers(e.target.value)}
+                      className="min-h-[80px] bg-muted/20"
+                    />
+                    <p className="text-[10px] text-muted-foreground">Um por linha ou separados por vírgula.</p>
+                  </div>
+
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+                    <div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-muted-foreground">Ou carregar arquivo</span></div>
+                  </div>
+
                   <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} />
                   <div className="flex gap-2">
                     <Button variant="outline" className="flex-1" onClick={() => fileInputRef.current?.click()}>
-                      {allLeads.length > 0 ? `${allLeads.length} contatos carregados` : 'Carregar CSV/Texto'}
+                      {leads.length > 0 ? `${leads.length} contatos carregados` : 'Carregar CSV/Texto'}
                     </Button>
-                    {allLeads.length > 0 && <Button variant="ghost" onClick={() => setLeads([])}><Trash2 size={16} /></Button>}
+                    {leads.length > 0 && <Button variant="ghost" onClick={() => setLeads([])}><Trash2 size={16} /></Button>}
                   </div>
-                  <div className="space-y-1">
+
+                  <div className="space-y-1 pt-2">
                     <Label className="text-xs">Corpo da Mensagem (use {'{{nome}}'} para personalizar)</Label>
                     <Textarea 
                       placeholder="Olá {{nome}}, temos uma oferta especial para você!" 
@@ -439,7 +516,7 @@ export default function WhatsApp() {
                       className="min-h-[120px] bg-muted/30"
                     />
                   </div>
-                  <Button className="w-full" onClick={handleStartDisparo} disabled={disparoAtivo || allLeads.length === 0}>
+                  <Button className="w-full" onClick={handleStartDisparo} disabled={disparoAtivo || (leads.length === 0 && !manualNumbers.trim())}>
                     {disparoAtivo ? <Pause className="w-4 h-4 mr-2" /> : <Play className="w-4 h-4 mr-2" />}
                     Iniciar Campanha em Massa
                   </Button>
