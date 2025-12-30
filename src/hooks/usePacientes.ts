@@ -9,7 +9,7 @@ export function usePacientes() {
     queryFn: async () => {
       const { data, error } = await supabase.from('pacientes').select('*');
       if (error) throw error;
-      return data as any as Paciente[];
+      return data as Paciente[];
     },
   });
 }
@@ -20,19 +20,18 @@ export function useCreatePaciente() {
   
   return useMutation({
     mutationFn: async (paciente: Omit<Paciente, 'id' | 'created_at' | 'updated_at'>) => {
-      const { data, error } = await (supabase.from('pacientes') as any)
+      const { data, error } = await supabase
+        .from('pacientes')
         .insert(paciente)
         .select()
         .single();
 
       if (error) throw error;
-      return data as any as Paciente;
+      return data as Paciente;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pacientes'] });
-      toast({
-        title: 'Paciente cadastrado com sucesso!'
-      });
+      toast({ title: 'Paciente cadastrado com sucesso!' });
     },
     onError: (error: Error) => {
       toast({
@@ -55,16 +54,7 @@ export function useDeletePaciente() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pacientes'] });
-      toast({
-        title: 'Paciente excluído com sucesso!'
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: 'Erro ao excluir paciente',
-        description: error.message,
-        variant: 'destructive'
-      });
+      toast({ title: 'Paciente excluído com sucesso!' });
     },
   });
 }

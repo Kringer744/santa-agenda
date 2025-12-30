@@ -9,7 +9,7 @@ export function useDentistas() {
     queryFn: async () => {
       const { data, error } = await supabase.from('dentistas').select('*');
       if (error) throw error;
-      return data as any as Dentista[];
+      return data as Dentista[];
     },
   });
 }
@@ -20,19 +20,18 @@ export function useCreateDentista() {
   
   return useMutation({
     mutationFn: async (dentista: Omit<Dentista, 'id' | 'created_at' | 'updated_at'>) => {
-      const { data, error } = await (supabase.from('dentistas') as any)
+      const { data, error } = await supabase
+        .from('dentistas')
         .insert(dentista)
         .select()
         .single();
 
       if (error) throw error;
-      return data as any as Dentista;
+      return data as Dentista;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dentistas'] });
-      toast({
-        title: 'Dentista cadastrado com sucesso!'
-      });
+      toast({ title: 'Dentista cadastrado com sucesso!' });
     },
     onError: (error: Error) => {
       toast({
@@ -55,16 +54,7 @@ export function useDeleteDentista() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dentistas'] });
-      toast({
-        title: 'Dentista excluído com sucesso!'
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: 'Erro ao excluir dentista',
-        description: error.message,
-        variant: 'destructive'
-      });
+      toast({ title: 'Dentista excluído com sucesso!' });
     },
   });
 }

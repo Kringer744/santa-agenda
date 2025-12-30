@@ -10,7 +10,7 @@ export function useConsultas() {
     queryFn: async () => {
       const { data, error } = await supabase.from('consultas').select('*');
       if (error) throw error;
-      return data as any as Consulta[];
+      return data as unknown as Consulta[];
     },
   });
 }
@@ -23,7 +23,8 @@ export function useCreateConsulta() {
     mutationFn: async (consulta: Omit<Consulta, 'id' | 'created_at' | 'updated_at' | 'codigo_consulta' | 'status' | 'pagamento_status'>) => {
       const codigoConsulta = `DC${Date.now().toString(36).toUpperCase().substring(0, 7)}`;
       
-      const { data, error } = await (supabase.from('consultas') as any)
+      const { data, error } = await supabase
+        .from('consultas')
         .insert({
           ...consulta,
           codigo_consulta: codigoConsulta,
@@ -34,8 +35,8 @@ export function useCreateConsulta() {
         .single();
         
       if (error) throw error;
-      if (data) await checkAndSendAutomatedMessages(data as any as Consulta);
-      return data as any as Consulta;
+      if (data) await checkAndSendAutomatedMessages(data as unknown as Consulta);
+      return data as unknown as Consulta;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['consultas'] });
@@ -50,15 +51,16 @@ export function useUpdateConsultaStatus() {
   
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: Consulta['status'] }) => {
-      const { data, error } = await (supabase.from('consultas') as any)
+      const { data, error } = await supabase
+        .from('consultas')
         .update({ status, updated_at: new Date().toISOString() })
         .eq('id', id)
         .select()
         .single();
         
       if (error) throw error;
-      if (data) await checkAndSendAutomatedMessages(data as any as Consulta);
-      return data as any as Consulta;
+      if (data) await checkAndSendAutomatedMessages(data as unknown as Consulta);
+      return data as unknown as Consulta;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['consultas'] });
