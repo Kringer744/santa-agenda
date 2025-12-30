@@ -10,8 +10,9 @@ import Pets from "./pages/Pets";
 import WhatsApp from "./pages/WhatsApp";
 import Configuracoes from "./pages/Configuracoes";
 import ClientReservation from "./pages/ClientReservation";
+import Login from "./pages/Login"; // Importar a nova página de Login
 import NotFound from "./pages/NotFound";
-import { MobileHeader } from "./components/layout/MobileHeader"; // Import MobileHeader
+import { SessionContextProvider } from "./components/auth/SessionContextProvider"; // Importar o SessionContextProvider
 
 const queryClient = new QueryClient();
 
@@ -21,17 +22,19 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/reservas" element={<Reservas />} />
-          <Route path="/tutores" element={<Tutores />} />
-          <Route path="/pets" element={<Pets />} />
-          <Route path="/whatsapp" element={<WhatsApp />} />
-          <Route path="/configuracoes" element={<Configuracoes />} />
-          {/* Removed ClientRegistration and PetRegistration routes */}
-          <Route path="/client-reservation" element={<ClientReservation />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <SessionContextProvider> {/* Envolver as rotas com o SessionContextProvider */}
+          <Routes>
+            <Route path="/login" element={<Login />} /> {/* Adicionar a rota de login */}
+            <Route path="/" element={<Index />} />
+            <Route path="/reservas" element={<Reservas />} />
+            <Route path="/tutores" element={<Tutores />} />
+            <Route path="/pets" element={<Pets />} />
+            <Route path="/whatsapp" element={<WhatsApp />} />
+            <Route path="/configuracoes" element={<Configuracoes />} />
+            <Route path="/client-reservation" element={<ClientReservation />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </SessionContextProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
