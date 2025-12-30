@@ -990,16 +990,10 @@ Ou: Nome,5511999999999"
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Loader2 className="w-4 h-4 animate-spin" /> Carregando templates...
                       </div>
-                    ) : templates.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center p-4 rounded-md bg-muted text-muted-foreground text-sm text-center space-y-2">
-                        <Database className="w-6 h-6" />
-                        <p>Nenhum template encontrado.</p>
-                        <p className="text-xs">Verifique se a tabela `whatsapp_templates` existe no Supabase e se o schema cache foi recarregado.</p>
-                      </div>
                     ) : (
-                      <Select value={selectedTemplateForBulk} onValueChange={handleSelectTemplateForBulk}>
+                      <Select value={selectedTemplateForBulk} onValueChange={handleSelectTemplateForBulk} disabled={templates.length === 0}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Escolha um template para preencher a mensagem" />
+                          <SelectValue placeholder={templates.length === 0 ? "Nenhum template disponível" : "Escolha um template para preencher a mensagem"} />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="custom">Mensagem Personalizada</SelectItem>
