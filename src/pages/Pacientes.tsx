@@ -11,18 +11,18 @@ import {
   DialogTrigger 
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Plus, Search, Phone, Mail, Calendar, Trash2, Loader2, Tooth } from 'lucide-react'; // Updated icons
-import { usePacientes, useCreatePaciente, useDeletePaciente } from '@/hooks/usePacientes'; // Updated hooks
-import { useConsultas } from '@/hooks/useConsultas'; // Updated hook
+import { Plus, Search, Phone, Mail, Calendar, Trash2, Loader2, Smile } from 'lucide-react'; // Replaced Tooth with Smile
+import { usePacientes, useCreatePaciente, useDeletePaciente } from '@/hooks/usePacientes';
+import { useConsultas } from '@/hooks/useConsultas';
 
 export default function Pacientes() {
   const [search, setSearch] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
-  const { data: pacientes = [], isLoading } = usePacientes(); // Updated hook
-  const { data: consultas = [] } = useConsultas(); // Updated hook
-  const createPaciente = useCreatePaciente(); // Updated hook
-  const deletePaciente = useDeletePaciente(); // Updated hook
+  const { data: pacientes = [], isLoading } = usePacientes();
+  const { data: consultas = [] } = useConsultas();
+  const createPaciente = useCreatePaciente();
+  const deletePaciente = useDeletePaciente();
   
   const filteredPacientes = pacientes.filter(paciente => 
     paciente.nome.toLowerCase().includes(search.toLowerCase()) ||
@@ -51,7 +51,6 @@ export default function Pacientes() {
   return (
     <Layout>
       <div className="space-y-6 md:space-y-8">
-        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 animate-fade-in">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-foreground">Pacientes</h1>
@@ -107,7 +106,6 @@ export default function Pacientes() {
           </Dialog>
         </div>
 
-        {/* Search */}
         <div className="relative max-w-full md:max-w-md animate-slide-up">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
           <Input 
@@ -118,7 +116,6 @@ export default function Pacientes() {
           />
         </div>
 
-        {/* Loading State */}
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -128,7 +125,6 @@ export default function Pacientes() {
             <p className="text-muted-foreground">Nenhum paciente encontrado</p>
           </div>
         ) : (
-          /* Pacientes Grid */
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {filteredPacientes.map((paciente, index) => {
               const pacienteConsultas = getConsultasByPaciente(paciente.id);
@@ -188,7 +184,7 @@ export default function Pacientes() {
                       <div className="flex gap-2 flex-wrap">
                         {pacienteConsultas.map(consulta => (
                           <Badge key={consulta.id} className="bg-coral-light text-primary">
-                            <Tooth className="w-3 h-3 mr-1" /> {consulta.codigo_consulta}
+                            <Smile className="w-3 h-3 mr-1" /> {consulta.codigo_consulta} {/* Replaced Tooth with Smile */}
                           </Badge>
                         ))}
                       </div>

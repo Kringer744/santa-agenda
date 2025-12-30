@@ -18,12 +18,12 @@ import {
   DialogTrigger 
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Calendar, Plus, Search, ChevronRight, Loader2, Tooth, Stethoscope } from 'lucide-react'; // Updated icons
-import { useConsultas, useCreateConsulta, useUpdateConsultaStatus } from '@/hooks/useConsultas'; // Updated hooks
-import { useDentistas } from '@/hooks/useDentistas'; // Updated hook
-import { usePacientes } from '@/hooks/usePacientes'; // Updated hook
-import { useClinicas } from '@/hooks/useClinicas'; // Updated hook
-import { useProcedimentos } from '@/hooks/useProcedimentos'; // Updated hook
+import { Calendar, Plus, Search, ChevronRight, Loader2, Smile, Stethoscope } from 'lucide-react'; // Replaced Tooth with Smile
+import { useConsultas, useCreateConsulta, useUpdateConsultaStatus } from '@/hooks/useConsultas';
+import { useDentistas } from '@/hooks/useDentistas';
+import { usePacientes } from '@/hooks/usePacientes';
+import { useClinicas } from '@/hooks/useClinicas';
+import { useProcedimentos } from '@/hooks/useProcedimentos';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
@@ -49,20 +49,20 @@ export default function Consultas() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedPaciente, setSelectedPaciente] = useState('');
 
-  const { data: consultas = [], isLoading } = useConsultas(); // Updated hook
-  const { data: dentistas = [] } = useDentistas(); // Updated hook
-  const { data: pacientes = [] } = usePacientes(); // Updated hook
-  const { data: clinicas = [] } = useClinicas(); // Updated hook
-  const { data: procedimentos = [] } = useProcedimentos(); // Updated hook
-  const createConsulta = useCreateConsulta(); // Updated hook
-  const updateStatus = useUpdateConsultaStatus(); // Updated hook
+  const { data: consultas = [], isLoading } = useConsultas();
+  const { data: dentistas = [] } = useDentistas();
+  const { data: pacientes = [] } = usePacientes();
+  const { data: clinicas = [] } = useClinicas();
+  const { data: procedimentos = [] } = useProcedimentos();
+  const createConsulta = useCreateConsulta();
+  const updateStatus = useUpdateConsultaStatus();
 
   const getDentista = (dentistaId: string) => dentistas.find(d => d.id === dentistaId);
   const getPaciente = (pacienteId: string) => pacientes.find(p => p.id === pacienteId);
   const getClinica = (clinicaId: string) => clinicas.find(c => c.id === clinicaId);
   const getProcedimento = (procedimentoId: string) => procedimentos.find(p => p.id === procedimentoId);
 
-  const pacienteDentistas = dentistas; // All dentists are available for a patient
+  const pacienteDentistas = dentistas;
 
   const filteredConsultas = consultas.filter(consulta => {
     const dentista = getDentista(consulta.dentista_id);
@@ -103,7 +103,6 @@ export default function Consultas() {
   return (
     <Layout>
       <div className="space-y-6 md:space-y-8">
-        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 animate-fade-in">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-foreground">Consultas</h1>
@@ -196,7 +195,6 @@ export default function Consultas() {
           </Dialog>
         </div>
 
-        {/* Filters */}
         <div className="flex flex-col md:flex-row gap-4 animate-slide-up">
           <div className="relative flex-1 max-w-full md:max-w-md">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -223,7 +221,6 @@ export default function Consultas() {
           </Select>
         </div>
 
-        {/* Loading State */}
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -233,7 +230,6 @@ export default function Consultas() {
             <p className="text-muted-foreground">Nenhuma consulta encontrada</p>
           </div>
         ) : (
-          /* Consultas List */
           <div className="space-y-4">
             {filteredConsultas.map((consulta, index) => {
               const dentista = getDentista(consulta.dentista_id);
@@ -247,7 +243,6 @@ export default function Consultas() {
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center gap-3 md:gap-4">
-                    {/* Dentista Avatar */}
                     <div className={cn(
                       "w-14 h-14 sm:w-16 sm:h-16 rounded-xl flex items-center justify-center text-2xl sm:text-3xl flex-shrink-0",
                       dentista?.especialidade === 'ortodontia' ? 'bg-mint-light' : 'bg-coral-light'
@@ -255,7 +250,6 @@ export default function Consultas() {
                       🦷
                     </div>
                     
-                    {/* Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2 md:gap-3">
                         <h3 className="text-base md:text-lg font-bold text-foreground">{paciente?.nome || 'Paciente não encontrado'}</h3>
@@ -312,7 +306,6 @@ export default function Consultas() {
                       )}
                     </div>
                     
-                    {/* Price & Action */}
                     <div className="flex items-center gap-4 mt-3 sm:mt-0">
                       <div className="text-right">
                         <p className="text-xl md:text-2xl font-bold text-foreground">

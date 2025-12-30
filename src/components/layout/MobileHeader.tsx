@@ -4,7 +4,7 @@ import {
   LayoutDashboard, 
   CalendarCheck, 
   Users, 
-  Tooth, 
+  Smile, // Replaced Tooth with Smile
   MessageSquare, 
   Settings, 
   Menu 
@@ -21,7 +21,7 @@ const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
   { icon: CalendarCheck, label: 'Consultas', path: '/consultas' },
   { icon: Users, label: 'Pacientes', path: '/pacientes' },
-  { icon: Tooth, label: 'Dentistas', path: '/dentistas' },
+  { icon: Smile, label: 'Dentistas', path: '/dentistas' }, // Replaced Tooth with Smile
   { icon: MessageSquare, label: 'WhatsApp', path: '/whatsapp' },
   { icon: Settings, label: 'Configurações', path: '/configuracoes' },
 ];
@@ -34,7 +34,7 @@ export function MobileHeader() {
     <header className="sticky top-0 z-40 bg-card border-b border-border p-4 flex items-center justify-between lg:hidden">
       <div className="flex items-center gap-3">
         <div className="w-8 h-8 rounded-lg gradient-hero flex items-center justify-center shadow-soft">
-          <Tooth className="w-4 h-4 text-primary-foreground" />
+          <Smile className="w-4 h-4 text-primary-foreground" /> {/* Replaced Tooth with Smile */}
         </div>
         <span className="font-bold text-lg text-foreground">DentalClinic</span>
       </div>
@@ -47,17 +47,15 @@ export function MobileHeader() {
         </DrawerTrigger>
         <DrawerContent className="w-64 h-full mt-0 rounded-none">
           <div className="flex flex-col h-full">
-            {/* Logo inside drawer */}
             <div className="h-16 flex items-center justify-center border-b border-border px-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl gradient-hero flex items-center justify-center shadow-soft">
-                  <Tooth className="w-6 h-6 text-primary-foreground" />
+                  <Smile className="w-6 h-6 text-primary-foreground" /> {/* Replaced Tooth with Smile */}
                 </div>
                 <span className="font-bold text-lg text-foreground">DentalClinic</span>
               </div>
             </div>
 
-            {/* Navigation inside drawer */}
             <nav className="flex-1 py-6 px-3">
               <ul className="space-y-2">
                 {menuItems.map((item) => {

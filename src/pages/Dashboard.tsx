@@ -1,15 +1,15 @@
 import { Layout } from '@/components/layout/Layout';
 import { StatsCard } from '@/components/dashboard/StatsCard';
-import { Tooth, CalendarCheck, Users, TrendingUp, Loader2, Stethoscope } from 'lucide-react'; // Updated icons
-import { useConsultas } from '@/hooks/useConsultas'; // Changed hook
-import { useDentistas } from '@/hooks/useDentistas'; // Changed hook
-import { usePacientes } from '@/hooks/usePacientes'; // Changed hook
-import { useClinicas } from '@/hooks/useClinicas'; // Changed hook
-import { useProcedimentos } from '@/hooks/useProcedimentos'; // Changed hook
-import { useAgendaDia } from '@/hooks/useAgendaDia'; // Changed hook
-import { ConsultasList } from '@/components/dashboard/ConsultasList'; // Changed component
-import { ProcedimentosHoje } from '@/components/dashboard/ProcedimentosHoje'; // Changed component
-import { AgendaChart } from '@/components/dashboard/AgendaChart'; // Changed component
+import { Smile, CalendarCheck, Users, TrendingUp, Loader2, Stethoscope } from 'lucide-react'; // Replaced Tooth with Smile
+import { useConsultas } from '@/hooks/useConsultas';
+import { useDentistas } from '@/hooks/useDentistas';
+import { usePacientes } from '@/hooks/usePacientes';
+import { useClinicas } from '@/hooks/useClinicas';
+import { useProcedimentos } from '@/hooks/useProcedimentos';
+import { useAgendaDia } from '@/hooks/useAgendaDia';
+import { ConsultasList } from '@/components/dashboard/ConsultasList';
+import { ProcedimentosHoje } from '@/components/dashboard/ProcedimentosHoje';
+import { AgendaChart } from '@/components/dashboard/AgendaChart';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
@@ -38,7 +38,6 @@ export default function Dashboard() {
   const consultasRealizadasHoje = consultas.filter(c => c.data_hora_inicio.startsWith(hoje) && c.status === 'realizada');
   const pacientesAtivos = pacientes.length;
 
-  // Calcular ocupação (exemplo: baseado em consultas agendadas vs. capacidade total de atendimentos das clínicas)
   const totalCapacidadeAtendimentos = clinicas.reduce((acc, c) => acc + c.capacidade_atendimentos, 0);
   const ocupacaoTotal = totalCapacidadeAtendimentos > 0 
     ? Math.round((consultasAgendadas / totalCapacidadeAtendimentos) * 100)
@@ -57,7 +56,6 @@ export default function Dashboard() {
   return (
     <Layout>
       <div className="space-y-8">
-        {/* Header */}
         <div className="animate-fade-in">
           <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
           <p className="text-muted-foreground mt-1 text-sm md:text-base">
@@ -69,7 +67,6 @@ export default function Dashboard() {
           </p>
         </div>
 
-        {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
           <StatsCard
             title="Consultas Agendadas"
@@ -101,9 +98,7 @@ export default function Dashboard() {
           />
         </div>
 
-        {/* Consultas do dia */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-          {/* Consultas Agendadas Hoje */}
           <ConsultasList 
             title="Consultas Agendadas Hoje" 
             type="agendada" 
@@ -111,8 +106,6 @@ export default function Dashboard() {
             dentistas={dentistas} 
             pacientes={pacientes} 
           />
-
-          {/* Consultas Realizadas Hoje */}
           <ConsultasList 
             title="Consultas Realizadas Hoje" 
             type="realizada" 
@@ -120,8 +113,6 @@ export default function Dashboard() {
             dentistas={dentistas} 
             pacientes={pacientes} 
           />
-
-          {/* Próximas Consultas */}
           <ConsultasList 
             title="Próximas Consultas" 
             type="proximas" 
@@ -131,7 +122,6 @@ export default function Dashboard() {
           />
         </div>
 
-        {/* Procedimentos e Agenda */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
           <ProcedimentosHoje consultas={consultas.filter(c => c.status === 'realizada')} procedimentos={procedimentos} />
           <AgendaChart agenda={agendaDia} dentistas={dentistas} clinicas={clinicas} />

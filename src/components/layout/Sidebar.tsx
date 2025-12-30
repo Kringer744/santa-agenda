@@ -4,7 +4,7 @@ import {
   LayoutDashboard, 
   CalendarCheck, 
   Users, 
-  Tooth, 
+  Smile, // Replaced Tooth with Smile
   MessageSquare, 
   Settings, 
   ChevronLeft,
@@ -18,7 +18,7 @@ const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
   { icon: CalendarCheck, label: 'Consultas', path: '/consultas' },
   { icon: Users, label: 'Pacientes', path: '/pacientes' },
-  { icon: Tooth, label: 'Dentistas', path: '/dentistas' },
+  { icon: Smile, label: 'Dentistas', path: '/dentistas' }, // Replaced Tooth with Smile
   { icon: MessageSquare, label: 'WhatsApp', path: '/whatsapp' },
   { icon: Settings, label: 'Configurações', path: '/configuracoes' },
 ];
@@ -39,11 +39,10 @@ export function Sidebar() {
         collapsed ? "w-20" : "w-64"
       )}
     >
-      {/* Logo */}
       <div className="h-16 flex items-center justify-center border-b border-border px-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl gradient-hero flex items-center justify-center shadow-soft">
-            <Tooth className="w-6 h-6 text-primary-foreground" />
+            <Smile className="w-6 h-6 text-primary-foreground" /> {/* Replaced Tooth with Smile */}
           </div>
           {!collapsed && (
             <span className="font-bold text-lg text-foreground">DentalClinic</span>
@@ -51,7 +50,6 @@ export function Sidebar() {
         </div>
       </div>
 
-      {/* Navigation */}
       <nav className="flex-1 py-6 px-3">
         <ul className="space-y-2">
           {menuItems.map((item) => {
@@ -77,7 +75,6 @@ export function Sidebar() {
         </ul>
       </nav>
 
-      {/* Collapse Button */}
       <div className="p-4 border-t border-border">
         <Button
           variant="ghost"

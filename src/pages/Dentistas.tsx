@@ -20,9 +20,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Search, Trash2, Loader2, Tooth, Stethoscope, Mail, Phone } from 'lucide-react'; // Updated icons
-import { useDentistas, useCreateDentista, useDeleteDentista } from '@/hooks/useDentistas'; // Updated hooks
-import { usePacientes } from '@/hooks/usePacientes'; // Updated hook
+import { Plus, Search, Trash2, Loader2, Smile, Stethoscope, Mail, Phone } from 'lucide-react'; // Replaced Tooth with Smile
+import { useDentistas, useCreateDentista, useDeleteDentista } from '@/hooks/useDentistas';
+import { usePacientes } from '@/hooks/usePacientes';
 import { cn } from '@/lib/utils';
 
 export default function Dentistas() {
@@ -30,10 +30,10 @@ export default function Dentistas() {
   const [activeTab, setActiveTab] = useState('todos');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
-  const { data: dentistas = [], isLoading } = useDentistas(); // Updated hook
-  const { data: pacientes = [] } = usePacientes(); // Updated hook (used for context, not direct relation here)
-  const createDentista = useCreateDentista(); // Updated hook
-  const deleteDentista = useDeleteDentista(); // Updated hook
+  const { data: dentistas = [], isLoading } = useDentistas();
+  const { data: pacientes = [] } = usePacientes();
+  const createDentista = useCreateDentista();
+  const deleteDentista = useDeleteDentista();
 
   const filteredDentistas = dentistas.filter(dentista => {
     const matchSearch = dentista.nome.toLowerCase().includes(search.toLowerCase()) ||
@@ -68,7 +68,6 @@ export default function Dentistas() {
   return (
     <Layout>
       <div className="space-y-6 md:space-y-8">
-        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 animate-fade-in">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-foreground">Dentistas</h1>
@@ -136,7 +135,6 @@ export default function Dentistas() {
           </Dialog>
         </div>
 
-        {/* Filters */}
         <div className="flex flex-col md:flex-row gap-4 animate-slide-up">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full md:w-auto">
             <TabsList className="bg-muted grid grid-cols-3">
@@ -157,7 +155,6 @@ export default function Dentistas() {
           </div>
         </div>
 
-        {/* Loading State */}
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -167,7 +164,6 @@ export default function Dentistas() {
             <p className="text-muted-foreground">Nenhum dentista encontrado</p>
           </div>
         ) : (
-          /* Dentistas Grid */
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
             {filteredDentistas.map((dentista, index) => {
               return (
@@ -176,12 +172,11 @@ export default function Dentistas() {
                   className="bg-card rounded-2xl overflow-hidden shadow-card hover:shadow-elevated transition-all duration-300 animate-slide-up group"
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
-                  {/* Dentista Avatar */}
                   <div className={cn(
                     "h-32 flex items-center justify-center text-6xl transition-transform duration-300 group-hover:scale-110 relative",
                     dentista.especialidade === 'ortodontia' ? 'bg-mint-light' : 'bg-coral-light'
                   )}>
-                    🦷
+                    <Smile className="w-12 h-12 text-primary-foreground" /> {/* Replaced Tooth with Smile */}
                     <Button 
                       size="icon" 
                       variant="ghost" 

@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, } from '@/components/ui/card';
-import { MessageSquare, Send, CheckCircle, Clock, Zap, Smartphone, Upload, Users, Play, Pause, Trash2, FileSpreadsheet, Bot, List, Save, CalendarDays, Camera, Star, Gift, BellRing, Loader2, Plus, Tooth, Stethoscope } from 'lucide-react'; // Updated icons
+import { MessageSquare, Send, CheckCircle, Clock, Zap, Smartphone, Upload, Users, Play, Pause, Trash2, FileSpreadsheet, Bot, List, Save, CalendarDays, Camera, Star, Gift, BellRing, Loader2, Plus, Smile, Stethoscope } from 'lucide-react'; // Replaced Tooth with Smile
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -53,18 +53,18 @@ export default function WhatsApp() {
     api_url: '',
     instance_token: '',
     menu_ativo: false,
-    mensagem_boas_vindas: 'Olá! 🦷 Seja bem-vindo à nossa Clínica Odontológica. Como podemos cuidar do seu sorriso hoje?', // Updated message
+    mensagem_boas_vindas: 'Olá! 🦷 Seja bem-vindo à nossa Clínica Odontológica. Como podemos cuidar do seu sorriso hoje?',
     opcoes_menu: [
       {
         id: '1',
-        texto: '🗓️ Agendar uma consulta', // Updated text
-        resposta: 'Ótimo! Vamos iniciar seu agendamento. Qual a data e horário preferidos?', // Updated response
+        texto: '🗓️ Agendar uma consulta',
+        resposta: 'Ótimo! Vamos iniciar seu agendamento. Qual a data e horário preferidos?',
         ativo: true
       },
       {
         id: '2',
-        texto: '🦷 Conhecer procedimentos', // Updated text
-        resposta: 'Temos diversos procedimentos para cuidar da sua saúde bucal. Qual você gostaria de saber mais?', // Updated response
+        texto: '🦷 Conhecer procedimentos',
+        resposta: 'Temos diversos procedimentos para cuidar da sua saúde bucal. Qual você gostaria de saber mais?',
         ativo: true
       },
       {
@@ -82,7 +82,6 @@ export default function WhatsApp() {
   const [isTesting, setIsTesting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
-  // Upload de leads
   const [leads, setLeads] = useState<Lead[]>([]);
   const [numerosManuais, setNumerosManuais] = useState('');
   const manualLeads = useMemo(() => {
@@ -115,7 +114,6 @@ export default function WhatsApp() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [menuTestNumber, setMenuTestNumber] = useState('');
 
-  // Carregar configuração salva
   useEffect(() => {
     loadConfig();
     loadTemplates();
@@ -190,7 +188,6 @@ export default function WhatsApp() {
     
     try {
       if (config.id) {
-        // Atualizar
         const { error } = await supabase
           .from('whatsapp_config')
           .update({
@@ -204,7 +201,6 @@ export default function WhatsApp() {
           
         if (error) throw error;
       } else {
-        // Inserir
         const { data, error } = await supabase
           .from('whatsapp_config')
           .insert([{
@@ -557,7 +553,6 @@ export default function WhatsApp() {
   return (
     <Layout>
       <div className="space-y-6 md:space-y-8">
-        {/* Header */}
         <div className="animate-fade-in">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-mint flex items-center justify-center">
@@ -596,7 +591,6 @@ export default function WhatsApp() {
             </TabsTrigger>
           </TabsList>
 
-          {/* Conexão WhatsApp */}
           <TabsContent value="conexao" className="mt-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
               <Card>
@@ -741,7 +735,6 @@ export default function WhatsApp() {
             </div>
           </TabsContent>
 
-          {/* Menu de Conversa */}
           <TabsContent value="menu" className="mt-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
               <Card>
@@ -860,7 +853,6 @@ export default function WhatsApp() {
                 </CardContent>
               </Card>
               
-              {/* Preview do Menu */}
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg md:text-xl">Preview do Menu</CardTitle>
@@ -890,7 +882,6 @@ export default function WhatsApp() {
             </div>
           </TabsContent>
 
-          {/* Acompanhamento do Paciente */}
           <TabsContent value="acompanhamento" className="mt-6">
             {isLoadingTemplates ? (
               <div className="flex items-center justify-center py-12">
@@ -974,7 +965,6 @@ export default function WhatsApp() {
             )}
           </TabsContent>
 
-          {/* Disparos em Massa */}
           <TabsContent value="disparos" className="mt-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
               <Card>
@@ -1186,7 +1176,6 @@ Ou: Nome,5511999999999"
             </div>
           </TabsContent>
 
-          {/* Histórico */}
           <TabsContent value="historico" className="mt-6">
             <Card>
               <CardHeader>
