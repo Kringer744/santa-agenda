@@ -37,7 +37,6 @@ interface WhatsAppConfig {
   opcoes_menu: MenuOption[];
 }
 
-// Ajustado para permitir null em descricao e ativo, conforme o schema do banco
 interface WhatsAppTemplate {
   id: string;
   nome: string;
@@ -153,7 +152,6 @@ export default function WhatsApp() {
     }
   };
 
-  // Função loadTemplates corrigida para ser assíncrona
   const loadTemplates = async () => {
     try {
       const { data, error } = await supabase
@@ -247,9 +245,9 @@ export default function WhatsApp() {
     }
   };
 
-  const handleToggleTemplate = (id: string) => {
-    setTemplates(templates.map(t => 
-      t.id === id ? { ...t, ativo: !t.ativo } : t
+  const handleUpdateTemplate = (id: string, field: keyof WhatsAppTemplate, value: string | boolean | null) => {
+    setTemplates(prev => prev.map(t => 
+      t.id === id ? { ...t, [field]: value } : t
     ));
   };
 
@@ -1011,36 +1009,41 @@ Ou: Nome,5511999999999"
                 <Card key={template.id} className="animate-slide-up" style={{ animationDelay: `${index * 50}ms` }}>
                   <CardHeader>
                     <div className="flex items-center justify-between">
-                      <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                      <div className="flex items-center gap-2">
                         <span className="text-xl">
                           {template.tipo === 'pre-estadia' ? '📅' : 
                            template.tipo === 'durante' ? '📸' : 
-                           template.tipo === 'pos-estadia' ? '⭐' : '🎉'}
+                           template.tipo === 'pos-estadia' ? '⭐' : 
+                           template.tipo === 'aniversario' ? '🎉' : '💬'}
                         </span>
-                        {template.nome}
-                      </CardTitle>
+                        <Input
+                          value={template.nome}
+                          onChange={(e) => handleUpdateTemplate(template.id, 'nome', e.target.value)}
+                          className="text-base md:text-lg font-bold text-foreground h-auto p-0 border-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                        />
+                      </div>
                       <Switch
                         checked={template.ativo || false}
-                        onCheckedChange={() => handleToggleTemplate(template.id)}
+                        onCheckedChange={(checked) => handleUpdateTemplate(template.id, 'ativo', checked)}
                       />
                     </div>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">
                       <Label className="text-xs text-muted-foreground">Descrição</Label>
-                      <p className="text-xs text-muted-foreground">{template.descricao}</p>
+                      <Textarea
+                        value={template.descricao || ''}
+                        onChange={(e) => handleUpdateTemplate(template.id, 'descricao', e.target.value)}
+                        className="min-h-16 resize-none"
+                        placeholder="Descrição do template..."
+                      />
                     </div>
                     
                     <div className="space-y-2 mt-3">
                       <Label className="text-xs text-muted-foreground">Mensagem</Label>
                       <Textarea
                         value={template.mensagem}
-                        onChange={(e) => {
-                          const updatedTemplates = templates.map(t => 
-                            t.id === template.id ? {...t, mensagem: e.target.value} : t
-                          );
-                          setTemplates(updatedTemplates);
-                        }}
+                        onChange={(e) => handleUpdateTemplate(template.id, 'mensagem', e.target.value)}
                         className="min-h-24 resize-none"
                         placeholder="Mensagem do template..."
                       />
@@ -1055,6 +1058,9 @@ Ou: Nome,5511999999999"
                       </Badge>
                       <Badge variant="secondary" className="text-xs cursor-pointer hover:bg-secondary/80">
                         {'{{data_checkin}}'}
+                      </Badge>
+                      <Badge variant="secondary" className="text-xs cursor-pointer hover:bg-secondary/80">
+                        {'{{data_checkout}}'}
                       </Badge>
                     </div>
                     
