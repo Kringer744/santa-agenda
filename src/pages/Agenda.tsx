@@ -53,7 +53,7 @@ export default function Agenda() {
 
   const handleSaveAgenda = async () => {
     if (!defaultDentistaId || !defaultClinicaId || !selectedDate) {
-      toast.error('Dados do dentista ou clínica não carregados. Verifique as configurações.');
+      toast.error('Dados da clínica não carregados. Verifique as configurações.');
       return;
     }
 
@@ -111,7 +111,7 @@ export default function Agenda() {
         <div className="animate-fade-in">
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">Gerenciar Agenda</h1>
           <p className="text-muted-foreground mt-1 text-sm md:text-base">
-            Defina a disponibilidade de horários para {currentDentistaName} na {currentClinicaName}.
+            Defina a disponibilidade de horários para a clínica.
           </p>
         </div>
 
@@ -121,7 +121,7 @@ export default function Agenda() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
                 <Stethoscope className="w-5 h-5 text-primary" />
-                Agenda de {currentDentistaName}
+                Agenda da Clínica
               </CardTitle>
               <CardDescription className="text-sm md:text-base">
                 Selecione a data para gerenciar a disponibilidade.
@@ -156,7 +156,7 @@ export default function Agenda() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
                 <CalendarDays className="w-5 h-5 text-secondary" />
-                Disponibilidade para {selectedDate ? format(selectedDate, 'dd/MM/yyyy', { locale: ptBR }) : 'o dia'}
+                Configurar Disponibilidade para {selectedDate ? format(selectedDate, 'dd/MM/yyyy', { locale: ptBR }) : 'o dia'}
               </CardTitle>
               <CardDescription className="text-sm md:text-base">
                 Defina se a agenda está aberta ou fechada e os horários disponíveis.
