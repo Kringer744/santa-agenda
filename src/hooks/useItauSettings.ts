@@ -6,16 +6,22 @@ import { TablesInsert } from '@/integrations/supabase/types';
 type ItauSettings = TablesInsert<'itau_settings'>;
 
 export function useItauSettings() {
-  return useQuery<ItauSettings>({
+  return useQuery<ItauSettings | undefined>({ // Alterado para ItauSettings | undefined
     queryKey: ['itauSettings'],
     queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('Usuário não autenticado.');
+      }
+
       const { data, error } = await supabase
         .from('itau_settings')
-        .select('id, client_id, client_secret') // Only select client_id and client_secret
+        .select('id, client_id, client_secret, user_id')
+        .eq('user_id', user.id)
         .limit(1)
         .maybeSingle();
       if (error) throw error;
-      return data || {}; // Return empty object if no settings found
+      return data || undefined; // Retorna data ou undefined
     },
   });
 }
@@ -25,11 +31,17 @@ export function useSaveItauSettings() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (settings: ItauSettings) => {
+    mutationFn: async (settings: Omit<ItauSettings, 'id' | 'created_at' | 'updated_at' | 'user_id'>) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('Usuário não autenticado.');
+      }
+
       // Try to fetch existing settings to determine if it's an insert or update
       const { data: existingSettings, error: fetchError } = await supabase
         .from('itau_settings')
         .select('id')
+        .eq('user_id', user.id)
         .limit(1)
         .maybeSingle();
 
@@ -42,6 +54,7 @@ export function useSaveItauSettings() {
           .update({
             client_id: settings.client_id,
             client_secret: settings.client_secret,
+            updated_at: new Date().toISOString(),
           })
           .eq('id', existingSettings.id)
           .select()
@@ -53,6 +66,7 @@ export function useSaveItauSettings() {
         const { data, error } = await supabase
           .from('itau_settings')
           .insert({
+            user_id: user.id,
             client_id: settings.client_id,
             client_secret: settings.client_secret,
           })
