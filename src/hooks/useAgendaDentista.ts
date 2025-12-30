@@ -15,7 +15,7 @@ export function useAgendaDentistaDoDia(dentistaId: string | undefined, date: str
         .eq('data', date)
         .maybeSingle();
       if (error) throw error;
-      return data as any as AgendaDentista;
+      return data as AgendaDentista;
     },
     enabled: !!dentistaId && !!date,
   });
@@ -27,15 +27,16 @@ export function useCreateAgendaDentista() {
 
   return useMutation({
     mutationFn: async (agenda: Omit<AgendaDentista, 'id' | 'created_at' | 'updated_at'>) => {
-      const { data, error } = await (supabase.from('agenda_dentista') as any)
+      const { data, error } = await supabase
+        .from('agenda_dentista')
         .insert(agenda)
         .select()
         .single();
 
       if (error) throw error;
-      return data as any as AgendaDentista;
+      return data as AgendaDentista;
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data: AgendaDentista) => {
       queryClient.invalidateQueries({ queryKey: ['agendaDentistaDoDia', data.dentista_id, data.data] });
       queryClient.invalidateQueries({ queryKey: ['agendaDia'] });
       toast({ title: 'Agenda do dia criada com sucesso!' });
@@ -52,16 +53,17 @@ export function useUpdateAgendaDentista() {
 
   return useMutation({
     mutationFn: async ({ id, ...agenda }: Partial<AgendaDentista> & { id: string }) => {
-      const { data, error } = await (supabase.from('agenda_dentista') as any)
+      const { data, error } = await supabase
+        .from('agenda_dentista')
         .update(agenda)
         .eq('id', id)
         .select()
         .single();
 
       if (error) throw error;
-      return data as any as AgendaDentista;
+      return data as AgendaDentista;
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data: AgendaDentista) => {
       queryClient.invalidateQueries({ queryKey: ['agendaDentistaDoDia', data.dentista_id, data.data] });
       queryClient.invalidateQueries({ queryKey: ['agendaDia'] });
       toast({ title: 'Agenda do dia atualizada com sucesso!' });

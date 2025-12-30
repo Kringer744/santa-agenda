@@ -9,7 +9,7 @@ export function useProcedimentos() {
     queryFn: async () => {
       const { data, error } = await supabase.from('procedimentos').select('*');
       if (error) throw error;
-      return data as any as Procedimento[];
+      return data as Procedimento[];
     },
   });
 }
@@ -20,13 +20,14 @@ export function useCreateProcedimento() {
   
   return useMutation({
     mutationFn: async (procedimento: Omit<Procedimento, 'id' | 'created_at'>) => {
-      const { data, error } = await (supabase.from('procedimentos') as any)
+      const { data, error } = await supabase
+        .from('procedimentos')
         .insert(procedimento)
         .select()
         .single();
 
       if (error) throw error;
-      return data as any as Procedimento;
+      return data as Procedimento;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['procedimentos'] });
@@ -50,14 +51,15 @@ export function useUpdateProcedimento() {
   
   return useMutation({
     mutationFn: async ({ id, ...procedimento }: Partial<Procedimento> & { id: string }) => {
-      const { data, error } = await (supabase.from('procedimentos') as any)
+      const { data, error } = await supabase
+        .from('procedimentos')
         .update(procedimento)
         .eq('id', id)
         .select()
         .single();
 
       if (error) throw error;
-      return data as any as Procedimento;
+      return data as Procedimento;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['procedimentos'] });

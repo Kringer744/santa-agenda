@@ -9,7 +9,7 @@ export function useClinicas() {
     queryFn: async () => {
       const { data, error } = await supabase.from('clinicas').select('*');
       if (error) throw error;
-      return data as any as Clinica[];
+      return data as Clinica[];
     },
   });
 }
@@ -20,13 +20,14 @@ export function useCreateClinica() {
   
   return useMutation({
     mutationFn: async (clinica: Omit<Clinica, 'id' | 'created_at' | 'updated_at'>) => {
-      const { data, error } = await (supabase.from('clinicas') as any)
+      const { data, error } = await supabase
+        .from('clinicas')
         .insert(clinica)
         .select()
         .single();
 
       if (error) throw error;
-      return data as any as Clinica;
+      return data as Clinica;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clinicas'] });
