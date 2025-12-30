@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, } from '@/components/ui/card';
-import { MessageSquare, Send, CheckCircle, Clock, Zap, Smartphone, Upload, Users, Play, Pause, Trash2, FileSpreadsheet, Bot, List, Save, CalendarDays, Camera, Star, Gift, BellRing, Loader2 } from 'lucide-react'; // Importar ícones Lucide
+import { MessageSquare, Send, CheckCircle, Clock, Zap, Smartphone, Upload, Users, Play, Pause, Trash2, FileSpreadsheet, Bot, List, Save, CalendarDays, Camera, Star, Gift, BellRing, Loader2, Plus } from 'lucide-react'; // Importar ícones Lucide
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -77,7 +77,7 @@ export default function WhatsApp() {
   });
 
   const [templates, setTemplates] = useState<WhatsAppTemplate[]>([]);
-  const [isLoadingTemplates, setIsLoadingTemplates] = useState(true); // Novo estado de carregamento
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
   const [isTesting, setIsTesting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -154,7 +154,7 @@ export default function WhatsApp() {
   };
 
   const loadTemplates = async () => {
-    setIsLoadingTemplates(true); // Inicia o carregamento
+    setIsLoadingTemplates(true);
     try {
       const { data, error } = await supabase
         .from('whatsapp_templates')
@@ -175,9 +175,9 @@ export default function WhatsApp() {
     } catch (error: any) {
       console.error('Erro geral ao carregar templates:', error);
       toast.error(`Erro ao carregar templates: ${error.message || 'Detalhes desconhecidos'}`);
-      setTemplates([]); // Garante que templates seja um array vazio em caso de erro
+      setTemplates([]);
     } finally {
-      setIsLoadingTemplates(false); // Finaliza o carregamento
+      setIsLoadingTemplates(false);
     }
   };
 
@@ -236,19 +236,32 @@ export default function WhatsApp() {
     setIsSaving(true);
     try {
       for (const template of templates) {
-        const { error } = await supabase
-          .from('whatsapp_templates')
-          .update({
-            nome: template.nome,
-            descricao: template.descricao,
-            tipo: template.tipo,
-            mensagem: template.mensagem,
-            ativo: template.ativo,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', template.id);
-          
-        if (error) throw error;
+        if (template.id) { // Se tem ID, é um template existente, então atualiza
+          const { error } = await supabase
+            .from('whatsapp_templates')
+            .update({
+              nome: template.nome,
+              descricao: template.descricao,
+              tipo: template.tipo,
+              mensagem: template.mensagem,
+              ativo: template.ativo,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', template.id);
+            
+          if (error) throw error;
+        } else { // Se não tem ID, é um template novo, então insere
+          const { error } = await supabase
+            .from('whatsapp_templates')
+            .insert({
+              nome: template.nome,
+              descricao: template.descricao,
+              tipo: template.tipo,
+              mensagem: template.mensagem,
+              ativo: template.ativo,
+            });
+          if (error) throw error;
+        }
       }
       toast.success('Templates salvos com sucesso!');
       loadTemplates(); // Recarregar templates para garantir o estado mais recente
@@ -264,6 +277,33 @@ export default function WhatsApp() {
     setTemplates(prev => prev.map(t => 
       t.id === id ? { ...t, [field]: value } : t
     ));
+  };
+
+  const handleAddTemplate = async (type: string, defaultName: string, defaultDescription: string, defaultMessage: string) => {
+    setIsSaving(true);
+    try {
+      const { data, error } = await supabase
+        .from('whatsapp_templates')
+        .insert({
+          nome: defaultName,
+          descricao: defaultDescription,
+          tipo: type,
+          mensagem: defaultMessage,
+          ativo: true,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      toast.success(`Template '${defaultName}' adicionado!`);
+      loadTemplates(); // Recarregar para incluir o novo template
+    } catch (error: any) {
+      console.error('Erro ao adicionar template:', error);
+      toast.error(`Erro ao adicionar template: ${error.message}`);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleTestConnection = async () => {
@@ -510,9 +550,12 @@ export default function WhatsApp() {
     return common;
   };
 
-  const templatesAcompanhamento = templates.filter(t => 
-    t.tipo === 'pre-estadia' || t.tipo === 'durante' || t.tipo === 'pos-estadia' || t.tipo === 'aniversario'
-  );
+  const expectedTemplateTypes = useMemo(() => [
+    { type: 'pre-estadia', name: 'Pré-estadia', description: 'Mensagem enviada 1 dia antes da estadia', defaultMessage: 'Oi! 🐾 Amanhã esperamos o {{nome_pet}}. Qualquer dúvida estamos por aqui.' },
+    { type: 'durante', name: 'Durante a hospedagem', description: 'Mensagem enviada durante a estadia com foto do pet', defaultMessage: 'Olá! Segue uma foto do {{nome_pet}} curtindo o dia no hotel! 💙' },
+    { type: 'pos-estadia', name: 'Pós-hospedagem', description: 'Mensagem enviada após a estadia para avaliação', defaultMessage: 'Foi um prazer cuidar do {{nome_pet}}! 💙 Avalie sua experiência.' },
+    { type: 'aniversario', name: 'Aniversário do Pet', description: 'Mensagem de parabéns no aniversário do pet', defaultMessage: '🎉 Hoje é aniversário do {{nome_pet}}! Temos um presente especial pra ele 🐶🐱' },
+  ], []);
 
   return (
     <Layout>
@@ -856,50 +899,69 @@ export default function WhatsApp() {
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
               </div>
-            ) : templatesAcompanhamento.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <BellRing className="w-10 h-10 md:w-12 md:h-12 mx-auto mb-3 opacity-50" />
-                <p className="text-sm md:text-base">Nenhum template de acompanhamento encontrado.</p>
-                <p className="text-xs md:text-sm">Verifique se a tabela 'whatsapp_templates' foi criada e populada no Supabase.</p>
-              </div>
             ) : (
               <>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-                  {templatesAcompanhamento.map((template, index) => (
-                    <Card key={template.id} className="animate-slide-up" style={{ animationDelay: `${index * 50}ms` }}>
-                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <div className="flex items-center gap-2">
-                          {getTemplateIcon(template.tipo)}
-                          <h4 className="text-base md:text-lg font-bold text-foreground">
-                            {getTemplateTitle(template.tipo)}
-                            <span className="text-sm text-muted-foreground ml-2">{getTemplateSubtitle(template.tipo)}</span>
+                  {expectedTemplateTypes.map((expectedTemplate, index) => {
+                    const template = templates.find(t => t.tipo === expectedTemplate.type);
+                    
+                    if (template) {
+                      return (
+                        <Card key={template.id} className="animate-slide-up" style={{ animationDelay: `${index * 50}ms` }}>
+                          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <div className="flex items-center gap-2">
+                              {getTemplateIcon(template.tipo)}
+                              <h4 className="text-base md:text-lg font-bold text-foreground">
+                                {getTemplateTitle(template.tipo)}
+                                <span className="text-sm text-muted-foreground ml-2">{getTemplateSubtitle(template.tipo)}</span>
+                              </h4>
+                            </div>
+                            <Switch
+                              checked={template.ativo || false}
+                              onCheckedChange={(checked) => handleUpdateTemplate(template.id, 'ativo', checked)}
+                            />
+                          </CardHeader>
+                          <CardContent>
+                            <div className="p-3 rounded-lg bg-muted/50 border border-border mb-3">
+                              <Textarea
+                                value={template.mensagem}
+                                onChange={(e) => handleUpdateTemplate(template.id, 'mensagem', e.target.value)}
+                                className="min-h-24 resize-none border-none focus-visible:ring-0 focus-visible:ring-offset-0 p-0 bg-transparent"
+                                placeholder="Mensagem do template..."
+                              />
+                            </div>
+                            
+                            <div className="flex flex-wrap gap-2">
+                              {getTemplateVariables(template.tipo).map(variable => (
+                                <Badge key={variable} variant="secondary" className="bg-mint-light text-secondary text-xs">
+                                  {variable}
+                                </Badge>
+                              ))}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    } else {
+                      return (
+                        <Card key={expectedTemplate.type} className="animate-slide-up flex flex-col items-center justify-center p-6 text-center" style={{ animationDelay: `${index * 50}ms` }}>
+                          <Plus className="w-10 h-10 text-muted-foreground mb-3 opacity-50" />
+                          <h4 className="text-base md:text-lg font-bold text-foreground mb-2">
+                            {getTemplateTitle(expectedTemplate.type)}
                           </h4>
-                        </div>
-                        <Switch
-                          checked={template.ativo || false}
-                          onCheckedChange={(checked) => handleUpdateTemplate(template.id, 'ativo', checked)}
-                        />
-                      </CardHeader>
-                      <CardContent>
-                        <div className="p-3 rounded-lg bg-muted/50 border border-border mb-3">
-                          <Textarea
-                            value={template.mensagem}
-                            onChange={(e) => handleUpdateTemplate(template.id, 'mensagem', e.target.value)}
-                            className="min-h-24 resize-none border-none focus-visible:ring-0 focus-visible:ring-offset-0 p-0 bg-transparent"
-                            placeholder="Mensagem do template..."
-                          />
-                        </div>
-                        
-                        <div className="flex flex-wrap gap-2">
-                          {getTemplateVariables(template.tipo).map(variable => (
-                            <Badge key={variable} variant="secondary" className="bg-mint-light text-secondary text-xs">
-                              {variable}
-                            </Badge>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                          <p className="text-sm text-muted-foreground mb-4">
+                            {getTemplateSubtitle(expectedTemplate.type)}
+                          </p>
+                          <Button 
+                            onClick={() => handleAddTemplate(expectedTemplate.type, expectedTemplate.name, expectedTemplate.description, expectedTemplate.defaultMessage)}
+                            disabled={isSaving}
+                          >
+                            <Plus className="w-4 h-4 mr-2" />
+                            Adicionar Template
+                          </Button>
+                        </Card>
+                      );
+                    }
+                  })}
                 </div>
                 <div className="mt-6 flex justify-end">
                   <Button
