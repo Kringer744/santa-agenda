@@ -75,8 +75,8 @@ serve(async (req) => {
 
     // Buscar config
     const { data: configRow, error: cfgErr } = await supabase
-      .from("whatsapp_config")
-      .select("*")
+      .from('whatsapp_config')
+      .select('*')
       .limit(1)
       .maybeSingle();
 

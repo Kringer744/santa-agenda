@@ -21,13 +21,13 @@ serve(async (req) => {
   }
 
   try {
-    const { access_token, valor, tutor_cpf, tutor_nome, solicitacaoPagador } = await req.json(); // tutor_cpf and tutor_nome are now paciente_cpf and paciente_nome
+    const { access_token, valor, paciente_cpf, paciente_nome, solicitacaoPagador } = await req.json(); // tutor_cpf and tutor_nome are now paciente_cpf and paciente_nome
 
     const ITAU_API_URL = "https://api.itau.com.br/pix/v2";
     const ITAU_PIX_CHAVE = "24164831880";
     const ITAU_API_KEY = "sua-api-key-aqui";
 
-    if (!access_token || !valor || !tutor_cpf || !tutor_nome) {
+    if (!access_token || !valor || !paciente_cpf || !paciente_nome) {
       return jsonResponse(
         { error: "access_token, valor, paciente_cpf e paciente_nome são obrigatórios" }, // Updated error message
         400
@@ -46,8 +46,8 @@ serve(async (req) => {
         expiracao: 3600,
       },
       devedor: {
-        cpf: tutor_cpf, // Using paciente CPF
-        nome: tutor_nome, // Using paciente nome
+        cpf: paciente_cpf, // Using paciente CPF
+        nome: paciente_nome, // Using paciente nome
       },
       valor: {
         original: valor.toFixed(2),
