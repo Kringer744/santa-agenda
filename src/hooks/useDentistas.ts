@@ -7,8 +7,12 @@ export function useDentistas() {
   return useQuery<Dentista[]>({
     queryKey: ['dentistas'],
     queryFn: async () => {
+      // Chamada explícita para a tabela 'dentistas'
       const { data, error } = await supabase.from('dentistas').select('*');
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao buscar dentistas:', error);
+        throw error;
+      }
       return data as Dentista[];
     },
   });
@@ -26,7 +30,10 @@ export function useCreateDentista() {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao criar dentista:', error);
+        throw error;
+      }
       return data as Dentista;
     },
     onSuccess: () => {
