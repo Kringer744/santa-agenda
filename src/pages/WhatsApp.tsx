@@ -8,7 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, } from '@/components/ui/card';
-import { MessageSquare, Send, CheckCircle, Clock, Zap, Smartphone, Upload, Users, Play, Pause, Trash2, FileSpreadsheet, Bot, List, Save, CalendarDays, Camera, Star, Gift, BellRing, Loader2, Plus, Smile, Stethoscope } from 'lucide-react'; // Replaced Tooth with Smile
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { MessageSquare, Send, CheckCircle, Clock, Zap, Smartphone, Upload, Users, Play, Pause, Trash2, FileSpreadsheet, Bot, List, Save, CalendarDays, Camera, Star, Gift, BellRing, Loader2, Plus, Smile, Stethoscope } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -113,6 +114,7 @@ export default function WhatsApp() {
   const [disparoAtivo, setDisparoAtivo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [menuTestNumber, setMenuTestNumber] = useState('');
+  const [selectedTemplateForBulk, setSelectedTemplateForBulk] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     loadConfig();
@@ -543,12 +545,21 @@ export default function WhatsApp() {
     return common;
   };
 
-  const expectedTemplateTypes = useMemo(() => [
+  const expectedAutomatedTemplateTypes = useMemo(() => [
     { type: 'lembrete_consulta', name: 'Lembrete de Consulta', description: 'Mensagem enviada 1 dia antes da consulta', defaultMessage: 'Olá {{nome_paciente}}! 🗓️ Lembrete da sua consulta com {{nome_dentista}} amanhã, {{data_consulta}} às {{hora_consulta}}. Aguardamos você!' },
     { type: 'pos_consulta', name: 'Pós-Consulta', description: 'Mensagem enviada após a consulta para feedback', defaultMessage: 'Olá {{nome_paciente}}! Esperamos que tenha tido uma ótima experiência com {{nome_dentista}} em {{data_consulta}}. Deixe seu feedback!' },
     { type: 'aniversario_paciente', name: 'Aniversário do Paciente', description: 'Mensagem de parabéns no aniversário do paciente', defaultMessage: '🎉 Feliz Aniversário, {{nome_paciente}}! A DentalClinic deseja um dia especial e um sorriso ainda mais lindo!' },
-    { type: 'promocao', name: 'Promoção', description: 'Template para envio de promoções e novidades', defaultMessage: 'Olá {{nome_paciente}}! Temos uma novidade especial para você na DentalClinic. Confira!' },
   ], []);
+
+  const handleSelectTemplateForBulk = (templateId: string) => {
+    setSelectedTemplateForBulk(templateId);
+    const selected = templates.find(t => t.id === templateId);
+    if (selected) {
+      setMensagemDisparo(selected.mensagem);
+    } else {
+      setMensagemDisparo('');
+    }
+  };
 
   return (
     <Layout>
@@ -890,7 +901,7 @@ export default function WhatsApp() {
             ) : (
               <>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-                  {expectedTemplateTypes.map((expectedTemplate, index) => {
+                  {expectedAutomatedTemplateTypes.map((expectedTemplate, index) => {
                     const template = templates.find(t => t.tipo === expectedTemplate.type);
                     
                     if (template) {
@@ -961,6 +972,12 @@ export default function WhatsApp() {
                     {isSaving ? 'Salvando...' : 'Salvar Templates'}
                   </Button>
                 </div>
+                <p className="text-sm text-muted-foreground mt-8">
+                  * As mensagens de lembrete de consulta e pós-consulta são enviadas automaticamente quando o status da consulta é atualizado.
+                </p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  * Para o envio de mensagens de aniversário, você precisaria configurar uma função de agendamento (cron job) no seu backend (ex: Supabase Edge Function) para verificar os aniversários diariamente e chamar a função `sendBirthdayMessage` para os pacientes do dia.
+                </p>
               </>
             )}
           </TabsContent>
@@ -1100,6 +1117,23 @@ Ou: Nome,5511999999999"
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm">Selecionar Template (Opcional)</Label>
+                    <Select value={selectedTemplateForBulk} onValueChange={handleSelectTemplateForBulk}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Escolha um template para preencher a mensagem" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="custom">Mensagem Personalizada</SelectItem>
+                        {templates.map(template => (
+                          <SelectItem key={template.id} value={template.id}>
+                            {template.nome} ({template.tipo === 'promocao' ? 'Promoção' : 'Outro'})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   <div className="space-y-2">
                     <Label className="text-sm">Mensagem do Disparo</Label>
                     <Textarea
