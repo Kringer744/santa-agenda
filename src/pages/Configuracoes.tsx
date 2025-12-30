@@ -1,3 +1,4 @@
+' character in the text.">
 import { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
@@ -382,7 +383,7 @@ export default function Configuracoes() {
                       Importante: Variáveis de Ambiente
                     </p>
                     <p className="text-sm text-blue-600 dark:text-blue-400">
-                      Para máxima segurança, é **altamente recomendado** que você defina as credenciais do Itaú Pix como variáveis de ambiente (secrets) diretamente no seu projeto Supabase (em `Edge Functions > Secrets`).
+                      Para máxima segurança, é **altamente recomendado** que você defina as credenciais do Itaú Pix como variáveis de ambiente (secrets) diretamente no seu projeto Supabase (em `Edge Functions &gt; Secrets`).
                     </p>
                     <p className="text-sm text-blue-600 dark:text-blue-400">
                       As Edge Functions tentarão ler as variáveis de ambiente primeiro. Se não as encontrarem, usarão as configurações salvas neste formulário.
