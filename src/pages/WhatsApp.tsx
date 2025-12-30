@@ -37,13 +37,14 @@ interface WhatsAppConfig {
   opcoes_menu: MenuOption[];
 }
 
+// Ajustado para permitir null em descricao e ativo, conforme o schema do banco
 interface WhatsAppTemplate {
   id: string;
   nome: string;
-  descricao: string;
+  descricao: string | null;
   tipo: string;
   mensagem: string;
-  ativo: boolean;
+  ativo: boolean | null;
   created_at: string;
   updated_at: string;
 }
@@ -152,6 +153,7 @@ export default function WhatsApp() {
     }
   };
 
+  // Função loadTemplates corrigida para ser assíncrona
   const loadTemplates = async () => {
     try {
       const { data, error } = await supabase
@@ -1018,7 +1020,7 @@ Ou: Nome,5511999999999"
                         {template.nome}
                       </CardTitle>
                       <Switch
-                        checked={template.ativo}
+                        checked={template.ativo || false}
                         onCheckedChange={() => handleToggleTemplate(template.id)}
                       />
                     </div>
