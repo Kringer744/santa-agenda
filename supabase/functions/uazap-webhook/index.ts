@@ -24,14 +24,12 @@ function formatPhoneNumber(phone: string): string {
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  const supabase = createClient(
-    // @ts-ignore: Deno namespace
-    Deno.env.get("SUPABASE_URL") ?? "",
-    // @ts-ignore: Deno namespace
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-  );
+  // @ts-ignore: Deno namespace
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  // @ts-ignore: Deno namespace
+  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const supabase = createClient(supabaseUrl, supabaseKey);
 
-  // IMPORTANTE: Mudar para a URL real do seu app publicado depois
   const APP_URL = "https://preview-ktepifvhpdgexdgvhxpq.lovable.app"; 
 
   try {
@@ -44,7 +42,6 @@ serve(async (req: Request) => {
 
     const receivedText = (message?.text ?? "").toLowerCase().trim();
 
-    // Se o cliente responder "1" ou escolher a opção de agendar
     if (receivedText === "1" || receivedText.includes("agendar")) {
       const { data: paciente } = await supabase
         .from('pacientes')
@@ -72,8 +69,7 @@ serve(async (req: Request) => {
     }
 
     return jsonResponse({ ok: true });
-  } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : String(err);
-    return jsonResponse({ ok: false, error: errorMessage }, 500);
+  } catch (err: any) {
+    return jsonResponse({ ok: false, error: err.message }, 500);
   }
 });
