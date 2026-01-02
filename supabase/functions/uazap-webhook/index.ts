@@ -38,6 +38,7 @@ serve(async (req: Request) => {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   // URL do preview para redirecionamento
+  // IMPORTANT: This URL is dynamic. In a production environment, this should be a stable domain.
   const APP_URL = "https://preview-ktepifvhpdgexdgvhxpq.lovable.app"; 
 
   try {
@@ -45,13 +46,20 @@ serve(async (req: Request) => {
     const message = body?.message ?? {};
     
     // Ignora mensagens enviadas pela própria instância
-    if (message?.fromMe) return jsonResponse({ ok: true, message: "Ignored message from self" });
+    if (message?.fromMe) {
+      console.log("[WEBHOOK] Ignored message from self.");
+      return jsonResponse({ ok: true, message: "Ignored message from self" });
+    }
 
     const rawFrom = body?.chat?.phone ?? message?.sender ?? "";
-    if (!rawFrom) return jsonResponse({ ok: true, message: "No sender phone found" });
+    if (!rawFrom) {
+      console.warn("[WEBHOOK] No sender phone found in message.");
+      return jsonResponse({ ok: true, message: "No sender phone found" });
+    }
 
     const fromNumber = formatPhoneNumber(rawFrom);
     const receivedText = (message?.text ?? "").toLowerCase().trim();
+    console.log(`[WEBHOOK] Received message from ${fromNumber}: "${receivedText}"`);
 
     // Carrega a configuração do WhatsApp
     const { data: config, error: configError } = await supabase.from('whatsapp_config').select('*').limit(1).maybeSingle();
@@ -61,6 +69,7 @@ serve(async (req: Request) => {
     }
     if (!config) {
       console.warn("[WEBHOOK] Configuração do WhatsApp não encontrada na tabela 'whatsapp_config'.");
+      // If no config, we can't do anything, but it's not an error for the webhook itself.
       return jsonResponse({ ok: true, message: "No WhatsApp config found" });
     }
 
@@ -78,58 +87,68 @@ serve(async (req: Request) => {
       "Content-Type": "application/json",
     };
 
-    // Lógica para agendamento via menu ou texto (prioritária)
-    if (receivedText === "1" || receivedText.includes("agendar")) {
-      const { data: paciente } = await supabase
-        .from('pacientes')
-        .select('id, nome')
-        .eq('telefone', fromNumber)
-        .maybeSingle();
+    const menuOptions = (config.opcoes_menu as any as MenuOption[]) || [];
+    const activeMenuOptions = menuOptions.filter(o => o.ativo);
 
-      let link = `${APP_URL}/client-appointment`;
-      let text = `Olá! Para agendar sua consulta na DentalClinic, acesse o link abaixo:\n\n${link}\n\nSelecione o dentista e o melhor horário para você.`;
+    // --- NOVA LÓGICA: Lidar com a seleção de uma opção do menu primeiro ---
+    const selectedOption = activeMenuOptions.find(option => 
+      option.texto.toLowerCase().trim() === receivedText
+    );
 
-      if (paciente) {
-        link += `?paciente_id=${paciente.id}`;
-        text = `Olá ${paciente.nome}! Que bom te ver novamente. Para agendar sua nova consulta, use este link exclusivo:\n\n${link}`;
+    if (selectedOption) {
+      console.log(`[WEBHOOK] Usuário selecionou a opção do menu: "${selectedOption.texto}"`);
+      let responseText = selectedOption.resposta;
+
+      // Tratamento especial para a opção "Agendar uma consulta"
+      if (selectedOption.id === '1' || selectedOption.texto.toLowerCase().includes('agendar uma consulta')) {
+        const { data: paciente } = await supabase
+          .from('pacientes')
+          .select('id, nome')
+          .eq('telefone', fromNumber)
+          .maybeSingle();
+
+        let link = `${APP_URL}/client-appointment`;
+        if (paciente) {
+          link += `?paciente_id=${paciente.id}`;
+          responseText = `Olá ${paciente.nome}! Que bom te ver novamente. Para agendar sua nova consulta, use este link exclusivo:\n\n${link}`;
+        } else {
+          responseText = `Olá! Para agendar sua consulta na DentalClinic, acesse o link abaixo:\n\n${link}\n\nSelecione o dentista e o melhor horário para você.`;
+        }
       }
 
-      console.log(`[WEBHOOK] Sending appointment link to: ${fromNumber}`);
       try {
         const sendTextResponse = await fetch(`${uazapApiUrl}/send/text`, {
           method: "POST",
           headers: uazapHeaders,
-          body: JSON.stringify({ number: fromNumber, text }),
+          body: JSON.stringify({ number: fromNumber, text: responseText }),
         });
 
         const sendTextData = await sendTextResponse.json().catch(async () => ({ raw: await sendTextResponse.text() }));
-        console.log("[WEBHOOK] Appointment link sent response from UAZAP:", sendTextData);
+        console.log("[WEBHOOK] Resposta da opção do menu enviada do UAZAP:", sendTextData);
 
         if (!sendTextResponse.ok) {
-          console.error("[WEBHOOK] Failed to send appointment link via UAZAP:", sendTextData);
-          return jsonResponse({ ok: false, error: "Failed to send appointment link", uazap_response: sendTextData }, 502); // Bad Gateway
+          console.error("[WEBHOOK] Falha ao enviar resposta da opção do menu via UAZAP:", sendTextData);
+          return jsonResponse({ ok: false, error: "Falha ao enviar resposta da opção do menu", uazap_response: sendTextData }, 502);
         }
       } catch (fetchError: any) {
-        console.error("[WEBHOOK] Network error during fetch for appointment link:", fetchError.message);
-        return jsonResponse({ ok: false, error: `Network error sending appointment link: ${fetchError.message}` }, 500);
+        console.error("[WEBHOOK] Erro de rede durante o fetch para resposta da opção do menu:", fetchError.message);
+        return jsonResponse({ ok: false, error: `Erro de rede ao enviar resposta da opção do menu: ${fetchError.message}` }, 500);
       }
-
-      return jsonResponse({ ok: true, sent: true, action: "sent_appointment_link" });
+      return jsonResponse({ ok: true, sent: true, action: "sent_menu_option_response" });
     }
 
-    // Lógica para enviar menu interativo se ativo e nenhuma ação específica foi tomada
+    // --- LÓGICA ANTIGA: Enviar menu inicial se nenhuma opção específica foi selecionada e o menu estiver ativo ---
+    // Este bloco só deve ser executado se o usuário enviar uma mensagem geral e não uma seleção de menu.
     if (config.menu_ativo) {
       const welcomeMessage = config.mensagem_boas_vindas || 'Olá! 🦷 Seja bem-vindo à nossa Clínica Odontológica. Como podemos cuidar do seu sorriso hoje?';
-      const menuOptions = (config.opcoes_menu as any as MenuOption[]) || [];
-
-      const activeOptions = menuOptions.filter(o => o.ativo);
+      
       const choices: string[] = [
         '[Atendimento]', // Seção principal
-        ...activeOptions.map(o => `${o.texto}|${o.id}|${o.resposta.substring(0, 72)}`)
+        ...activeMenuOptions.map(o => `${o.texto}|${o.id}|${o.resposta.substring(0, 72)}`)
       ];
 
       if (choices.length > 1) { // Garante que há pelo menos uma opção real além do cabeçalho da seção
-        console.log(`[WEBHOOK] Sending interactive menu to: ${fromNumber}`);
+        console.log(`[WEBHOOK] Enviando menu interativo para: ${fromNumber}`);
         try {
           const menuResponse = await fetch(`${uazapApiUrl}/send/menu`, {
             method: "POST",
@@ -145,15 +164,15 @@ serve(async (req: Request) => {
           });
 
           const menuData = await menuResponse.json().catch(async () => ({ raw: await menuResponse.text() }));
-          console.log("[WEBHOOK] Menu sent response from UAZAP:", menuData);
+          console.log("[WEBHOOK] Resposta do menu enviada do UAZAP:", menuData);
 
           if (!menuResponse.ok) {
-            console.error("[WEBHOOK] Failed to send interactive menu via UAZAP:", menuData);
-            return jsonResponse({ ok: false, error: "Failed to send interactive menu", uazap_response: menuData }, 502); // Bad Gateway
+            console.error("[WEBHOOK] Falha ao enviar menu interativo via UAZAP:", menuData);
+            return jsonResponse({ ok: false, error: "Falha ao enviar menu interativo", uazap_response: menuData }, 502);
           }
         } catch (fetchError: any) {
-          console.error("[WEBHOOK] Network error during fetch for interactive menu:", fetchError.message);
-          return jsonResponse({ ok: false, error: `Network error sending interactive menu: ${fetchError.message}` }, 500);
+          console.error("[WEBHOOK] Erro de rede durante o fetch para menu interativo:", fetchError.message);
+          return jsonResponse({ ok: false, error: `Erro de rede ao enviar menu interativo: ${fetchError.message}` }, 500);
         }
 
         return jsonResponse({ ok: true, sent: true, action: "sent_interactive_menu" });
@@ -163,9 +182,10 @@ serve(async (req: Request) => {
     }
 
     // Se nenhuma das condições acima for atendida, retorna ok sem ação específica
+    console.log("[WEBHOOK] Nenhuma ação específica tomada para a mensagem.");
     return jsonResponse({ ok: true, action: "no_specific_action_taken" });
   } catch (err: any) {
-    console.error("[WEBHOOK ERROR] Unhandled error:", err.message);
+    console.error("[WEBHOOK ERROR] Erro não tratado:", err.message);
     return jsonResponse({ ok: false, error: err.message }, 500);
   }
 });
