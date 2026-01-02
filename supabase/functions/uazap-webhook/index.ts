@@ -1,7 +1,7 @@
 // @ts-ignore: Deno environment
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts"; // Updated to 0.190.0
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 // @ts-ignore: Deno environment
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0"; // Updated to 2.45.0
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -38,7 +38,6 @@ serve(async (req: Request) => {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   // URL do preview para redirecionamento
-  // Idealmente, esta URL deveria ser configurável via Supabase Secrets ou whatsapp_config
   const APP_URL = "https://preview-ktepifvhpdgexdgvhxpq.lovable.app"; 
 
   try {
@@ -57,20 +56,21 @@ serve(async (req: Request) => {
     // Carrega a configuração do WhatsApp
     const { data: config, error: configError } = await supabase.from('whatsapp_config').select('*').limit(1).maybeSingle();
     if (configError) {
-      console.error("[WEBHOOK] Erro ao carregar configuração do WhatsApp:", configError.message);
+      console.error("[WEBHOOK] Erro ao carregar configuração do WhatsApp do Supabase:", configError.message);
       return jsonResponse({ ok: false, error: "Erro ao carregar configuração do WhatsApp" }, 500);
     }
     if (!config) {
-      console.warn("[WEBHOOK] Configuração do WhatsApp não encontrada. Não é possível enviar menu ou links de agendamento.");
+      console.warn("[WEBHOOK] Configuração do WhatsApp não encontrada na tabela 'whatsapp_config'.");
       return jsonResponse({ ok: true, message: "No WhatsApp config found" });
     }
 
     const uazapApiUrl = config.api_url;
     const uazapInstanceToken = config.instance_token;
 
+    // Verifica se as credenciais do UAZAP estão configuradas
     if (!uazapApiUrl || !uazapInstanceToken) {
-      console.warn("[WEBHOOK] URL da API UAZAP ou Token da Instância não configurados. Não é possível enviar mensagens.");
-      return jsonResponse({ ok: true, message: "UAZAP API URL or Instance Token missing" });
+      console.error("[WEBHOOK] URL da API UAZAP ou Token da Instância não configurados na tabela whatsapp_config.");
+      return jsonResponse({ ok: false, error: "UAZAP API URL or Instance Token missing in config" }, 400);
     }
 
     const uazapHeaders = {
@@ -95,11 +95,24 @@ serve(async (req: Request) => {
       }
 
       console.log(`[WEBHOOK] Sending appointment link to: ${fromNumber}`);
-      await fetch(`${uazapApiUrl}/send/text`, {
-        method: "POST",
-        headers: uazapHeaders,
-        body: JSON.stringify({ number: fromNumber, text }),
-      });
+      try {
+        const sendTextResponse = await fetch(`${uazapApiUrl}/send/text`, {
+          method: "POST",
+          headers: uazapHeaders,
+          body: JSON.stringify({ number: fromNumber, text }),
+        });
+
+        const sendTextData = await sendTextResponse.json().catch(async () => ({ raw: await sendTextResponse.text() }));
+        console.log("[WEBHOOK] Appointment link sent response from UAZAP:", sendTextData);
+
+        if (!sendTextResponse.ok) {
+          console.error("[WEBHOOK] Failed to send appointment link via UAZAP:", sendTextData);
+          return jsonResponse({ ok: false, error: "Failed to send appointment link", uazap_response: sendTextData }, 502); // Bad Gateway
+        }
+      } catch (fetchError: any) {
+        console.error("[WEBHOOK] Network error during fetch for appointment link:", fetchError.message);
+        return jsonResponse({ ok: false, error: `Network error sending appointment link: ${fetchError.message}` }, 500);
+      }
 
       return jsonResponse({ ok: true, sent: true, action: "sent_appointment_link" });
     }
@@ -117,23 +130,33 @@ serve(async (req: Request) => {
 
       if (choices.length > 1) { // Garante que há pelo menos uma opção real além do cabeçalho da seção
         console.log(`[WEBHOOK] Sending interactive menu to: ${fromNumber}`);
-        const menuResponse = await fetch(`${uazapApiUrl}/send/menu`, {
-          method: "POST",
-          headers: uazapHeaders,
-          body: JSON.stringify({
-            number: fromNumber,
-            type: "list",
-            text: welcomeMessage,
-            choices,
-            listButton: 'Menu de Atendimento',
-            footerText: 'DentalClinic',
-          }),
-        });
+        try {
+          const menuResponse = await fetch(`${uazapApiUrl}/send/menu`, {
+            method: "POST",
+            headers: uazapHeaders,
+            body: JSON.stringify({
+              number: fromNumber,
+              type: "list",
+              text: welcomeMessage,
+              choices,
+              listButton: 'Menu de Atendimento',
+              footerText: 'DentalClinic',
+            }),
+          });
 
-        const menuData = await menuResponse.json().catch(async () => ({ raw: await menuResponse.text() }));
-        console.log("[WEBHOOK] Menu sent response:", menuData);
+          const menuData = await menuResponse.json().catch(async () => ({ raw: await menuResponse.text() }));
+          console.log("[WEBHOOK] Menu sent response from UAZAP:", menuData);
 
-        return jsonResponse({ ok: menuResponse.ok, sent: menuResponse.ok, action: "sent_interactive_menu" });
+          if (!menuResponse.ok) {
+            console.error("[WEBHOOK] Failed to send interactive menu via UAZAP:", menuData);
+            return jsonResponse({ ok: false, error: "Failed to send interactive menu", uazap_response: menuData }, 502); // Bad Gateway
+          }
+        } catch (fetchError: any) {
+          console.error("[WEBHOOK] Network error during fetch for interactive menu:", fetchError.message);
+          return jsonResponse({ ok: false, error: `Network error sending interactive menu: ${fetchError.message}` }, 500);
+        }
+
+        return jsonResponse({ ok: true, sent: true, action: "sent_interactive_menu" });
       } else {
         console.warn("[WEBHOOK] Nenhuma opção de menu ativa para enviar.");
       }
@@ -142,7 +165,7 @@ serve(async (req: Request) => {
     // Se nenhuma das condições acima for atendida, retorna ok sem ação específica
     return jsonResponse({ ok: true, action: "no_specific_action_taken" });
   } catch (err: any) {
-    console.error("[WEBHOOK ERROR]", err.message);
+    console.error("[WEBHOOK ERROR] Unhandled error:", err.message);
     return jsonResponse({ ok: false, error: err.message }, 500);
   }
 });
