@@ -9,10 +9,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { MessageSquare, Play, Pause, Plus, Trash2, Save, Wifi, WifiOff, Loader2, Users } from 'lucide-react';
+import { MessageSquare, Play, Pause, Plus, Trash2, Save, Wifi, WifiOff, Loader2, Users, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { testConnection, createBulkCampaign, sendTextMessage } from '@/lib/uazap';
+import { testConnection, createBulkCampaign, sendTextMessage, sendInteractiveMenu } from '@/lib/uazap';
 import { getPatientsWithBirthdayThisMonth } from '@/lib/whatsappClinicAutomation';
 import { Paciente } from '@/types';
 import { cn } from '@/lib/utils';
@@ -56,6 +56,8 @@ export default function WhatsApp() {
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
   const [isTesting, setIsTesting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSendingTestMenu, setIsSendingTestMenu] = useState(false); // Novo estado para o envio do menu de teste
+  const [testPhoneNumber, setTestPhoneNumber] = useState(''); // Novo estado para o número de teste
   
   const [leads, setLeads] = useState<Lead[]>([]);
   const [manualNumbers, setManualNumbers] = useState('');
@@ -135,6 +137,38 @@ export default function WhatsApp() {
       toast.error(result.error || 'Falha na conexão com a instância');
     }
     setIsTesting(false);
+  };
+
+  const handleSendTestMenu = async () => {
+    if (!config.api_url || !config.instance_token || !testPhoneNumber) {
+      toast.error('URL da API, Token da Instância e Número de Telefone são necessários para enviar o menu de teste.');
+      return;
+    }
+    if (!config.menu_ativo || config.opcoes_menu.filter(o => o.ativo).length === 0) {
+      toast.error('O menu interativo precisa estar ativo e ter opções configuradas para ser enviado.');
+      return;
+    }
+
+    setIsSendingTestMenu(true);
+    try {
+      const result = await sendInteractiveMenu(
+        { apiUrl: config.api_url, instanceToken: config.instance_token },
+        testPhoneNumber,
+        config.mensagem_boas_vindas,
+        config.opcoes_menu
+      );
+
+      if (result.success) {
+        toast.success('Menu de teste enviado com sucesso!');
+      } else {
+        toast.error(result.error || 'Falha ao enviar menu de teste.');
+      }
+    } catch (error: any) {
+      console.error('Erro ao enviar menu de teste:', error);
+      toast.error(`Erro ao enviar menu de teste: ${error.message}`);
+    } finally {
+      setIsSendingTestMenu(false);
+    }
   };
 
   const handleAddMenuOption = () => {
@@ -308,6 +342,25 @@ export default function WhatsApp() {
                     {isSaving ? <Loader2 className="animate-spin" /> : <Save className="mr-2" />}
                     Salvar
                   </Button>
+                </div>
+
+                <div className="pt-6 border-t space-y-4">
+                  <h3 className="text-lg font-semibold text-foreground">Enviar Menu de Teste</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Envie o menu interativo configurado para um número de sua escolha para testar.
+                  </p>
+                  <div className="flex gap-3">
+                    <Input 
+                      placeholder="Número de telefone (Ex: 5511999999999)" 
+                      value={testPhoneNumber} 
+                      onChange={e => setTestPhoneNumber(e.target.value)} 
+                      className="flex-1"
+                    />
+                    <Button onClick={handleSendTestMenu} disabled={isSendingTestMenu || connectionStatus !== 'connected'}>
+                      {isSendingTestMenu ? <Loader2 className="animate-spin mr-2" /> : <Send className="mr-2" />}
+                      Enviar Teste
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
