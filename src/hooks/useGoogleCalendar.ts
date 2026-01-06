@@ -25,16 +25,21 @@ export function useGoogleCalendarSync() {
       });
 
       if (error) {
-        console.error("Erro ao sincronizar com Google Calendar:", error);
-        throw new Error(data?.error || error.message);
+        console.error("Erro ao sincronizar com Google Calendar (Supabase invoke error):", error);
+        // Garante que a mensagem de erro seja uma string, ou usa uma mensagem genérica
+        const errorMessage = typeof error.message === 'string' ? error.message : JSON.stringify(error);
+        throw new Error(errorMessage);
       }
       if (data?.error) {
-        console.error("Erro na função Edge do Google Calendar:", data.error);
-        throw new Error(data.error);
+        console.error("Erro na função Edge do Google Calendar (Edge function error):", data.error);
+        // Garante que a mensagem de erro seja uma string, ou usa uma mensagem genérica
+        const errorMessage = typeof data.error === 'string' ? data.error : JSON.stringify(data.error);
+        throw new Error(errorMessage);
       }
       return data;
     },
     onError: (error: Error) => {
+      // A mensagem de erro aqui agora deve ser sempre uma string
       toast.error(`Erro ao sincronizar com Google Calendar: ${error.message}`);
     },
   });

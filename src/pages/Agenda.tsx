@@ -71,6 +71,7 @@ export default function Agenda() {
       return result.event?.id; // Retorna o ID do evento do Google Calendar
     } catch (error) {
       console.error("Erro ao sincronizar com Google Calendar:", error);
+      // O onError do useGoogleCalendarSync já trata o toast, mas podemos adicionar um log aqui
       return null;
     }
   };
@@ -81,59 +82,64 @@ export default function Agenda() {
     const slots = open ? DEFAULT_TIME_SLOTS : [];
     let newGoogleEventId: string | null = null;
 
-    if (agendaExistente) {
-      if (!open && agendaExistente.google_event_id) { // Se fechar o dia e houver um evento principal
-        await syncGoogleCalendar('deleteEvent', { id: agendaExistente.google_event_id });
-        newGoogleEventId = null;
-      } else if (open && !agendaExistente.google_event_id) { // Se abrir o dia e não houver evento principal
-        const startOfDay = parseISO(`${formattedDate}T08:00:00`);
-        const endOfDay = parseISO(`${formattedDate}T18:00:00`);
-        newGoogleEventId = await syncGoogleCalendar('createEvent', {
-          summary: `Agenda de ${selectedDentista.nome} - ${format(selectedDate!, 'dd/MM')}`,
-          description: `Horários disponíveis: ${slots.join(', ')}`,
-          start: { dateTime: startOfDay.toISOString(), timeZone: 'America/Sao_Paulo' },
-          end: { dateTime: endOfDay.toISOString(), timeZone: 'America/Sao_Paulo' },
+    try { // Adicionado try-catch
+      if (agendaExistente) {
+        if (!open && agendaExistente.google_event_id) { // Se fechar o dia e houver um evento principal
+          await syncGoogleCalendar('deleteEvent', { id: agendaExistente.google_event_id });
+          newGoogleEventId = null;
+        } else if (open && !agendaExistente.google_event_id) { // Se abrir o dia e não houver evento principal
+          const startOfDay = parseISO(`${formattedDate}T08:00:00`);
+          const endOfDay = parseISO(`${formattedDate}T18:00:00`);
+          newGoogleEventId = await syncGoogleCalendar('createEvent', {
+            summary: `Agenda de ${selectedDentista.nome} - ${format(selectedDate!, 'dd/MM')}`,
+            description: `Horários disponíveis: ${slots.join(', ')}`,
+            start: { dateTime: startOfDay.toISOString(), timeZone: 'America/Sao_Paulo' },
+            end: { dateTime: endOfDay.toISOString(), timeZone: 'America/Sao_Paulo' },
+          });
+        } else if (open && agendaExistente.google_event_id) { // Se abrir o dia e já houver evento principal
+          const startOfDay = parseISO(`${formattedDate}T08:00:00`);
+          const endOfDay = parseISO(`${formattedDate}T18:00:00`);
+          await syncGoogleCalendar('updateEvent', {
+            id: agendaExistente.google_event_id,
+            summary: `Agenda de ${selectedDentista.nome} - ${format(selectedDate!, 'dd/MM')}`,
+            description: `Horários disponíveis: ${slots.join(', ')}`,
+            start: { dateTime: startOfDay.toISOString(), timeZone: 'America/Sao_Paulo' },
+            end: { dateTime: endOfDay.toISOString(), timeZone: 'America/Sao_Paulo' },
+          });
+          newGoogleEventId = agendaExistente.google_event_id;
+        }
+
+        await updateAgenda.mutateAsync({
+          id: agendaExistente.id,
+          horarios_disponiveis: slots,
+          horarios_ocupados: [], // Limpa horários ocupados ao fechar/abrir o dia
+          google_event_id: newGoogleEventId,
         });
-      } else if (open && agendaExistente.google_event_id) { // Se abrir o dia e já houver evento principal
-        const startOfDay = parseISO(`${formattedDate}T08:00:00`);
-        const endOfDay = parseISO(`${formattedDate}T18:00:00`);
-        await syncGoogleCalendar('updateEvent', {
-          id: agendaExistente.google_event_id,
-          summary: `Agenda de ${selectedDentista.nome} - ${format(selectedDate!, 'dd/MM')}`,
-          description: `Horários disponíveis: ${slots.join(', ')}`,
-          start: { dateTime: startOfDay.toISOString(), timeZone: 'America/Sao_Paulo' },
-          end: { dateTime: endOfDay.toISOString(), timeZone: 'America/Sao_Paulo' },
+
+      } else {
+        if (open) {
+          const startOfDay = parseISO(`${formattedDate}T08:00:00`);
+          const endOfDay = parseISO(`${formattedDate}T18:00:00`);
+          newGoogleEventId = await syncGoogleCalendar('createEvent', {
+            summary: `Agenda de ${selectedDentista.nome} - ${format(selectedDate!, 'dd/MM')}`,
+            description: `Horários disponíveis: ${slots.join(', ')}`,
+            start: { dateTime: startOfDay.toISOString(), timeZone: 'America/Sao_Paulo' },
+            end: { dateTime: endOfDay.toISOString(), timeZone: 'America/Sao_Paulo' },
+          });
+        }
+
+        await createAgenda.mutateAsync({
+          dentista_id: selectedDentistaId,
+          clinica_id: clinicas[0].id,
+          data: formattedDate,
+          horarios_disponiveis: slots,
+          horarios_ocupados: [],
+          google_event_id: newGoogleEventId,
         });
-        newGoogleEventId = agendaExistente.google_event_id;
       }
-
-      await updateAgenda.mutateAsync({
-        id: agendaExistente.id,
-        horarios_disponiveis: slots,
-        horarios_ocupados: [], // Limpa horários ocupados ao fechar/abrir o dia
-        google_event_id: newGoogleEventId,
-      });
-
-    } else {
-      if (open) {
-        const startOfDay = parseISO(`${formattedDate}T08:00:00`);
-        const endOfDay = parseISO(`${formattedDate}T18:00:00`);
-        newGoogleEventId = await syncGoogleCalendar('createEvent', {
-          summary: `Agenda de ${selectedDentista.nome} - ${format(selectedDate!, 'dd/MM')}`,
-          description: `Horários disponíveis: ${slots.join(', ')}`,
-          start: { dateTime: startOfDay.toISOString(), timeZone: 'America/Sao_Paulo' },
-          end: { dateTime: endOfDay.toISOString(), timeZone: 'America/Sao_Paulo' },
-        });
-      }
-
-      await createAgenda.mutateAsync({
-        dentista_id: selectedDentistaId,
-        clinica_id: clinicas[0].id,
-        data: formattedDate,
-        horarios_disponiveis: slots,
-        horarios_ocupados: [],
-        google_event_id: newGoogleEventId,
-      });
+    } catch (error: any) { // Catch block para handleToggleDay
+      console.error("[Agenda] Erro ao alternar dia:", error);
+      toast.error(`Erro ao gerenciar agenda: ${error.message || 'Erro desconhecido'}`);
     }
   };
 
@@ -149,22 +155,27 @@ export default function Agenda() {
       newSlots = [...agendaExistente.horarios_disponiveis, slot].sort();
     }
 
-    await updateAgenda.mutateAsync({
-      id: agendaExistente.id,
-      horarios_disponiveis: newSlots
-    });
-
-    // Atualizar a descrição do evento principal no Google Calendar
-    if (agendaExistente.google_event_id) {
-      const startOfDay = parseISO(`${formattedDate}T08:00:00`);
-      const endOfDay = parseISO(`${formattedDate}T18:00:00`);
-      await syncGoogleCalendar('updateEvent', {
-        id: agendaExistente.google_event_id,
-        summary: `Agenda de ${selectedDentista.nome} - ${format(selectedDate!, 'dd/MM')}`,
-        description: `Horários disponíveis: ${newSlots.join(', ')}`,
-        start: { dateTime: startOfDay.toISOString(), timeZone: 'America/Sao_Paulo' },
-        end: { dateTime: endOfDay.toISOString(), timeZone: 'America/Sao_Paulo' },
+    try { // Adicionado try-catch
+      await updateAgenda.mutateAsync({
+        id: agendaExistente.id,
+        horarios_disponiveis: newSlots
       });
+
+      // Atualizar a descrição do evento principal no Google Calendar
+      if (agendaExistente.google_event_id) {
+        const startOfDay = parseISO(`${formattedDate}T08:00:00`);
+        const endOfDay = parseISO(`${formattedDate}T18:00:00`);
+        await syncGoogleCalendar('updateEvent', {
+          id: agendaExistente.google_event_id,
+          summary: `Agenda de ${selectedDentista.nome} - ${format(selectedDate!, 'dd/MM')}`,
+          description: `Horários disponíveis: ${newSlots.join(', ')}`,
+          start: { dateTime: startOfDay.toISOString(), timeZone: 'America/Sao_Paulo' },
+          end: { dateTime: endOfDay.toISOString(), timeZone: 'America/Sao_Paulo' },
+        });
+      }
+    } catch (error: any) { // Catch block para handleToggleSlot
+      console.error("[Agenda] Erro ao alternar horário:", error);
+      toast.error(`Erro ao gerenciar horário: ${error.message || 'Erro desconhecido'}`);
     }
   };
 
@@ -183,48 +194,53 @@ export default function Agenda() {
     const newSlotFormatted = `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
     let newGoogleEventId: string | null = null;
 
-    if (agendaExistente) {
-      if (agendaExistente.horarios_disponiveis.includes(newSlotFormatted)) {
-        toast.info("Este horário já está disponível.");
-        return;
-      }
-      const newSlots = [...agendaExistente.horarios_disponiveis, newSlotFormatted].sort();
-      await updateAgenda.mutateAsync({
-        id: agendaExistente.id,
-        horarios_disponiveis: newSlots
-      });
+    try { // Adicionado try-catch
+      if (agendaExistente) {
+        if (agendaExistente.horarios_disponiveis.includes(newSlotFormatted)) {
+          toast.info("Este horário já está disponível.");
+          return;
+        }
+        const newSlots = [...agendaExistente.horarios_disponiveis, newSlotFormatted].sort();
+        await updateAgenda.mutateAsync({
+          id: agendaExistente.id,
+          horarios_disponiveis: newSlots
+        });
 
-      // Atualizar a descrição do evento principal no Google Calendar
-      if (agendaExistente.google_event_id) {
-        const startOfDay = parseISO(`${formattedDate}T08:00:00`);
-        const endOfDay = parseISO(`${formattedDate}T18:00:00`);
-        await syncGoogleCalendar('updateEvent', {
-          id: agendaExistente.google_event_id,
+        // Atualizar a descrição do evento principal no Google Calendar
+        if (agendaExistente.google_event_id) {
+          const startOfDay = parseISO(`${formattedDate}T08:00:00`);
+          const endOfDay = parseISO(`${formattedDate}T18:00:00`);
+          await syncGoogleCalendar('updateEvent', {
+            id: agendaExistente.google_event_id,
+            summary: `Agenda de ${selectedDentista.nome} - ${format(selectedDate!, 'dd/MM')}`,
+            description: `Horários disponíveis: ${newSlots.join(', ')}`,
+            start: { dateTime: startOfDay.toISOString(), timeZone: 'America/Sao_Paulo' },
+            end: { dateTime: endOfDay.toISOString(), timeZone: 'America/Sao_Paulo' },
+          });
+        }
+      } else {
+        const newSlots = [newSlotFormatted];
+        newGoogleEventId = await syncGoogleCalendar('createEvent', {
           summary: `Agenda de ${selectedDentista.nome} - ${format(selectedDate!, 'dd/MM')}`,
           description: `Horários disponíveis: ${newSlots.join(', ')}`,
-          start: { dateTime: startOfDay.toISOString(), timeZone: 'America/Sao_Paulo' },
-          end: { dateTime: endOfDay.toISOString(), timeZone: 'America/Sao_Paulo' },
+          start: { dateTime: parseISO(`${formattedDate}T08:00:00`).toISOString(), timeZone: 'America/Sao_Paulo' },
+          end: { dateTime: parseISO(`${formattedDate}T18:00:00`).toISOString(), timeZone: 'America/Sao_Paulo' },
+        });
+
+        await createAgenda.mutateAsync({
+          dentista_id: selectedDentistaId,
+          clinica_id: clinicas[0].id,
+          data: formattedDate,
+          horarios_disponiveis: newSlots,
+          horarios_ocupados: [],
+          google_event_id: newGoogleEventId,
         });
       }
-    } else {
-      const newSlots = [newSlotFormatted];
-      newGoogleEventId = await syncGoogleCalendar('createEvent', {
-        summary: `Agenda de ${selectedDentista.nome} - ${format(selectedDate!, 'dd/MM')}`,
-        description: `Horários disponíveis: ${newSlots.join(', ')}`,
-        start: { dateTime: parseISO(`${formattedDate}T08:00:00`).toISOString(), timeZone: 'America/Sao_Paulo' },
-        end: { dateTime: parseISO(`${formattedDate}T18:00:00`).toISOString(), timeZone: 'America/Sao_Paulo' },
-      });
-
-      await createAgenda.mutateAsync({
-        dentista_id: selectedDentistaId,
-        clinica_id: clinicas[0].id,
-        data: formattedDate,
-        horarios_disponiveis: newSlots,
-        horarios_ocupados: [],
-        google_event_id: newGoogleEventId,
-      });
+      setNewManualSlot('');
+    } catch (error: any) { // Catch block para handleAddManualSlot
+      console.error("[Agenda] Erro ao adicionar horário manual:", error);
+      toast.error(`Erro ao adicionar horário: ${error.message || 'Erro desconhecido'}`);
     }
-    setNewManualSlot('');
   };
 
   const isDayOpen = !!(agendaExistente && agendaExistente.horarios_disponiveis.length > 0);
