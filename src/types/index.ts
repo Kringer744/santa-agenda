@@ -8,6 +8,7 @@ export interface Paciente {
   created_at: string;
   updated_at: string;
   tags: string[];
+  observacoes: string | null; // NOVO: Campo para observações
 }
 
 export interface Dentista {

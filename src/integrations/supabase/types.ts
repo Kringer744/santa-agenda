@@ -20,6 +20,7 @@ export interface Database {
           created_at: string
           updated_at: string
           tags: string[]
+          observacoes: string | null // NOVO: Campo para observações
         }
         Insert: {
           id?: string
@@ -31,6 +32,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
           tags?: string[]
+          observacoes?: string | null // NOVO: Campo para observações
         }
         Update: {
           id?: string
@@ -42,6 +44,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
           tags?: string[]
+          observacoes?: string | null // NOVO: Campo para observações
         }
         Relationships: []
       }
@@ -55,6 +58,7 @@ export interface Database {
           email: string | null
           created_at: string
           updated_at: string
+          google_calendar_id: string | null
         }
         Insert: {
           id?: string
@@ -65,6 +69,7 @@ export interface Database {
           email?: string | null
           created_at?: string
           updated_at?: string
+          google_calendar_id?: string | null
         }
         Update: {
           id?: string
@@ -75,6 +80,7 @@ export interface Database {
           email?: string | null
           created_at?: string
           updated_at?: string
+          google_calendar_id?: string | null
         }
         Relationships: []
       }
@@ -205,6 +211,7 @@ export interface Database {
           horarios_ocupados: string[]
           created_at: string
           updated_at: string
+          google_event_id: string | null
         }
         Insert: {
           id?: string
@@ -215,6 +222,7 @@ export interface Database {
           horarios_ocupados: string[]
           created_at?: string
           updated_at?: string
+          google_event_id?: string | null
         }
         Update: {
           id?: string
@@ -225,6 +233,7 @@ export interface Database {
           horarios_ocupados?: string[]
           created_at?: string
           updated_at?: string
+          google_event_id?: string | null
         }
         Relationships: []
       }

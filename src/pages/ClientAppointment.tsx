@@ -16,7 +16,8 @@ import { format, addMinutes, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { AgendaDentista } from '@/types'; // Importar AgendaDentista type
+import { AgendaDentista, Paciente } from '@/types'; // Importar AgendaDentista e Paciente type
+import { supabase } from '@/integrations/supabase/client'; // Importar supabase client
 
 export default function ClientAppointment() {
   const [searchParams] = useSearchParams();
@@ -32,6 +33,7 @@ export default function ClientAppointment() {
   const [telefone, setTelefone] = useState('');
   const [cpf, setCpf] = useState('');
   const [dataNascimento, setDataNascimento] = useState('');
+  const [currentPacienteId, setCurrentPacienteId] = useState<string | null>(pacienteIdUrl); // Novo estado para o ID do paciente atual
 
   const { data: dentistas = [] } = useDentistas();
   const { data: clinicas = [] } = useClinicas();
@@ -57,16 +59,44 @@ export default function ClientAppointment() {
         toast.error("Por favor, preencha todos os campos, incluindo sua data de nascimento.");
         return;
       }
-      const res = await createPaciente.mutateAsync({ 
-        nome, 
-        telefone, 
-        cpf, 
-        data_nascimento: dataNascimento,
-        tags: ['cliente-web'], 
-        email: null 
-      });
-      toast.success(`Olá ${res.nome}, vamos agendar sua consulta.`);
-      setStep(2);
+
+      // Formatar CPF e telefone para busca
+      const cleanedCpf = cpf.replace(/\D/g, '');
+      const cleanedTelefone = telefone.replace(/\D/g, '');
+
+      // 1. Verificar se o paciente já existe
+      const { data: existingPatients, error: fetchError } = await supabase
+        .from('pacientes')
+        .select('id, nome')
+        .or(`cpf.eq.${cleanedCpf},telefone.eq.${cleanedTelefone}`);
+
+      if (fetchError) throw fetchError;
+
+      let pacienteToUse: Paciente | null = null;
+
+      if (existingPatients && existingPatients.length > 0) {
+        pacienteToUse = existingPatients[0] as Paciente;
+        toast.info(`Paciente "${pacienteToUse.nome}" já cadastrado. Usando perfil existente.`);
+      } else {
+        // 2. Se não existe, criar novo paciente
+        const newPaciente = await createPaciente.mutateAsync({ 
+          nome, 
+          telefone: cleanedTelefone, 
+          cpf: cleanedCpf, 
+          data_nascimento: dataNascimento,
+          tags: ['cliente-web'], 
+          email: null,
+          observacoes: null, // Novo campo
+        });
+        pacienteToUse = newPaciente;
+        toast.success(`Olá ${newPaciente.nome}, vamos agendar sua consulta.`);
+      }
+      
+      if (pacienteToUse) {
+        setCurrentPacienteId(pacienteToUse.id);
+        setStep(2);
+      }
+
     } catch (err: any) { 
       console.error("Erro no cadastro:", err);
       toast.error(`Erro ao cadastrar: ${err.message || 'Verifique se os dados já existem.'}`); 
@@ -74,8 +104,7 @@ export default function ClientAppointment() {
   };
 
   const handleBook = async () => {
-    const paciente = pacienteIdUrl ? pacientes.find(p => p.id === pacienteIdUrl) : pacientes.find(p => p.telefone === telefone);
-    const pacienteId = paciente?.id;
+    const paciente = pacientes.find(p => p.id === currentPacienteId); // Usar currentPacienteId
     const selectedDentista = dentistas.find(d => d.id === selectedDentistaId);
     
     if (clinicas.length === 0) {
@@ -83,7 +112,7 @@ export default function ClientAppointment() {
       return;
     }
 
-    if (!pacienteId || !selectedDate || !selectedSlot || !selectedDentista) {
+    if (!currentPacienteId || !selectedDate || !selectedSlot || !selectedDentista) { // Usar currentPacienteId
       toast.error("Por favor, selecione o dentista, a data e o horário.");
       return;
     }
@@ -93,7 +122,7 @@ export default function ClientAppointment() {
 
     try {
       const newConsulta = await createConsulta.mutateAsync({
-        paciente_id: pacienteId,
+        paciente_id: currentPacienteId, // Usar currentPacienteId
         dentista_id: selectedDentistaId,
         clinica_id: clinicas[0]?.id || '',
         data_hora_inicio: startDateTime.toISOString(),

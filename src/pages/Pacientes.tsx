@@ -8,21 +8,27 @@ import {
   DialogContent, 
   DialogHeader, 
   DialogTitle, 
-  DialogTrigger 
+  DialogTrigger,
+  DialogFooter
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Plus, Search, Phone, Mail, Calendar, Trash2, Loader2, Smile } from 'lucide-react'; // Replaced Tooth with Smile
-import { usePacientes, useCreatePaciente, useDeletePaciente } from '@/hooks/usePacientes';
+import { Textarea } from '@/components/ui/textarea'; // Importar Textarea
+import { Plus, Search, Phone, Mail, Calendar, Trash2, Loader2, Smile, Edit } from 'lucide-react'; 
+import { usePacientes, useCreatePaciente, useDeletePaciente, useUpdatePaciente } from '@/hooks/usePacientes'; // Importar useUpdatePaciente
 import { useConsultas } from '@/hooks/useConsultas';
+import { Paciente } from '@/types'; // Importar tipo Paciente
 
 export default function Pacientes() {
   const [search, setSearch] = useState('');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingPaciente, setEditingPaciente] = useState<Paciente | null>(null);
   
   const { data: pacientes = [], isLoading } = usePacientes();
   const { data: consultas = [] } = useConsultas();
   const createPaciente = useCreatePaciente();
   const deletePaciente = useDeletePaciente();
+  const updatePaciente = useUpdatePaciente(); // Novo hook de atualização
   
   const filteredPacientes = pacientes.filter(paciente => 
     paciente.nome.toLowerCase().includes(search.toLowerCase()) ||
@@ -43,8 +49,27 @@ export default function Pacientes() {
       email: formData.get('email') as string || null,
       data_nascimento: formData.get('data_nascimento') as string || null,
       tags: ['novo'],
+      observacoes: null, // Novo campo
     }, {
-      onSuccess: () => setIsDialogOpen(false)
+      onSuccess: () => setIsCreateDialogOpen(false)
+    });
+  };
+
+  const handleEditPaciente = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingPaciente) return;
+
+    const formData = new FormData(e.currentTarget);
+    updatePaciente.mutate({
+      id: editingPaciente.id,
+      nome: formData.get('nome') as string,
+      cpf: formData.get('cpf') as string,
+      telefone: formData.get('telefone') as string,
+      email: formData.get('email') as string || null,
+      data_nascimento: formData.get('data_nascimento') as string || null,
+      observacoes: formData.get('observacoes') as string || null, // Novo campo
+    }, {
+      onSuccess: () => setIsEditDialogOpen(false)
     });
   };
 
@@ -59,14 +84,14 @@ export default function Pacientes() {
             </p>
           </div>
           
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
               <Button className="w-full md:w-auto">
                 <Plus className="w-4 h-4 mr-2" />
                 Novo Paciente
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Cadastrar Paciente</DialogTitle>
               </DialogHeader>
@@ -94,7 +119,7 @@ export default function Pacientes() {
                   <Input id="data_nascimento" name="data_nascimento" type="date" />
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                  <Button type="button" variant="outline" className="flex-1" onClick={() => setIsDialogOpen(false)}>
+                  <Button type="button" variant="outline" className="flex-1" onClick={() => setIsCreateDialogOpen(false)}>
                     Cancelar
                   </Button>
                   <Button type="submit" className="flex-1" disabled={createPaciente.isPending}>
@@ -150,6 +175,14 @@ export default function Pacientes() {
                       <Button 
                         size="icon" 
                         variant="ghost" 
+                        className="h-8 w-8 text-primary"
+                        onClick={() => { setEditingPaciente(paciente); setIsEditDialogOpen(true); }}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button 
+                        size="icon" 
+                        variant="ghost" 
                         className="h-8 w-8 text-destructive"
                         onClick={() => deletePaciente.mutate(paciente.id)}
                       >
@@ -178,13 +211,20 @@ export default function Pacientes() {
                     </div>
                   </div>
 
+                  {paciente.observacoes && (
+                    <div className="mt-4 pt-4 border-t border-border">
+                      <p className="text-xs text-muted-foreground mb-2 font-semibold">Observações:</p>
+                      <p className="text-sm text-foreground line-clamp-3">{paciente.observacoes}</p>
+                    </div>
+                  )}
+
                   {pacienteConsultas.length > 0 && (
                     <div className="mt-4 pt-4 border-t border-border">
                       <p className="text-xs text-muted-foreground mb-2">Consultas agendadas</p>
                       <div className="flex gap-2 flex-wrap">
                         {pacienteConsultas.map(consulta => (
                           <Badge key={consulta.id} className="bg-coral-light text-primary">
-                            <Smile className="w-3 h-3 mr-1" /> {consulta.codigo_consulta} {/* Replaced Tooth with Smile */}
+                            <Smile className="w-3 h-3 mr-1" /> {consulta.codigo_consulta}
                           </Badge>
                         ))}
                       </div>
@@ -194,6 +234,59 @@ export default function Pacientes() {
               );
             })}
           </div>
+        )}
+
+        {/* Dialog de Edição de Paciente */}
+        {editingPaciente && (
+          <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+            <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Editar Paciente</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleEditPaciente} className="space-y-4 mt-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit_nome">Nome completo</Label>
+                  <Input id="edit_nome" name="nome" required defaultValue={editingPaciente.nome} placeholder="Maria Silva" />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit_cpf">CPF</Label>
+                    <Input id="edit_cpf" name="cpf" required defaultValue={editingPaciente.cpf} placeholder="000.000.000-00" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit_telefone">WhatsApp</Label>
+                    <Input id="edit_telefone" name="telefone" required defaultValue={editingPaciente.telefone} placeholder="11999999999" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit_email">E-mail</Label>
+                  <Input id="edit_email" name="email" type="email" defaultValue={editingPaciente.email || ''} placeholder="maria@email.com" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit_data_nascimento">Data de nascimento</Label>
+                  <Input id="edit_data_nascimento" name="data_nascimento" type="date" defaultValue={editingPaciente.data_nascimento || ''} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit_observacoes">Observações</Label>
+                  <Textarea 
+                    id="edit_observacoes" 
+                    name="observacoes" 
+                    defaultValue={editingPaciente.observacoes || ''} 
+                    placeholder="Último atendimento, procedimentos realizados, alergias, etc." 
+                    className="min-h-[100px]"
+                  />
+                </div>
+                <DialogFooter className="flex flex-col sm:flex-row gap-3 pt-4">
+                  <Button type="button" variant="outline" className="flex-1" onClick={() => setIsEditDialogOpen(false)}>
+                    Cancelar
+                  </Button>
+                  <Button type="submit" className="flex-1" disabled={updatePaciente.isPending}>
+                    {updatePaciente.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar Alterações'}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
         )}
       </div>
     </Layout>

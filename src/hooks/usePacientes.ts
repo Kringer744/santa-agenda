@@ -50,6 +50,41 @@ export function useCreatePaciente() {
   });
 }
 
+export function useUpdatePaciente() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ id, ...paciente }: Partial<Paciente> & { id: string }) => {
+      const { data, error } = await supabase
+        .from('pacientes')
+        .update(paciente)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        if (error.code === '23505') { // Erro de violação de unicidade (ex: CPF duplicado)
+          throw new Error('Este CPF ou telefone já está cadastrado para outro paciente.');
+        }
+        throw error;
+      }
+      return data as Paciente;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['pacientes'] });
+      toast({ title: `Paciente ${data.nome} atualizado com sucesso!` });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erro ao atualizar paciente',
+        description: error.message,
+        variant: 'destructive'
+      });
+    },
+  });
+}
+
 export function useDeletePaciente() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
