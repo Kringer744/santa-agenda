@@ -9,13 +9,14 @@ import { Loader2, CheckCircle, Clock, Stethoscope, CreditCard, ChevronLeft, Cake
 import { useDentistas } from '@/hooks/useDentistas';
 import { usePacientes, useCreatePaciente } from '@/hooks/usePacientes';
 import { useClinicas } from '@/hooks/useClinicas';
-import { useAgendaDia, useUpdateAgendaDentista } from '@/hooks/useAgendaDentista'; // Importar useUpdateAgendaDentista
+import { useTodasAgendas, useUpdateAgendaDentista } from '@/hooks/useAgendaDentista'; // Importar useTodasAgendas
 import { useCreateConsulta } from '@/hooks/useConsultas';
 import { useGoogleCalendarSync } from '@/hooks/useGoogleCalendar'; // Importar o novo hook
 import { format, addMinutes, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { AgendaDentista } from '@/types'; // Importar AgendaDentista type
 
 export default function ClientAppointment() {
   const [searchParams] = useSearchParams();
@@ -35,7 +36,7 @@ export default function ClientAppointment() {
   const { data: dentistas = [] } = useDentistas();
   const { data: clinicas = [] } = useClinicas();
   const { data: pacientes = [] } = usePacientes();
-  const { data: todasAgendas = [] } = useAgendaDia();
+  const { data: todasAgendas = [] } = useTodasAgendas(); // Usar useTodasAgendas
   const createConsulta = useCreateConsulta();
   const createPaciente = useCreatePaciente();
   const updateAgenda = useUpdateAgendaDentista(); // Hook para atualizar a agenda do dentista
@@ -44,9 +45,9 @@ export default function ClientAppointment() {
   const availableSlots = useMemo(() => {
     if (!selectedDate || !selectedDentistaId) return [];
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
-    const agenda = todasAgendas.find(a => a.dentista_id === selectedDentistaId && a.data === dateStr);
+    const agenda = todasAgendas.find((a: AgendaDentista) => a.dentista_id === selectedDentistaId && a.data === dateStr);
     if (!agenda) return [];
-    return agenda.horarios_disponiveis.filter(slot => !agenda.horarios_ocupados.includes(slot));
+    return agenda.horarios_disponiveis.filter((slot: string) => !agenda.horarios_ocupados.includes(slot));
   }, [selectedDate, selectedDentistaId, todasAgendas]);
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -105,7 +106,7 @@ export default function ClientAppointment() {
       });
 
       // Atualizar agenda do dentista no Supabase para marcar o horário como ocupado
-      const agendaDoDia = todasAgendas.find(a => a.dentista_id === selectedDentistaId && a.data === format(selectedDate, 'yyyy-MM-dd'));
+      const agendaDoDia = todasAgendas.find((a: AgendaDentista) => a.dentista_id === selectedDentistaId && a.data === format(selectedDate, 'yyyy-MM-dd'));
       if (agendaDoDia) {
         const newHorariosOcupados = [...agendaDoDia.horarios_ocupados, selectedSlot].sort();
         await updateAgenda.mutateAsync({
@@ -247,7 +248,7 @@ export default function ClientAppointment() {
                 <Label className="text-lg font-bold">Horários para {selectedDate ? format(selectedDate, "dd 'de' MMMM", { locale: ptBR }) : ''}</Label>
                 {availableSlots.length > 0 ? (
                   <div className="grid grid-cols-3 gap-2">
-                    {availableSlots.map(slot => (
+                    {availableSlots.map((slot: string) => (
                       <Button 
                         key={slot} 
                         variant={selectedSlot === slot ? "default" : "outline"}

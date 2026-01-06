@@ -7,7 +7,7 @@ import { usePacientes } from '@/hooks/usePacientes';
 import { useClinicas } from '@/hooks/useClinicas';
 import { ConsultasList } from '@/components/dashboard/ConsultasList';
 import { AgendaChart } from '@/components/dashboard/AgendaChart';
-import { useAgendaDia } from '@/hooks/useAgendaDia';
+import { useTodasAgendas } from '@/hooks/useAgendaDentista'; // Usar useTodasAgendas
 
 export default function Dashboard() {
   const hoje = new Date().toISOString().split('T')[0];
@@ -16,7 +16,7 @@ export default function Dashboard() {
   const { data: dentistas = [], isLoading: loadingDentistas } = useDentistas();
   const { data: pacientes = [], isLoading: loadingPacientes } = usePacientes();
   const { data: clinicas = [], isLoading: loadingClinicas } = useClinicas();
-  const { data: agendaDia = [], isLoading: loadingAgenda } = useAgendaDia();
+  const { data: todasAgendas = [], isLoading: loadingAgenda } = useTodasAgendas(); // Usar useTodasAgendas
 
   const isLoading = loadingConsultas || loadingDentistas || loadingPacientes || loadingClinicas || loadingAgenda;
 
@@ -32,6 +32,9 @@ export default function Dashboard() {
       </Layout>
     );
   }
+
+  // Filtrar as agendas para o gráfico, pegando as 5 primeiras ou as relevantes
+  const agendaParaChart = todasAgendas.slice(0, 5);
 
   return (
     <Layout>
@@ -87,7 +90,7 @@ export default function Dashboard() {
             />
           </div>
           <div className="space-y-6">
-            <AgendaChart agenda={agendaDia.slice(0, 5)} dentistas={dentistas} clinicas={clinicas} />
+            <AgendaChart agenda={agendaParaChart} dentistas={dentistas} clinicas={clinicas} />
             <div className="bg-primary/5 border border-primary/20 rounded-xl p-6">
               <h3 className="font-bold text-primary mb-2 flex items-center gap-2">
                 <MessageSquare size={18} /> Lembretes WhatsApp

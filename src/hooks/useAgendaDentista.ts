@@ -3,7 +3,8 @@ import { useToast } from '@/hooks/use-toast';
 import { AgendaDentista } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 
-export function useAgendaDentistaDoDia(dentistaId: string | undefined, date: string | undefined) {
+// Hook para buscar a agenda de um dentista para um dia específico
+export function useAgendaDia(dentistaId: string | undefined, date: string | undefined) {
   return useQuery<AgendaDentista | null>({
     queryKey: ['agendaDentistaDoDia', dentistaId, date],
     queryFn: async () => {
@@ -18,6 +19,18 @@ export function useAgendaDentistaDoDia(dentistaId: string | undefined, date: str
       return data as AgendaDentista;
     },
     enabled: !!dentistaId && !!date,
+  });
+}
+
+// NOVO: Hook para buscar todas as agendas (para uso em Dashboard e ClientAppointment)
+export function useTodasAgendas() {
+  return useQuery<AgendaDentista[]>({
+    queryKey: ['todasAgendas'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('agenda_dentista').select('*');
+      if (error) throw error;
+      return data as AgendaDentista[];
+    },
   });
 }
 
@@ -38,7 +51,7 @@ export function useCreateAgendaDentista() {
     },
     onSuccess: (data: AgendaDentista) => {
       queryClient.invalidateQueries({ queryKey: ['agendaDentistaDoDia', data.dentista_id, data.data] });
-      queryClient.invalidateQueries({ queryKey: ['agendaDia'] });
+      queryClient.invalidateQueries({ queryKey: ['todasAgendas'] }); // Invalida o novo hook também
       toast({ title: 'Agenda do dia criada com sucesso!' });
     },
     onError: (error: Error) => {
@@ -65,7 +78,7 @@ export function useUpdateAgendaDentista() {
     },
     onSuccess: (data: AgendaDentista) => {
       queryClient.invalidateQueries({ queryKey: ['agendaDentistaDoDia', data.dentista_id, data.data] });
-      queryClient.invalidateQueries({ queryKey: ['agendaDia'] });
+      queryClient.invalidateQueries({ queryKey: ['todasAgendas'] }); // Invalida o novo hook também
       toast({ title: 'Agenda do dia atualizada com sucesso!' });
     },
     onError: (error: Error) => {

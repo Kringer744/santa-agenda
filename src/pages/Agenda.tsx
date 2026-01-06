@@ -6,16 +6,17 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Input } from '@/components/ui/input'; // Importar Input para adicionar horários
+import { Input } from '@/components/ui/input';
 import { Loader2, CalendarDays, CheckCircle, XCircle, Clock, PlusCircle } from 'lucide-react';
 import { useDentistas } from '@/hooks/useDentistas';
 import { useClinicas } from '@/hooks/useClinicas';
-import { useAgendaDentistaDoDia, useCreateAgendaDentista, useUpdateAgendaDentista } from '@/hooks/useAgendaDentista';
-import { useGoogleCalendarSync } from '@/hooks/useGoogleCalendar'; // Importar o novo hook
+import { useAgendaDia, useCreateAgendaDentista, useUpdateAgendaDentista } from '@/hooks/useAgendaDentista';
+import { useGoogleCalendarSync } from '@/hooks/useGoogleCalendar';
 import { cn } from '@/lib/utils';
-import { format, parseISO, setHours, setMinutes } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
+// Removido: import { AgendaDentista } from '@/types'; // Importar AgendaDentista type
 
 const DEFAULT_TIME_SLOTS = [
   '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
@@ -26,7 +27,7 @@ const DEFAULT_TIME_SLOTS = [
 export default function Agenda() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedDentistaId, setSelectedDentistaId] = useState<string>('');
-  const [newManualSlot, setNewManualSlot] = useState(''); // Estado para novo horário manual
+  const [newManualSlot, setNewManualSlot] = useState('');
   
   const { data: dentistas = [] } = useDentistas();
   const { data: clinicas = [] } = useClinicas();
@@ -36,11 +37,11 @@ export default function Agenda() {
   }, [dentistas, selectedDentistaId]);
 
   const formattedDate = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '';
-  const { data: agendaExistente, isLoading: loadingAgenda } = useAgendaDentistaDoDia(selectedDentistaId, formattedDate);
+  const { data: agendaExistente, isLoading: loadingAgenda } = useAgendaDia(selectedDentistaId, formattedDate);
   
   const createAgenda = useCreateAgendaDentista();
   const updateAgenda = useUpdateAgendaDentista();
-  const googleCalendarSync = useGoogleCalendarSync(); // Usar o hook de sincronização
+  const googleCalendarSync = useGoogleCalendarSync();
 
   const selectedDentista = dentistas.find(d => d.id === selectedDentistaId);
   const googleCalendarId = selectedDentista?.google_calendar_id;
@@ -48,14 +49,15 @@ export default function Agenda() {
   const syncGoogleCalendar = async (action: 'createEvent' | 'updateEvent' | 'deleteEvent', eventData: any) => {
     if (!googleCalendarId) {
       toast.warning("ID do Google Calendar não configurado para este dentista.");
-      return;
+      return null; // Retorna null para indicar que não houve sincronização
     }
     try {
-      await googleCalendarSync.mutateAsync({ action, eventData, calendarId: googleCalendarId });
+      const result = await googleCalendarSync.mutateAsync({ action, eventData, calendarId: googleCalendarId });
       toast.success(`Evento no Google Calendar ${action === 'createEvent' ? 'criado' : action === 'updateEvent' ? 'atualizado' : 'excluído'}!`);
+      return result.event?.id; // Retorna o ID do evento do Google Calendar
     } catch (error) {
       console.error("Erro ao sincronizar com Google Calendar:", error);
-      // toast.error(`Falha ao sincronizar com Google Calendar: ${error.message}`); // O hook já trata o toast de erro
+      return null;
     }
   };
 
@@ -63,21 +65,16 @@ export default function Agenda() {
     if (!selectedDentistaId || clinicas.length === 0 || !formattedDate || !selectedDentista) return;
     
     const slots = open ? DEFAULT_TIME_SLOTS : [];
-    
-    if (agendaExistente) {
-      await updateAgenda.mutateAsync({
-        id: agendaExistente.id,
-        horarios_disponiveis: slots,
-        horarios_ocupados: [] // Limpa horários ocupados ao fechar/abrir o dia
-      });
+    let newGoogleEventId: string | null = null;
 
-      // Sincronizar com Google Calendar
+    if (agendaExistente) {
       if (!open && agendaExistente.google_event_id) { // Se fechar o dia e houver um evento principal
         await syncGoogleCalendar('deleteEvent', { id: agendaExistente.google_event_id });
+        newGoogleEventId = null;
       } else if (open && !agendaExistente.google_event_id) { // Se abrir o dia e não houver evento principal
         const startOfDay = parseISO(`${formattedDate}T08:00:00`);
         const endOfDay = parseISO(`${formattedDate}T18:00:00`);
-        await syncGoogleCalendar('createEvent', {
+        newGoogleEventId = await syncGoogleCalendar('createEvent', {
           summary: `Agenda de ${selectedDentista.nome} - ${format(selectedDate!, 'dd/MM')}`,
           description: `Horários disponíveis: ${slots.join(', ')}`,
           start: { dateTime: startOfDay.toISOString(), timeZone: 'America/Sao_Paulo' },
@@ -93,28 +90,36 @@ export default function Agenda() {
           start: { dateTime: startOfDay.toISOString(), timeZone: 'America/Sao_Paulo' },
           end: { dateTime: endOfDay.toISOString(), timeZone: 'America/Sao_Paulo' },
         });
+        newGoogleEventId = agendaExistente.google_event_id;
       }
 
-    } else {
-      const newAgenda = await createAgenda.mutateAsync({
-        dentista_id: selectedDentistaId,
-        clinica_id: clinicas[0].id, // Usa a única clínica disponível
-        data: formattedDate,
+      await updateAgenda.mutateAsync({
+        id: agendaExistente.id,
         horarios_disponiveis: slots,
-        horarios_ocupados: []
+        horarios_ocupados: [], // Limpa horários ocupados ao fechar/abrir o dia
+        google_event_id: newGoogleEventId,
       });
 
-      // Sincronizar com Google Calendar se o dia for aberto
+    } else {
       if (open) {
         const startOfDay = parseISO(`${formattedDate}T08:00:00`);
         const endOfDay = parseISO(`${formattedDate}T18:00:00`);
-        await syncGoogleCalendar('createEvent', {
+        newGoogleEventId = await syncGoogleCalendar('createEvent', {
           summary: `Agenda de ${selectedDentista.nome} - ${format(selectedDate!, 'dd/MM')}`,
           description: `Horários disponíveis: ${slots.join(', ')}`,
           start: { dateTime: startOfDay.toISOString(), timeZone: 'America/Sao_Paulo' },
           end: { dateTime: endOfDay.toISOString(), timeZone: 'America/Sao_Paulo' },
         });
       }
+
+      await createAgenda.mutateAsync({
+        dentista_id: selectedDentistaId,
+        clinica_id: clinicas[0].id,
+        data: formattedDate,
+        horarios_disponiveis: slots,
+        horarios_ocupados: [],
+        google_event_id: newGoogleEventId,
+      });
     }
   };
 
@@ -125,12 +130,9 @@ export default function Agenda() {
     let newSlots: string[];
     
     if (isAvailable) {
-      newSlots = agendaExistente.horarios_disponiveis.filter(s => s !== slot);
-      // Se o slot estava disponível e foi desativado, e não está ocupado, podemos tentar remover um evento específico se houver
-      // Para simplificar, vamos apenas atualizar a descrição do evento principal do dia no Google Calendar
+      newSlots = agendaExistente.horarios_disponiveis.filter((s: string) => s !== slot);
     } else {
       newSlots = [...agendaExistente.horarios_disponiveis, slot].sort();
-      // Se o slot foi ativado, atualizamos a descrição do evento principal
     }
 
     await updateAgenda.mutateAsync({
@@ -165,6 +167,7 @@ export default function Agenda() {
     }
 
     const newSlotFormatted = `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
+    let newGoogleEventId: string | null = null;
 
     if (agendaExistente) {
       if (agendaExistente.horarios_disponiveis.includes(newSlotFormatted)) {
@@ -190,22 +193,21 @@ export default function Agenda() {
         });
       }
     } else {
-      const newAgenda = await createAgenda.mutateAsync({
+      const newSlots = [newSlotFormatted];
+      newGoogleEventId = await syncGoogleCalendar('createEvent', {
+        summary: `Agenda de ${selectedDentista.nome} - ${format(selectedDate!, 'dd/MM')}`,
+        description: `Horários disponíveis: ${newSlots.join(', ')}`,
+        start: { dateTime: parseISO(`${formattedDate}T08:00:00`).toISOString(), timeZone: 'America/Sao_Paulo' },
+        end: { dateTime: parseISO(`${formattedDate}T18:00:00`).toISOString(), timeZone: 'America/Sao_Paulo' },
+      });
+
+      await createAgenda.mutateAsync({
         dentista_id: selectedDentistaId,
         clinica_id: clinicas[0].id,
         data: formattedDate,
-        horarios_disponiveis: [newSlotFormatted],
-        horarios_ocupados: []
-      });
-
-      // Criar evento principal no Google Calendar se for o primeiro slot adicionado
-      const startOfDay = parseISO(`${formattedDate}T08:00:00`);
-      const endOfDay = parseISO(`${formattedDate}T18:00:00`);
-      await syncGoogleCalendar('createEvent', {
-        summary: `Agenda de ${selectedDentista.nome} - ${format(selectedDate!, 'dd/MM')}`,
-        description: `Horários disponíveis: ${[newSlotFormatted].join(', ')}`,
-        start: { dateTime: startOfDay.toISOString(), timeZone: 'America/Sao_Paulo' },
-        end: { dateTime: endOfDay.toISOString(), timeZone: 'America/Sao_Paulo' },
+        horarios_disponiveis: newSlots,
+        horarios_ocupados: [],
+        google_event_id: newGoogleEventId,
       });
     }
     setNewManualSlot('');
@@ -283,7 +285,7 @@ export default function Agenda() {
               ) : (
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                    {[...new Set([...DEFAULT_TIME_SLOTS, ...(agendaExistente?.horarios_disponiveis || [])])].sort().map(slot => {
+                    {[...new Set([...DEFAULT_TIME_SLOTS, ...(agendaExistente?.horarios_disponiveis || [])])].sort().map((slot: string) => {
                       const isAvailable = agendaExistente?.horarios_disponiveis.includes(slot);
                       const isOccupied = agendaExistente?.horarios_ocupados.includes(slot);
                       

@@ -68,6 +68,7 @@ export interface AgendaDentista { // Changed from VagaDia
   clinica_id: string; // Link to Clinica
   horarios_disponiveis: string[]; // Array of time slots, e.g., ['09:00', '09:30']
   horarios_ocupados: string[]; // Array of occupied time slots
+  google_event_id: string | null; // NOVO: ID do evento principal no Google Calendar para este dia
   created_at: string; // Added created_at
   updated_at: string; // Added updated_at
 }

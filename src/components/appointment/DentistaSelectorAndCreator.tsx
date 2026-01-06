@@ -43,6 +43,7 @@ export function DentistaSelectorAndCreator({
         especialidade: formData.get('especialidade') as string || null,
         telefone: formData.get('telefone') as string || null,
         email: formData.get('email') as string || null,
+        google_calendar_id: null, // Adicionado para satisfazer o tipo
       });
       toast.success('Dentista cadastrado com sucesso!');
       onSelectDentista(newDentista.id);
