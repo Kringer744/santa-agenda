@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { sendTextMessage } from '@/lib/uazap';
-import { format } from 'date-fns';
+import { format, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Consulta, Paciente, Dentista } from '@/types';
 
@@ -116,7 +116,7 @@ export async function getPatientsWithBirthdayToday(): Promise<Paciente[]> {
   }
 }
 
-// NOVO: Busca aniversariantes do mês atual
+// Busca aniversariantes do mês atual
 export async function getPatientsWithBirthdayThisMonth(): Promise<Paciente[]> {
   try {
     const today = new Date();
@@ -147,7 +147,6 @@ function replaceTemplateVariables(
   consulta: Consulta | null
 ): string {
   let message = template.replace(/\{\{nome_paciente\}\}/g, paciente.nome);
-  // Compatibilidade com template {{nome}}
   message = message.replace(/\{\{nome\}\}/g, paciente.nome);
 
   if (dentista) {
@@ -171,7 +170,7 @@ export async function sendAutomatedMessage(
 ): Promise<boolean> {
   try {
     const config = await loadWhatsAppConfig();
-    if (!config) return false;
+    if (!config || !config.apiUrl || !config.instanceToken) return false;
     
     const templates = await loadActiveTemplates();
     const template = templates.find(t => t.tipo === templateType);
@@ -203,18 +202,49 @@ export async function sendAutomatedMessage(
   }
 }
 
+// NOVO: Função para enviar todos os lembretes de amanhã
+export async function sendRemindersForTomorrow(): Promise<{ success: number; total: number }> {
+  const tomorrow = addDays(new Date(), 1);
+  const tomorrowStr = format(tomorrow, 'yyyy-MM-dd');
+
+  // Busca consultas de amanhã que estão agendadas ou confirmadas
+  const { data: consultas, error } = await supabase
+    .from('consultas')
+    .select('*')
+    .ilike('data_hora_inicio', `${tomorrowStr}%`)
+    .in('status', ['agendada', 'confirmada']);
+
+  if (error) throw error;
+  if (!consultas || consultas.length === 0) return { success: 0, total: 0 };
+
+  let successCount = 0;
+  for (const consulta of consultas as any as Consulta[]) {
+    // Verifica se já não enviamos um lembrete hoje para esta consulta
+    const { data: existing } = await supabase
+      .from('whatsapp_messages')
+      .select('id')
+      .eq('consulta_id', consulta.id)
+      .eq('tipo', 'lembrete_consulta')
+      .eq('status', 'enviada')
+      .limit(1);
+
+    if (!existing || existing.length === 0) {
+      const sent = await sendAutomatedMessage(consulta, 'lembrete_consulta');
+      if (sent) successCount++;
+    }
+  }
+
+  return { success: successCount, total: consultas.length };
+}
+
 export async function checkAndSendAutomatedMessages(consulta: Consulta): Promise<void> {
+  // Lógica de disparo individual (mantida para quando uma consulta é criada/atualizada)
   try {
     if (consulta.status === 'confirmada' && consulta.data_hora_inicio) {
       const consultaDate = new Date(consulta.data_hora_inicio);
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrow = addDays(new Date(), 1);
       
-      if (
-        consultaDate.getDate() === tomorrow.getDate() &&
-        consultaDate.getMonth() === tomorrow.getMonth() &&
-        consultaDate.getFullYear() === tomorrow.getFullYear()
-      ) {
+      if (format(consultaDate, 'yyyy-MM-dd') === format(tomorrow, 'yyyy-MM-dd')) {
         const { data: existingMessage } = await supabase
           .from('whatsapp_messages')
           .select('id')

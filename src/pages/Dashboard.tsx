@@ -1,27 +1,58 @@
+import { useState } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { StatsCard } from '@/components/dashboard/StatsCard';
-import { CalendarCheck, Users, TrendingUp, Loader2, Stethoscope, Clock, MessageSquare } from 'lucide-react'; 
+import { CalendarCheck, Users, TrendingUp, Loader2, Stethoscope, Clock, MessageSquare, Send } from 'lucide-react'; 
 import { useConsultas } from '@/hooks/useConsultas';
 import { useDentistas } from '@/hooks/useDentistas';
 import { usePacientes } from '@/hooks/usePacientes';
 import { useClinicas } from '@/hooks/useClinicas';
 import { ConsultasList } from '@/components/dashboard/ConsultasList';
 import { AgendaChart } from '@/components/dashboard/AgendaChart';
-import { useTodasAgendas } from '@/hooks/useAgendaDentista'; // Usar useTodasAgendas
+import { useTodasAgendas } from '@/hooks/useAgendaDentista';
+import { sendRemindersForTomorrow } from '@/lib/whatsappClinicAutomation';
+import { toast } from 'sonner';
+import { format, addDays } from 'date-fns';
 
 export default function Dashboard() {
+  const [isSendingReminders, setIsSendingReminders] = useState(false);
   const hoje = new Date().toISOString().split('T')[0];
+  const amanha = format(addDays(new Date(), 1), 'yyyy-MM-dd');
   
   const { data: consultas = [], isLoading: loadingConsultas } = useConsultas();
   const { data: dentistas = [], isLoading: loadingDentistas } = useDentistas();
   const { data: pacientes = [], isLoading: loadingPacientes } = usePacientes();
   const { data: clinicas = [], isLoading: loadingClinicas } = useClinicas();
-  const { data: todasAgendas = [], isLoading: loadingAgenda } = useTodasAgendas(); // Usar useTodasAgendas
+  const { data: todasAgendas = [], isLoading: loadingAgenda } = useTodasAgendas();
 
   const isLoading = loadingConsultas || loadingDentistas || loadingPacientes || loadingClinicas || loadingAgenda;
 
   const consultasHoje = consultas.filter(c => c.data_hora_inicio.startsWith(hoje));
+  const consultasAmanha = consultas.filter(c => 
+    c.data_hora_inicio.startsWith(amanha) && 
+    (c.status === 'agendada' || c.status === 'confirmada')
+  );
   const consultasPendentes = consultas.filter(c => c.status === 'agendada' || c.status === 'confirmada').length;
+
+  const handleSendReminders = async () => {
+    if (consultasAmanha.length === 0) {
+      toast.info('Nenhuma consulta agendada para amanhã.');
+      return;
+    }
+
+    setIsSendingReminders(true);
+    try {
+      const result = await sendRemindersForTomorrow();
+      if (result.total === 0) {
+        toast.info('Nenhum lembrete novo para enviar.');
+      } else {
+        toast.success(`${result.success} de ${result.total} lembretes enviados com sucesso!`);
+      }
+    } catch (error: any) {
+      toast.error(`Erro ao enviar lembretes: ${error.message}`);
+    } finally {
+      setIsSendingReminders(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -33,7 +64,6 @@ export default function Dashboard() {
     );
   }
 
-  // Filtrar as agendas para o gráfico, pegando as 5 primeiras ou as relevantes
   const agendaParaChart = todasAgendas.slice(0, 5);
 
   return (
@@ -96,10 +126,19 @@ export default function Dashboard() {
                 <MessageSquare size={18} /> Lembretes WhatsApp
               </h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Existem {consultasHoje.length} pacientes aguardando confirmação para amanhã.
+                Existem {consultasAmanha.length} pacientes com consulta agendada para amanhã.
               </p>
-              <button className="w-full bg-primary text-white py-2 rounded-lg text-sm font-bold hover:bg-primary/90 transition-colors">
-                Enviar Lembretes
+              <button 
+                onClick={handleSendReminders}
+                disabled={isSendingReminders || consultasAmanha.length === 0}
+                className="w-full bg-primary text-white py-2 rounded-lg text-sm font-bold hover:bg-primary/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSendingReminders ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+                {isSendingReminders ? 'Enviando...' : 'Enviar Lembretes para Amanhã'}
               </button>
             </div>
           </div>
