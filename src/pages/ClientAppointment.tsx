@@ -9,8 +9,9 @@ import { Loader2, CheckCircle, Clock, Stethoscope, CreditCard, ChevronLeft, Cake
 import { useDentistas } from '@/hooks/useDentistas';
 import { usePacientes, useCreatePaciente } from '@/hooks/usePacientes';
 import { useClinicas } from '@/hooks/useClinicas';
-import { useAgendaDia } from '@/hooks/useAgendaDia';
+import { useAgendaDia, useUpdateAgendaDentista } from '@/hooks/useAgendaDentista'; // Importar useUpdateAgendaDentista
 import { useCreateConsulta } from '@/hooks/useConsultas';
+import { useGoogleCalendarSync } from '@/hooks/useGoogleCalendar'; // Importar o novo hook
 import { format, addMinutes, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -37,6 +38,8 @@ export default function ClientAppointment() {
   const { data: todasAgendas = [] } = useAgendaDia();
   const createConsulta = useCreateConsulta();
   const createPaciente = useCreatePaciente();
+  const updateAgenda = useUpdateAgendaDentista(); // Hook para atualizar a agenda do dentista
+  const googleCalendarSync = useGoogleCalendarSync(); // Hook para sincronização com Google Calendar
 
   const availableSlots = useMemo(() => {
     if (!selectedDate || !selectedDentistaId) return [];
@@ -70,34 +73,63 @@ export default function ClientAppointment() {
   };
 
   const handleBook = async () => {
-    const pacienteId = pacienteIdUrl || pacientes.find(p => p.telefone === telefone)?.id;
+    const paciente = pacienteIdUrl ? pacientes.find(p => p.id === pacienteIdUrl) : pacientes.find(p => p.telefone === telefone);
+    const pacienteId = paciente?.id;
+    const selectedDentista = dentistas.find(d => d.id === selectedDentistaId);
     
     if (clinicas.length === 0) {
       toast.error("Erro interno: Clínica não configurada. O administrador precisa acessar as Configurações do sistema primeiro.");
       return;
     }
 
-    if (!pacienteId || !selectedDate || !selectedSlot || !selectedDentistaId) {
+    if (!pacienteId || !selectedDate || !selectedSlot || !selectedDentista) {
       toast.error("Por favor, selecione o dentista, a data e o horário.");
       return;
     }
 
-    const start = parseISO(`${format(selectedDate, 'yyyy-MM-dd')}T${selectedSlot}:00`);
-    const end = addMinutes(start, 30);
+    const startDateTime = parseISO(`${format(selectedDate, 'yyyy-MM-dd')}T${selectedSlot}:00`);
+    const endDateTime = addMinutes(startDateTime, 30); // Assumindo consultas de 30 minutos
 
     try {
-      await createConsulta.mutateAsync({
+      const newConsulta = await createConsulta.mutateAsync({
         paciente_id: pacienteId,
         dentista_id: selectedDentistaId,
         clinica_id: clinicas[0]?.id || '',
-        data_hora_inicio: start.toISOString(),
-        data_hora_fim: end.toISOString(),
-        procedimentos: [],
-        valor_total: 150,
+        data_hora_inicio: startDateTime.toISOString(),
+        data_hora_fim: endDateTime.toISOString(),
+        procedimentos: [], // Pode ser adicionado depois
+        valor_total: 150, // Valor fixo por enquanto
         pix_txid: null,
         pix_qr_code_base64: null,
         pix_copia_e_cola: null,
       });
+
+      // Atualizar agenda do dentista no Supabase para marcar o horário como ocupado
+      const agendaDoDia = todasAgendas.find(a => a.dentista_id === selectedDentistaId && a.data === format(selectedDate, 'yyyy-MM-dd'));
+      if (agendaDoDia) {
+        const newHorariosOcupados = [...agendaDoDia.horarios_ocupados, selectedSlot].sort();
+        await updateAgenda.mutateAsync({
+          id: agendaDoDia.id,
+          horarios_ocupados: newHorariosOcupados
+        });
+      }
+
+      // Sincronizar com Google Calendar
+      if (selectedDentista.google_calendar_id) {
+        await googleCalendarSync.mutateAsync({
+          action: 'createEvent',
+          calendarId: selectedDentista.google_calendar_id,
+          eventData: {
+            summary: `Consulta: ${paciente?.nome} com ${selectedDentista.nome}`,
+            description: `Paciente: ${paciente?.nome}\nTelefone: ${paciente?.telefone}\nConsulta ID: ${newConsulta.id}`,
+            start: { dateTime: startDateTime.toISOString(), timeZone: 'America/Sao_Paulo' },
+            end: { dateTime: endDateTime.toISOString(), timeZone: 'America/Sao_Paulo' },
+            attendees: [{ email: paciente?.email || '' }, { email: selectedDentista.email || '' }].filter(a => a.email),
+          }
+        });
+      } else {
+        toast.warning("ID do Google Calendar não configurado para este dentista. Agendamento não sincronizado.");
+      }
 
       setPixData({ 
         qrCodeBase64: 'placeholder', 

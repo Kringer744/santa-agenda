@@ -17,6 +17,7 @@ export interface Dentista {
   especialidade: string | null;
   telefone: string | null;
   email: string | null;
+  google_calendar_id: string | null; // NOVO: ID do Google Calendar do dentista
   created_at: string;
   updated_at: string;
 }
