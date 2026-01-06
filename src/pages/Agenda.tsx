@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
-// Removido: import { AgendaDentista } from '@/types';
+// Removido: import { AgendaDentista } from '@/types'; // Importar AgendaDentista type
 
 const DEFAULT_TIME_SLOTS = [
   '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
@@ -49,12 +49,12 @@ export default function Agenda() {
   const syncGoogleCalendar = async (action: 'createEvent' | 'updateEvent' | 'deleteEvent', eventData: any) => {
     if (!googleCalendarId) {
       toast.warning("ID do Google Calendar não configurado para este dentista.");
-      return null;
+      return null; // Retorna null para indicar que não houve sincronização
     }
     try {
       const result = await googleCalendarSync.mutateAsync({ action, eventData, calendarId: googleCalendarId });
       toast.success(`Evento no Google Calendar ${action === 'createEvent' ? 'criado' : action === 'updateEvent' ? 'atualizado' : 'excluído'}!`);
-      return result.event?.id;
+      return result.event?.id; // Retorna o ID do evento do Google Calendar
     } catch (error) {
       console.error("Erro ao sincronizar com Google Calendar:", error);
       return null;
@@ -68,10 +68,10 @@ export default function Agenda() {
     let newGoogleEventId: string | null = null;
 
     if (agendaExistente) {
-      if (!open && agendaExistente.google_event_id) {
+      if (!open && agendaExistente.google_event_id) { // Se fechar o dia e houver um evento principal
         await syncGoogleCalendar('deleteEvent', { id: agendaExistente.google_event_id });
         newGoogleEventId = null;
-      } else if (open && !agendaExistente.google_event_id) {
+      } else if (open && !agendaExistente.google_event_id) { // Se abrir o dia e não houver evento principal
         const startOfDay = parseISO(`${formattedDate}T08:00:00`);
         const endOfDay = parseISO(`${formattedDate}T18:00:00`);
         newGoogleEventId = await syncGoogleCalendar('createEvent', {
@@ -80,7 +80,7 @@ export default function Agenda() {
           start: { dateTime: startOfDay.toISOString(), timeZone: 'America/Sao_Paulo' },
           end: { dateTime: endOfDay.toISOString(), timeZone: 'America/Sao_Paulo' },
         });
-      } else if (open && agendaExistente.google_event_id) {
+      } else if (open && agendaExistente.google_event_id) { // Se abrir o dia e já houver evento principal
         const startOfDay = parseISO(`${formattedDate}T08:00:00`);
         const endOfDay = parseISO(`${formattedDate}T18:00:00`);
         await syncGoogleCalendar('updateEvent', {
@@ -96,7 +96,7 @@ export default function Agenda() {
       await updateAgenda.mutateAsync({
         id: agendaExistente.id,
         horarios_disponiveis: slots,
-        horarios_ocupados: [],
+        horarios_ocupados: [], // Limpa horários ocupados ao fechar/abrir o dia
         google_event_id: newGoogleEventId,
       });
 
@@ -140,6 +140,7 @@ export default function Agenda() {
       horarios_disponiveis: newSlots
     });
 
+    // Atualizar a descrição do evento principal no Google Calendar
     if (agendaExistente.google_event_id) {
       const startOfDay = parseISO(`${formattedDate}T08:00:00`);
       const endOfDay = parseISO(`${formattedDate}T18:00:00`);
@@ -179,6 +180,7 @@ export default function Agenda() {
         horarios_disponiveis: newSlots
       });
 
+      // Atualizar a descrição do evento principal no Google Calendar
       if (agendaExistente.google_event_id) {
         const startOfDay = parseISO(`${formattedDate}T08:00:00`);
         const endOfDay = parseISO(`${formattedDate}T18:00:00`);

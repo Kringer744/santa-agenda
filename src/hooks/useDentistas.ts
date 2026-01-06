@@ -53,36 +53,6 @@ export function useCreateDentista() {
   });
 }
 
-export function useUpdateDentista() {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-  
-  return useMutation({
-    mutationFn: async ({ id, ...dentista }: Partial<Dentista> & { id: string }) => {
-      const { data, error } = await supabase
-        .from('dentistas')
-        .update(dentista)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data as Dentista;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['dentistas'] });
-      toast({ title: 'Dentista atualizado com sucesso!' });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: 'Erro ao atualizar dentista',
-        description: error.message,
-        variant: 'destructive'
-      });
-    },
-  });
-}
-
 export function useDeleteDentista() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
