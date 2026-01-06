@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast'; // Mantém o import para o Radix UI toast
+import { toast as sonnerToast } from 'sonner'; // Importa o toast do sonner com alias
 import { Dentista } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -21,7 +22,7 @@ export function useDentistas() {
 
 export function useCreateDentista() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
+  const { toast } = useToast(); // Usa o toast do Radix UI
   
   return useMutation({
     mutationFn: async (dentista: Omit<Dentista, 'id' | 'created_at' | 'updated_at'>) => {
@@ -41,22 +42,22 @@ export function useCreateDentista() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dentistas'] });
-      toast({ title: 'Dentista cadastrado com sucesso!' });
+      toast({ title: 'Dentista cadastrado com sucesso!' }); // Usa o toast do Radix UI
     },
     onError: (error: Error) => {
       toast({
         title: 'Erro ao cadastrar dentista',
         description: error.message,
         variant: 'destructive'
-      });
+      }); // Usa o toast do Radix UI
     },
   });
 }
 
 export function useUpdateDentistaGoogleCalendarId() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
-
+  // Não precisamos do useToast aqui, pois usaremos sonnerToast
+  
   return useMutation({
     mutationFn: async ({ id, google_calendar_id }: { id: string; google_calendar_id: string | null }) => {
       const { data, error } = await supabase
@@ -71,17 +72,17 @@ export function useUpdateDentistaGoogleCalendarId() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['dentistas'] });
-      toast.success(`ID do Google Calendar para ${data.nome} atualizado!`);
+      sonnerToast.success(`ID do Google Calendar para ${data.nome} atualizado!`); // Usa sonnerToast
     },
     onError: (error: Error) => {
-      toast.error(`Erro ao atualizar ID do Google Calendar: ${error.message}`);
+      sonnerToast.error(`Erro ao atualizar ID do Google Calendar: ${error.message}`); // Usa sonnerToast
     },
   });
 }
 
 export function useDeleteDentista() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
+  const { toast } = useToast(); // Usa o toast do Radix UI
   
   return useMutation({
     mutationFn: async (id: string) => {
@@ -90,7 +91,7 @@ export function useDeleteDentista() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dentistas'] });
-      toast({ title: 'Dentista removido com sucesso.' });
+      toast({ title: 'Dentista removido com sucesso.' }); // Usa o toast do Radix UI
     },
   });
 }
