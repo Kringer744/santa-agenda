@@ -53,6 +53,32 @@ export function useCreateDentista() {
   });
 }
 
+export function useUpdateDentistaGoogleCalendarId() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ id, google_calendar_id }: { id: string; google_calendar_id: string | null }) => {
+      const { data, error } = await supabase
+        .from('dentistas')
+        .update({ google_calendar_id, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as Dentista;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['dentistas'] });
+      toast.success(`ID do Google Calendar para ${data.nome} atualizado!`);
+    },
+    onError: (error: Error) => {
+      toast.error(`Erro ao atualizar ID do Google Calendar: ${error.message}`);
+    },
+  });
+}
+
 export function useDeleteDentista() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
