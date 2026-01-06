@@ -30,7 +30,7 @@ export default function Agenda() {
   const [newManualSlot, setNewManualSlot] = useState('');
   
   const { data: dentistas = [] } = useDentistas();
-  const { data: clinicas = [] } = useClinicas();
+  const { data: clinicas = [], isLoading: loadingClinicas } = useClinicas(); // Adicionado isLoading para clinicas
 
   useEffect(() => {
     if (dentistas.length > 0 && !selectedDentistaId) setSelectedDentistaId(dentistas[0].id);
@@ -45,6 +45,20 @@ export default function Agenda() {
 
   const selectedDentista = dentistas.find(d => d.id === selectedDentistaId);
   const googleCalendarId = selectedDentista?.google_calendar_id;
+
+  // Adicionando logs para depuração
+  useEffect(() => {
+    console.log("[Agenda Debug] --- Estado do Botão 'Abrir Dia' ---");
+    console.log("loadingAgenda:", loadingAgenda);
+    console.log("createAgenda.isPending:", createAgenda.isPending);
+    console.log("updateAgenda.isPending:", updateAgenda.isPending);
+    console.log("clinicas.length:", clinicas.length);
+    console.log("selectedDentistaId:", selectedDentistaId);
+    console.log("selectedDentista:", selectedDentista);
+    console.log("googleCalendarId:", googleCalendarId);
+    console.log("-------------------------------------------------");
+  }, [loadingAgenda, createAgenda.isPending, updateAgenda.isPending, clinicas.length, selectedDentistaId, selectedDentista, googleCalendarId]);
+
 
   const syncGoogleCalendar = async (action: 'createEvent' | 'updateEvent' | 'deleteEvent', eventData: any) => {
     if (!googleCalendarId) {
@@ -273,12 +287,12 @@ export default function Agenda() {
                   id="day-toggle"
                   checked={isDayOpen}
                   onCheckedChange={handleToggleDay}
-                  disabled={loadingAgenda || createAgenda.isPending || updateAgenda.isPending || clinicas.length === 0 || !selectedDentistaId}
+                  disabled={loadingAgenda || createAgenda.isPending || updateAgenda.isPending || clinicas.length === 0 || !selectedDentistaId || loadingClinicas}
                 />
               </div>
             </CardHeader>
             <CardContent>
-              {loadingAgenda ? (
+              {loadingAgenda || loadingClinicas ? (
                 <div className="flex items-center justify-center py-20">
                   <Loader2 className="w-8 h-8 animate-spin text-primary" />
                 </div>
