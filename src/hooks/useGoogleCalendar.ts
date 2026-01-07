@@ -20,27 +20,31 @@ interface GoogleCalendarSyncPayload {
 export function useGoogleCalendarSync() {
   return useMutation({
     mutationFn: async (payload: GoogleCalendarSyncPayload) => {
-      const { data, error } = await supabase.functions.invoke('google-calendar-sync', {
-        body: payload,
-      });
+      try {
+        const { data, error } = await supabase.functions.invoke('google-calendar-sync', {
+          body: payload,
+        });
 
-      if (error) {
-        console.error("Erro ao sincronizar com Google Calendar (Supabase invoke error):", error);
-        // Garante que a mensagem de erro seja uma string, ou usa uma mensagem genérica
-        const errorMessage = typeof error.message === 'string' ? error.message : JSON.stringify(error);
-        throw new Error(errorMessage);
+        if (error) {
+          console.error("Erro ao invocar função Edge:", error);
+          throw new Error(error.message || "Falha na comunicação com o servidor.");
+        }
+
+        if (data?.error) {
+          console.error("Erro retornado pela função Edge:", data.error);
+          throw new Error(data.error);
+        }
+
+        return data;
+      } catch (err: any) {
+        // Se for um erro de rede/CORS, o invoke pode falhar silenciosamente
+        console.error("Erro na mutação de sincronização:", err);
+        throw err;
       }
-      if (data?.error) {
-        console.error("Erro na função Edge do Google Calendar (Edge function error):", data.error);
-        // Garante que a mensagem de erro seja uma string, ou usa uma mensagem genérica
-        const errorMessage = typeof data.error === 'string' ? data.error : JSON.stringify(data.error);
-        throw new Error(errorMessage);
-      }
-      return data;
     },
     onError: (error: Error) => {
-      // A mensagem de erro aqui agora deve ser sempre uma string
-      toast.error(`Erro ao sincronizar com Google Calendar: ${error.message}`);
+      console.error("Falha na sincronização do Google Calendar:", error);
+      toast.error(`Erro: ${error.message}`);
     },
   });
 }

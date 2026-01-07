@@ -2,8 +2,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 // @ts-ignore: Deno environment
 import { google } from "https://esm.sh/googleapis@144.0.0";
-// @ts-ignore: Deno environment
-import { OAuth2Client } from "https://esm.sh/google-auth-library@9.11.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,7 +16,10 @@ function jsonResponse(body: unknown, status = 200) {
 }
 
 serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  // Tratamento explícito de CORS (Preflight)
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
 
   try {
     // @ts-ignore: Deno namespace
@@ -29,44 +30,43 @@ serve(async (req: Request) => {
     const GOOGLE_REFRESH_TOKEN = Deno.env.get("GOOGLE_REFRESH_TOKEN");
 
     if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_REFRESH_TOKEN) {
-      console.error("[google-calendar-sync] Erro: Faltam segredos (Secrets) no Supabase.");
-      return jsonResponse({ error: "Configuração incompleta no servidor. Verifique os Secrets GOOGLE_CLIENT_ID, SECRET e REFRESH_TOKEN." }, 500);
+      console.error("[google-calendar-sync] Erro: Faltam segredos no Supabase.");
+      return jsonResponse({ error: "Configuração incompleta: Verifique os Secrets GOOGLE_CLIENT_ID, SECRET e REFRESH_TOKEN no painel do Supabase." }, 500);
     }
 
-    const oauth2Client = new OAuth2Client(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET);
+    // Usando a autenticação diretamente da biblioteca googleapis para evitar conflitos de versão
+    const oauth2Client = new google.auth.OAuth2(
+      GOOGLE_CLIENT_ID,
+      GOOGLE_CLIENT_SECRET
+    );
+
     oauth2Client.setCredentials({ refresh_token: GOOGLE_REFRESH_TOKEN });
 
-    // Tenta atualizar o access_token para validar a conexão
-    try {
-      await oauth2Client.getAccessToken();
-      console.log("[google-calendar-sync] Token OAuth validado com sucesso.");
-    } catch (authErr: any) {
-      console.error("[google-calendar-sync] Erro de Autenticação OAuth:", authErr.message);
-      return jsonResponse({ error: "Falha na autenticação com o Google. O Refresh Token pode estar expirado ou inválido." }, 401);
-    }
-
     const calendar = google.calendar({ version: "v3", auth: oauth2Client });
-    const { action, eventData, calendarId } = await req.json();
+    
+    // Validar corpo da requisição
+    const payload = await req.json().catch(() => ({}));
+    const { action, eventData, calendarId } = payload;
 
     if (!calendarId) {
-      return jsonResponse({ error: "O ID do calendário (e-mail do dentista) não foi fornecido." }, 400);
+      console.error("[google-calendar-sync] Erro: calendarId não informado.");
+      return jsonResponse({ error: "O ID do calendário (e-mail do dentista) é obrigatório." }, 400);
     }
 
-    console.log(`[google-calendar-sync] Ação: ${action} | Calendário: ${calendarId}`);
+    console.log(`[google-calendar-sync] Executando: ${action} para ${calendarId}`);
 
     switch (action) {
       case "createEvent": {
-        console.log("[google-calendar-sync] Criando evento:", JSON.stringify(eventData));
+        console.log("[google-calendar-sync] Criando evento...");
         const response = await calendar.events.insert({ 
           calendarId: calendarId, 
           requestBody: eventData 
         });
-        console.log("[google-calendar-sync] Evento criado com ID:", response.data.id);
         return jsonResponse({ success: true, event: response.data });
       }
       
       case "updateEvent": {
-        if (!eventData.id) return jsonResponse({ error: "ID do evento é necessário para atualização." }, 400);
+        if (!eventData?.id) return jsonResponse({ error: "ID do evento é necessário para atualização." }, 400);
         const response = await calendar.events.update({ 
           calendarId: calendarId, 
           eventId: eventData.id, 
@@ -76,7 +76,7 @@ serve(async (req: Request) => {
       }
       
       case "deleteEvent": {
-        if (!eventData.id) return jsonResponse({ error: "ID do evento é necessário para exclusão." }, 400);
+        if (!eventData?.id) return jsonResponse({ error: "ID do evento é necessário para exclusão." }, 400);
         await calendar.events.delete({ 
           calendarId: calendarId, 
           eventId: eventData.id 
@@ -85,11 +85,10 @@ serve(async (req: Request) => {
       }
       
       default:
-        return jsonResponse({ error: "Ação não reconhecida." }, 400);
+        return jsonResponse({ error: `Ação '${action}' não reconhecida.` }, 400);
     }
   } catch (error: any) {
-    console.error("[google-calendar-sync] Erro Crítico:", error.message);
-    // Retorna o erro detalhado do Google se disponível
+    console.error("[google-calendar-sync] Erro:", error.message);
     const detail = error.response?.data?.error?.message || error.message;
     return jsonResponse({ error: detail }, 500);
   }
