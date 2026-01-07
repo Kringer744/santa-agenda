@@ -6,22 +6,29 @@ import { google } from "https://esm.sh/googleapis@144.0.0";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
 };
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { 
+      ...corsHeaders, 
+      "Content-Type": "application/json" 
+    },
   });
 }
 
 serve(async (req: Request) => {
+  // 1. TRATAMENTO OBRIGATÓRIO DE OPTIONS (PREFLIGHT)
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response(null, { 
+      status: 204, // No Content, mas indica sucesso total para o Preflight
+      headers: corsHeaders 
+    });
   }
 
   try {
-    // Credenciais configuradas diretamente no código para funcionamento imediato
     const GOOGLE_CLIENT_ID = "217643829089-j6pr08u3u3v0oeqt74k742cp5h2f8leu.apps.googleusercontent.com";
     const GOOGLE_CLIENT_SECRET = "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";
     const GOOGLE_REFRESH_TOKEN = "1//04i5svmmxX5m8CgYIARAAGAQSNwF-L9IrIIIVYq-HaY45Id42ufMtBcKbnyxwOhiqis8BepDDtkQ-hhRZuOVbIjXsC-Cx8WxpXyo";
