@@ -18,10 +18,10 @@ serve(async (req: Request) => {
   console.log("[google-calendar-sync] Recebendo requisição...");
 
   try {
-    // Credenciais (Configuradas diretamente)
-    const GOOGLE_CLIENT_ID = "217643829089-j6pr08u3u3v0oeqt74k742cp5h2f8leu.apps.googleusercontent.com";
-    const GOOGLE_CLIENT_SECRET = "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";
-    const GOOGLE_REFRESH_TOKEN = "1//04i5svmmxX5m8CgYIARAAGAQSNwF-L9IrIIIVYq-HaY45Id42ufMtBcKbnyxwOhiqis8BepDDtkQ-hhRZuOVbIjXsC-Cx8WxpXyo";
+    // Credenciais (Configuradas diretamente) - ATUALIZADAS
+    const GOOGLE_CLIENT_ID = "217643829089-rv6qdig8von36faa2horjnpn3b9o68ip.apps.googleusercontent.com";
+    const GOOGLE_CLIENT_SECRET = "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";
+    const GOOGLE_REFRESH_TOKEN = "1//04ZqEaumTtZ8PCgYIARAAGAQSNwF-L9IrGL_ZAZ05o1NduM2dmXAwq2P6LlvWmZkEwq6wTK0ZSD1XYlH135uwJSSYbe3aaVy5iwI";
 
     const oauth2Client = new google.auth.OAuth2(
       GOOGLE_CLIENT_ID,
