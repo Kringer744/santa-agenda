@@ -9,15 +9,15 @@ import { Loader2, CheckCircle, Clock, Stethoscope, CreditCard, ChevronLeft, Cake
 import { useDentistas } from '@/hooks/useDentistas';
 import { usePacientes, useCreatePaciente } from '@/hooks/usePacientes';
 import { useClinicas } from '@/hooks/useClinicas';
-import { useTodasAgendas, useUpdateAgendaDentista } from '@/hooks/useAgendaDentista'; // Importar useTodasAgendas
+import { useTodasAgendas, useUpdateAgendaDentista } from '@/hooks/useAgendaDentista';
 import { useCreateConsulta } from '@/hooks/useConsultas';
-import { useGoogleCalendarSync } from '@/hooks/useGoogleCalendar'; // Importar o novo hook
-import { format, addMinutes, parseISO } from 'date-fns';
+import { useGoogleCalendarSync } from '@/hooks/useGoogleCalendar';
+import { format, addMinutes, parseISO, isSameDay, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { AgendaDentista, Paciente } from '@/types'; // Importar AgendaDentista e Paciente type
-import { supabase } from '@/integrations/supabase/client'; // Importar supabase client
+import { AgendaDentista, Paciente } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function ClientAppointment() {
   const [searchParams] = useSearchParams();
@@ -33,23 +33,39 @@ export default function ClientAppointment() {
   const [telefone, setTelefone] = useState('');
   const [cpf, setCpf] = useState('');
   const [dataNascimento, setDataNascimento] = useState('');
-  const [currentPacienteId, setCurrentPacienteId] = useState<string | null>(pacienteIdUrl); // Novo estado para o ID do paciente atual
+  const [currentPacienteId, setCurrentPacienteId] = useState<string | null>(pacienteIdUrl);
 
   const { data: dentistas = [] } = useDentistas();
   const { data: clinicas = [] } = useClinicas();
   const { data: pacientes = [] } = usePacientes();
-  const { data: todasAgendas = [] } = useTodasAgendas(); // Usar useTodasAgendas
+  const { data: todasAgendas = [] } = useTodasAgendas();
   const createConsulta = useCreateConsulta();
   const createPaciente = useCreatePaciente();
-  const updateAgenda = useUpdateAgendaDentista(); // Hook para atualizar a agenda do dentista
-  const googleCalendarSync = useGoogleCalendarSync(); // Hook para sincronização com Google Calendar
+  const updateAgenda = useUpdateAgendaDentista();
+  const googleCalendarSync = useGoogleCalendarSync();
 
   const availableSlots = useMemo(() => {
     if (!selectedDate || !selectedDentistaId) return [];
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
     const agenda = todasAgendas.find((a: AgendaDentista) => a.dentista_id === selectedDentistaId && a.data === dateStr);
+    
     if (!agenda) return [];
-    return agenda.horarios_disponiveis.filter((slot: string) => !agenda.horarios_ocupados.includes(slot));
+
+    const now = new Date();
+    const isToday = isSameDay(selectedDate, now);
+    const currentHourMin = format(now, 'HH:mm');
+
+    return agenda.horarios_disponiveis.filter((slot: string) => {
+      const isOccupied = agenda.horarios_ocupados.includes(slot);
+      if (isOccupied) return false;
+
+      // Se for hoje, filtra horários que já passaram
+      if (isToday) {
+        return slot > currentHourMin;
+      }
+
+      return true;
+    });
   }, [selectedDate, selectedDentistaId, todasAgendas]);
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -60,11 +76,9 @@ export default function ClientAppointment() {
         return;
       }
 
-      // Formatar CPF e telefone para busca
       const cleanedCpf = cpf.replace(/\D/g, '');
       const cleanedTelefone = telefone.replace(/\D/g, '');
 
-      // 1. Verificar se o paciente já existe
       const { data: existingPatients, error: fetchError } = await supabase
         .from('pacientes')
         .select('id, nome')
@@ -78,7 +92,6 @@ export default function ClientAppointment() {
         pacienteToUse = existingPatients[0] as Paciente;
         toast.info(`Paciente "${pacienteToUse.nome}" já cadastrado. Usando perfil existente.`);
       } else {
-        // 2. Se não existe, criar novo paciente
         const newPaciente = await createPaciente.mutateAsync({ 
           nome, 
           telefone: cleanedTelefone, 
@@ -86,7 +99,7 @@ export default function ClientAppointment() {
           data_nascimento: dataNascimento,
           tags: ['cliente-web'], 
           email: null,
-          observacoes: null, // Novo campo
+          observacoes: null,
         });
         pacienteToUse = newPaciente;
         toast.success(`Olá ${newPaciente.nome}, vamos agendar sua consulta.`);
@@ -104,38 +117,36 @@ export default function ClientAppointment() {
   };
 
   const handleBook = async () => {
-    const paciente = pacientes.find(p => p.id === currentPacienteId); // Usar currentPacienteId
+    const paciente = pacientes.find(p => p.id === currentPacienteId);
     const selectedDentista = dentistas.find(d => d.id === selectedDentistaId);
     
     if (clinicas.length === 0) {
-      toast.error("Erro interno: Clínica não configurada. O administrador precisa acessar as Configurações do sistema primeiro.");
+      toast.error("Erro interno: Clínica não configurada.");
       return;
     }
 
-    if (!currentPacienteId || !selectedDate || !selectedSlot || !selectedDentista) { // Usar currentPacienteId
+    if (!currentPacienteId || !selectedDate || !selectedSlot || !selectedDentista) {
       toast.error("Por favor, selecione o dentista, a data e o horário.");
       return;
     }
 
     const startDateTime = parseISO(`${format(selectedDate, 'yyyy-MM-dd')}T${selectedSlot}:00`);
-    const endDateTime = addMinutes(startDateTime, 30); // Assumindo consultas de 30 minutos
+    const endDateTime = addMinutes(startDateTime, 30);
 
     try {
-      // 1. Criar a consulta (Isso já dispara as mensagens UAZAP, então se falhar aqui, o erro é no uazap-send)
       const newConsulta = await createConsulta.mutateAsync({
-        paciente_id: currentPacienteId, // Usar currentPacienteId
+        paciente_id: currentPacienteId,
         dentista_id: selectedDentistaId,
         clinica_id: clinicas[0]?.id || '',
         data_hora_inicio: startDateTime.toISOString(),
         data_hora_fim: endDateTime.toISOString(),
-        procedimentos: [], // Pode ser adicionado depois
-        valor_total: 150, // Valor fixo por enquanto
+        procedimentos: [],
+        valor_total: 150,
         pix_txid: null,
         pix_qr_code_base64: null,
         pix_copia_e_cola: null,
       });
 
-      // 2. Atualizar agenda do dentista no Supabase
       const agendaDoDia = todasAgendas.find((a: AgendaDentista) => a.dentista_id === selectedDentistaId && a.data === format(selectedDate, 'yyyy-MM-dd'));
       if (agendaDoDia) {
         const newHorariosOcupados = [...agendaDoDia.horarios_ocupados, selectedSlot].sort();
@@ -145,7 +156,6 @@ export default function ClientAppointment() {
         });
       }
 
-      // 3. Sincronizar com Google Calendar (TENTATIVA NÃO BLOQUEANTE)
       if (selectedDentista.google_calendar_id) {
         try {
           await googleCalendarSync.mutateAsync({
@@ -160,8 +170,7 @@ export default function ClientAppointment() {
             }
           });
         } catch (syncErr) {
-          console.error("Falha na sincronização do Google Calendar, mas o agendamento foi salvo:", syncErr);
-          toast.warning("Agendamento realizado, mas houve um erro ao sincronizar com o calendário do Google.");
+          console.error("Falha na sincronização do Google Calendar:", syncErr);
         }
       }
 
@@ -170,10 +179,10 @@ export default function ClientAppointment() {
         pixCopiaECola: '00020126360014BR.GOV.BCB.PIX0114241648318805204000053039865802BR5925DentalClinic6009SAO PAULO62070503***6304' 
       });
       setStep(4);
-      toast.success("Reserva realizada! Efetue o pagamento para confirmar.");
+      toast.success("Reserva realizada!");
     } catch (err: any) { 
       console.error("Erro no agendamento:", err);
-      toast.error(`Erro ao gerar agendamento: ${err.message || 'Verifique se as funções Edge estão publicadas.'}`); 
+      toast.error(`Erro ao gerar agendamento: ${err.message}`); 
     }
   };
 
@@ -232,7 +241,7 @@ export default function ClientAppointment() {
                 <Label className="text-base font-bold">1. Selecione o Dentista</Label>
                 <div className="grid grid-cols-1 gap-3">
                   {dentistas.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">Nenhum dentista disponível no momento.</p>
+                    <p className="text-sm text-muted-foreground text-center py-4">Nenhum dentista disponível.</p>
                   ) : dentistas.map(d => (
                     <button 
                       key={d.id} 
@@ -261,10 +270,10 @@ export default function ClientAppointment() {
                   <Calendar
                     mode="single"
                     selected={selectedDate}
-                    onSelect={(d) => { setSelectedDate(d); setStep(3); }}
+                    onSelect={(d) => { setSelectedDate(d); if(d) setStep(3); }}
                     locale={ptBR}
                     className="mx-auto rounded-xl border shadow-sm"
-                    disabled={(date) => date < new Date()}
+                    disabled={(date) => date < startOfDay(new Date())}
                   />
                 </div>
               )}
@@ -294,7 +303,7 @@ export default function ClientAppointment() {
                   </div>
                 ) : (
                   <div className="py-12 text-center bg-muted/30 rounded-xl border border-dashed">
-                    <p className="text-muted-foreground">Desculpe, não há horários livres para este dia.</p>
+                    <p className="text-muted-foreground">Desculpe, não há horários livres para este dia no momento.</p>
                   </div>
                 )}
               </div>
@@ -341,17 +350,13 @@ export default function ClientAppointment() {
                   </Button>
                 </div>
               </div>
-
-              <p className="text-xs text-muted-foreground italic">
-                Sua reserva expira em 30 minutos caso o pagamento não seja identificado.
-              </p>
             </div>
           )}
         </CardContent>
       </Card>
       
-      <p className="mt-8 text-sm text-muted-foreground flex items-center gap-1">
-        DentalClinic • Sistema de Atendimento Odontológico Profissional
+      <p className="mt-8 text-sm text-muted-foreground">
+        DentalClinic • Sistema Profissional
       </p>
     </div>
   );
