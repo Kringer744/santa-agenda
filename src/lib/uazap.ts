@@ -38,15 +38,16 @@ export async function sendInteractiveMenu(
   welcomeMessage: string,
   options: MenuOption[],
   listButton: string = 'Menu de Atendimento',
-  footerText: string = 'Hotel para Pets'
+  footerText: string = 'DentalClinic'
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const activeOptions = options.filter(o => o.ativo);
     
     // Formato UAZAPI: "[Seção]", "Título|id|Descrição"
+    // Alterado: Descrição vazia para manter o menu limpo
     const choices: string[] = [
-      '[Atendimento]', // Seção principal
-      ...activeOptions.map(o => `${o.texto}|${o.id}|${o.resposta.substring(0, 72)}`)
+      '[Opções]', 
+      ...activeOptions.map(o => `${o.texto}|${o.id}|`)
     ];
 
     const { data, error } = await supabase.functions.invoke('uazap-send', {
@@ -95,7 +96,7 @@ export async function sendTextMessage(
   }
 }
 
-// NEW: Enviar mensagem com imagem (QR Code)
+// Enviar mensagem com imagem (QR Code)
 export async function sendImageMessage(
   config: UazapConfig,
   number: string,
