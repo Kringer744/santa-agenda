@@ -1,35 +1,24 @@
 // @ts-ignore: Deno environment
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 // @ts-ignore: Deno environment
-import { google } from "https://esm.sh/googleapis@144.0.0";
+import { google } from "https://esm.sh/googleapis@105.0.0";
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
 };
 
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 
-      ...corsHeaders, 
-      "Content-Type": "application/json" 
-    },
-  });
-}
-
 serve(async (req: Request) => {
-  // 1. TRATAMENTO DE OPTIONS (PREFLIGHT) - USANDO 200 OK
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { 
-      status: 200, 
-      headers: corsHeaders 
-    });
+  // 1. Tratamento imediato de OPTIONS para CORS
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
   }
 
+  console.log("[google-calendar-sync] Recebendo requisição...");
+
   try {
-    // Credenciais (Configuradas diretamente para facilitar a integração)
+    // Credenciais (Configuradas diretamente)
     const GOOGLE_CLIENT_ID = "217643829089-j6pr08u3u3v0oeqt74k742cp5h2f8leu.apps.googleusercontent.com";
     const GOOGLE_CLIENT_SECRET = "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";
     const GOOGLE_REFRESH_TOKEN = "1//04i5svmmxX5m8CgYIARAAGAQSNwF-L9IrIIIVYq-HaY45Id42ufMtBcKbnyxwOhiqis8BepDDtkQ-hhRZuOVbIjXsC-Cx8WxpXyo";
@@ -40,52 +29,54 @@ serve(async (req: Request) => {
     );
 
     oauth2Client.setCredentials({ refresh_token: GOOGLE_REFRESH_TOKEN });
-
     const calendar = google.calendar({ version: "v3", auth: oauth2Client });
     
-    const payload = await req.json().catch(() => ({}));
-    const { action, eventData, calendarId } = payload;
+    const body = await req.json().catch(() => ({}));
+    const { action, eventData, calendarId } = body;
 
     if (!calendarId) {
-      return jsonResponse({ error: "O e-mail do dentista é obrigatório." }, 400);
+      console.error("[google-calendar-sync] Erro: calendarId ausente.");
+      return new Response(JSON.stringify({ error: "calendarId é obrigatório." }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    console.log(`[google-calendar-sync] Executando: ${action} para ${calendarId}`);
+    console.log(`[google-calendar-sync] Ação: ${action} | Calendário: ${calendarId}`);
 
+    let result;
     switch (action) {
-      case "createEvent": {
-        const response = await calendar.events.insert({ 
-          calendarId: calendarId, 
-          requestBody: eventData 
-        });
-        return jsonResponse({ success: true, event: response.data });
-      }
+      case "createEvent":
+        const createRes = await calendar.events.insert({ calendarId, requestBody: eventData });
+        result = { success: true, event: createRes.data };
+        break;
       
-      case "updateEvent": {
-        if (!eventData?.id) return jsonResponse({ error: "ID do evento ausente." }, 400);
-        const response = await calendar.events.update({ 
-          calendarId: calendarId, 
-          eventId: eventData.id, 
-          requestBody: eventData 
-        });
-        return jsonResponse({ success: true, event: response.data });
-      }
+      case "updateEvent":
+        if (!eventData?.id) throw new Error("ID do evento é necessário para atualização.");
+        const updateRes = await calendar.events.update({ calendarId, eventId: eventData.id, requestBody: eventData });
+        result = { success: true, event: updateRes.data };
+        break;
       
-      case "deleteEvent": {
-        if (!eventData?.id) return jsonResponse({ error: "ID do evento ausente." }, 400);
-        await calendar.events.delete({ 
-          calendarId: calendarId, 
-          eventId: eventData.id 
-        });
-        return jsonResponse({ success: true });
-      }
+      case "deleteEvent":
+        if (!eventData?.id) throw new Error("ID do evento é necessário para exclusão.");
+        await calendar.events.delete({ calendarId, eventId: eventData.id });
+        result = { success: true };
+        break;
       
       default:
-        return jsonResponse({ error: `Ação '${action}' não reconhecida.` }, 400);
+        throw new Error(`Ação '${action}' não suportada.`);
     }
+
+    return new Response(JSON.stringify(result), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
   } catch (error: any) {
-    console.error("[google-calendar-sync] Erro:", error.message);
-    const detail = error.response?.data?.error?.message || error.message;
-    return jsonResponse({ error: detail }, 500);
+    console.error("[google-calendar-sync] Erro crítico:", error.message);
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });
