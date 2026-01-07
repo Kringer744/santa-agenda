@@ -21,19 +21,10 @@ serve(async (req: Request) => {
   }
 
   try {
-    // Usando as chaves fornecidas diretamente
+    // Credenciais configuradas diretamente no código para funcionamento imediato
     const GOOGLE_CLIENT_ID = "217643829089-j6pr08u3u3v0oeqt74k742cp5h2f8leu.apps.googleusercontent.com";
     const GOOGLE_CLIENT_SECRET = "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";
-    
-    // @ts-ignore: Deno namespace
-    const GOOGLE_REFRESH_TOKEN = Deno.env.get("GOOGLE_REFRESH_TOKEN");
-
-    if (!GOOGLE_REFRESH_TOKEN) {
-      console.error("[google-calendar-sync] Erro: Refresh Token não configurado.");
-      return jsonResponse({ 
-        error: "Para funcionar sem você estar logado, você PRECISA gerar o 'Refresh Token' no OAuth Playground e salvar nos Secrets do Supabase como GOOGLE_REFRESH_TOKEN." 
-      }, 401);
-    }
+    const GOOGLE_REFRESH_TOKEN = "1//04i5svmmxX5m8CgYIARAAGAQSNwF-L9IrIIIVYq-HaY45Id42ufMtBcKbnyxwOhiqis8BepDDtkQ-hhRZuOVbIjXsC-Cx8WxpXyo";
 
     const oauth2Client = new google.auth.OAuth2(
       GOOGLE_CLIENT_ID,
