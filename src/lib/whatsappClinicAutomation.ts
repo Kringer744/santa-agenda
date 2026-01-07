@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { sendTextMessage } from '@/lib/uazap';
-import { format, addDays } from 'date-fns';
+import { format, addDays, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Consulta, Paciente, Dentista } from '@/types';
 
@@ -202,49 +202,56 @@ export async function sendAutomatedMessage(
   }
 }
 
-// NOVO: Função para enviar todos os lembretes de amanhã
+// CORRIGIDO: Função para enviar todos os lembretes de amanhã usando intervalo de tempo
 export async function sendRemindersForTomorrow(): Promise<{ success: number; total: number }> {
-  const tomorrow = addDays(new Date(), 1);
-  const tomorrowStr = format(tomorrow, 'yyyy-MM-dd');
+  try {
+    const tomorrow = addDays(new Date(), 1);
+    const startOfTomorrow = startOfDay(tomorrow).toISOString();
+    const endOfTomorrow = endOfDay(tomorrow).toISOString();
 
-  // Busca consultas de amanhã que estão agendadas ou confirmadas
-  const { data: consultas, error } = await supabase
-    .from('consultas')
-    .select('*')
-    .ilike('data_hora_inicio', `${tomorrowStr}%`)
-    .in('status', ['agendada', 'confirmada']);
+    // Busca consultas de amanhã usando gte e lte (correto para timestamps)
+    const { data: consultas, error } = await supabase
+      .from('consultas')
+      .select('*')
+      .gte('data_hora_inicio', startOfTomorrow)
+      .lte('data_hora_inicio', endOfTomorrow)
+      .in('status', ['agendada', 'confirmada']);
 
-  if (error) throw error;
-  if (!consultas || consultas.length === 0) return { success: 0, total: 0 };
+    if (error) throw error;
+    if (!consultas || consultas.length === 0) return { success: 0, total: 0 };
 
-  let successCount = 0;
-  for (const consulta of consultas as any as Consulta[]) {
-    // Verifica se já não enviamos um lembrete hoje para esta consulta
-    const { data: existing } = await supabase
-      .from('whatsapp_messages')
-      .select('id')
-      .eq('consulta_id', consulta.id)
-      .eq('tipo', 'lembrete_consulta')
-      .eq('status', 'enviada')
-      .limit(1);
+    let successCount = 0;
+    for (const consulta of consultas as any as Consulta[]) {
+      // Verifica se já não enviamos um lembrete hoje para esta consulta
+      const { data: existing } = await supabase
+        .from('whatsapp_messages')
+        .select('id')
+        .eq('consulta_id', consulta.id)
+        .eq('tipo', 'lembrete_consulta')
+        .eq('status', 'enviada')
+        .limit(1);
 
-    if (!existing || existing.length === 0) {
-      const sent = await sendAutomatedMessage(consulta, 'lembrete_consulta');
-      if (sent) successCount++;
+      if (!existing || existing.length === 0) {
+        const sent = await sendAutomatedMessage(consulta, 'lembrete_consulta');
+        if (sent) successCount++;
+      }
     }
-  }
 
-  return { success: successCount, total: consultas.length };
+    return { success: successCount, total: consultas.length };
+  } catch (error) {
+    console.error('Erro ao enviar lembretes em massa:', error);
+    throw error;
+  }
 }
 
 export async function checkAndSendAutomatedMessages(consulta: Consulta): Promise<void> {
-  // Lógica de disparo individual (mantida para quando uma consulta é criada/atualizada)
+  // Lógica de disparo individual
   try {
     if (consulta.status === 'confirmada' && consulta.data_hora_inicio) {
       const consultaDate = new Date(consulta.data_hora_inicio);
       const tomorrow = addDays(new Date(), 1);
       
-      if (format(consultaDate, 'yyyy-MM-dd') === format(tomorrow, 'yyyy-MM-dd')) {
+      if (format(consultaDate, 'yyyy-MM-18') === format(tomorrow, 'yyyy-MM-18')) {
         const { data: existingMessage } = await supabase
           .from('whatsapp_messages')
           .select('id')
