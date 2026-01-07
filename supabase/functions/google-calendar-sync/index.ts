@@ -20,15 +20,16 @@ function jsonResponse(body: unknown, status = 200) {
 }
 
 serve(async (req: Request) => {
-  // 1. TRATAMENTO OBRIGATÓRIO DE OPTIONS (PREFLIGHT)
+  // 1. TRATAMENTO DE OPTIONS (PREFLIGHT) - USANDO 200 OK
   if (req.method === "OPTIONS") {
-    return new Response(null, { 
-      status: 204, // No Content, mas indica sucesso total para o Preflight
+    return new Response("ok", { 
+      status: 200, 
       headers: corsHeaders 
     });
   }
 
   try {
+    // Credenciais (Configuradas diretamente para facilitar a integração)
     const GOOGLE_CLIENT_ID = "217643829089-j6pr08u3u3v0oeqt74k742cp5h2f8leu.apps.googleusercontent.com";
     const GOOGLE_CLIENT_SECRET = "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";
     const GOOGLE_REFRESH_TOKEN = "1//04i5svmmxX5m8CgYIARAAGAQSNwF-L9IrIIIVYq-HaY45Id42ufMtBcKbnyxwOhiqis8BepDDtkQ-hhRZuOVbIjXsC-Cx8WxpXyo";
