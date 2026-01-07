@@ -16,25 +16,25 @@ function jsonResponse(body: unknown, status = 200) {
 }
 
 serve(async (req: Request) => {
-  // Tratamento explícito de CORS (Preflight)
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    // @ts-ignore: Deno namespace
-    const GOOGLE_CLIENT_ID = Deno.env.get("GOOGLE_CLIENT_ID");
-    // @ts-ignore: Deno namespace
-    const GOOGLE_CLIENT_SECRET = Deno.env.get("GOOGLE_CLIENT_SECRET");
+    // Usando as chaves fornecidas diretamente
+    const GOOGLE_CLIENT_ID = "217643829089-j6pr08u3u3v0oeqt74k742cp5h2f8leu.apps.googleusercontent.com";
+    const GOOGLE_CLIENT_SECRET = "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";
+    
     // @ts-ignore: Deno namespace
     const GOOGLE_REFRESH_TOKEN = Deno.env.get("GOOGLE_REFRESH_TOKEN");
 
-    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_REFRESH_TOKEN) {
-      console.error("[google-calendar-sync] Erro: Faltam segredos no Supabase.");
-      return jsonResponse({ error: "Configuração incompleta: Verifique os Secrets GOOGLE_CLIENT_ID, SECRET e REFRESH_TOKEN no painel do Supabase." }, 500);
+    if (!GOOGLE_REFRESH_TOKEN) {
+      console.error("[google-calendar-sync] Erro: Refresh Token não configurado.");
+      return jsonResponse({ 
+        error: "Para funcionar sem você estar logado, você PRECISA gerar o 'Refresh Token' no OAuth Playground e salvar nos Secrets do Supabase como GOOGLE_REFRESH_TOKEN." 
+      }, 401);
     }
 
-    // Usando a autenticação diretamente da biblioteca googleapis para evitar conflitos de versão
     const oauth2Client = new google.auth.OAuth2(
       GOOGLE_CLIENT_ID,
       GOOGLE_CLIENT_SECRET
@@ -44,20 +44,17 @@ serve(async (req: Request) => {
 
     const calendar = google.calendar({ version: "v3", auth: oauth2Client });
     
-    // Validar corpo da requisição
     const payload = await req.json().catch(() => ({}));
     const { action, eventData, calendarId } = payload;
 
     if (!calendarId) {
-      console.error("[google-calendar-sync] Erro: calendarId não informado.");
-      return jsonResponse({ error: "O ID do calendário (e-mail do dentista) é obrigatório." }, 400);
+      return jsonResponse({ error: "O e-mail do dentista é obrigatório." }, 400);
     }
 
     console.log(`[google-calendar-sync] Executando: ${action} para ${calendarId}`);
 
     switch (action) {
       case "createEvent": {
-        console.log("[google-calendar-sync] Criando evento...");
         const response = await calendar.events.insert({ 
           calendarId: calendarId, 
           requestBody: eventData 
@@ -66,7 +63,7 @@ serve(async (req: Request) => {
       }
       
       case "updateEvent": {
-        if (!eventData?.id) return jsonResponse({ error: "ID do evento é necessário para atualização." }, 400);
+        if (!eventData?.id) return jsonResponse({ error: "ID do evento ausente." }, 400);
         const response = await calendar.events.update({ 
           calendarId: calendarId, 
           eventId: eventData.id, 
@@ -76,7 +73,7 @@ serve(async (req: Request) => {
       }
       
       case "deleteEvent": {
-        if (!eventData?.id) return jsonResponse({ error: "ID do evento é necessário para exclusão." }, 400);
+        if (!eventData?.id) return jsonResponse({ error: "ID do evento ausente." }, 400);
         await calendar.events.delete({ 
           calendarId: calendarId, 
           eventId: eventData.id 
