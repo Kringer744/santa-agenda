@@ -68,3 +68,48 @@ export function useUpdateConsultaStatus() {
     },
   });
 }
+
+export function useUpdateConsultaValue() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  
+  return useMutation({
+    mutationFn: async ({ id, valor_total }: { id: string; valor_total: number }) => {
+      const { data, error } = await supabase
+        .from('consultas')
+        .update({ valor_total, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .select()
+        .single();
+        
+      if (error) throw error;
+      return data as unknown as Consulta;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['consultas'] });
+      toast({ title: 'Valor da consulta atualizado!' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Erro ao atualizar valor', description: error.message, variant: 'destructive' });
+    },
+  });
+}
+
+export function useDeleteConsulta() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('consultas').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['consultas'] });
+      toast({ title: 'Consulta excluída com sucesso.' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Erro ao excluir consulta', description: error.message, variant: 'destructive' });
+    },
+  });
+}

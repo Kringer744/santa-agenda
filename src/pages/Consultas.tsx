@@ -14,16 +14,18 @@ import {
   DialogContent, 
   DialogHeader, 
   DialogTitle, 
-  DialogTrigger 
+  DialogTrigger,
+  DialogFooter
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Calendar, Plus, Search, ChevronRight, Loader2, Stethoscope } from 'lucide-react'; 
-import { useConsultas, useCreateConsulta, useUpdateConsultaStatus } from '@/hooks/useConsultas';
+import { Calendar, Plus, Search, ChevronRight, Loader2, Stethoscope, Trash2, Edit } from 'lucide-react'; 
+import { useConsultas, useCreateConsulta, useUpdateConsultaStatus, useDeleteConsulta, useUpdateConsultaValue } from '@/hooks/useConsultas';
 import { useDentistas } from '@/hooks/useDentistas';
-import { usePacientes } from '@/hooks/usePacientes';
+import { usePacientes, useCreatePaciente } from '@/hooks/usePacientes';
 import { useClinicas } from '@/hooks/useClinicas';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { Consulta } from '@/types';
 
 const statusColors: Record<string, string> = {
   agendada: 'bg-honey-light text-accent-foreground border-honey',
@@ -33,18 +35,238 @@ const statusColors: Record<string, string> = {
   reagendada: 'bg-blush-light text-blush border-blush',
 };
 
+// Componente auxiliar para o formulário de nova consulta
+function NewConsultaForm({ 
+  dentistas, 
+  pacientes, 
+  clinicas, 
+  createConsulta, 
+  createPaciente, 
+  onSuccess 
+}: any) {
+  const [isNewPatient, setIsNewPatient] = useState(false);
+  const [selectedPacienteId, setSelectedPacienteId] = useState('');
+  const [newPacienteData, setNewPacienteData] = useState({ nome: '', cpf: '', telefone: '' });
+
+  const handleCreateNewPatient = async () => {
+    if (!newPacienteData.nome || !newPacienteData.cpf || !newPacienteData.telefone) {
+      alert('Preencha nome, CPF e telefone para cadastrar o paciente.');
+      return null;
+    }
+    try {
+      const newPaciente = await createPaciente.mutateAsync({
+        nome: newPacienteData.nome,
+        cpf: newPacienteData.cpf.replace(/\D/g, ''),
+        telefone: newPacienteData.telefone.replace(/\D/g, ''),
+        email: null,
+        data_nascimento: null,
+        tags: ['novo'],
+        observacoes: null,
+      });
+      setSelectedPacienteId(newPaciente.id);
+      setIsNewPatient(false);
+      return newPaciente.id;
+    } catch (error: any) {
+      alert(`Erro ao cadastrar paciente: ${error.message}`);
+      return null;
+    }
+  };
+
+  const handleAddConsulta = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (clinicas.length === 0) return;
+
+    let pacienteId = selectedPacienteId;
+
+    if (isNewPatient) {
+      pacienteId = await handleCreateNewPatient();
+      if (!pacienteId) return;
+    }
+
+    if (!pacienteId) {
+      alert('Selecione ou cadastre um paciente.');
+      return;
+    }
+
+    const formData = new FormData(e.currentTarget);
+    createConsulta.mutate({
+      paciente_id: pacienteId,
+      dentista_id: formData.get('dentista_id') as string,
+      clinica_id: clinicas[0].id, 
+      data_hora_inicio: formData.get('data_hora_inicio') as string,
+      data_hora_fim: formData.get('data_hora_fim') as string,
+      procedimentos: [],
+      valor_total: parseFloat(formData.get('valor_total') as string) || 0,
+      pix_txid: null,
+      pix_qr_code_base64: null,
+      pix_copia_e_cola: null,
+    }, {
+      onSuccess: onSuccess
+    });
+  };
+
+  return (
+    <form onSubmit={handleAddConsulta} className="space-y-4 mt-4">
+      <div className="space-y-2">
+        <Label htmlFor="paciente_id">Paciente</Label>
+        <div className="flex items-center gap-2">
+          <Select 
+            name="paciente_id" 
+            required 
+            value={selectedPacienteId}
+            onValueChange={setSelectedPacienteId}
+            disabled={isNewPatient}
+          >
+            <SelectTrigger className="flex-1">
+              <SelectValue placeholder="Selecione o paciente" />
+            </SelectTrigger>
+            <SelectContent>
+              {pacientes.map((paciente: any) => (
+                <SelectItem key={paciente.id} value={paciente.id}>
+                  {paciente.nome}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button 
+            type="button" 
+            variant="outline" 
+            size="sm" 
+            onClick={() => {
+              setIsNewPatient(!isNewPatient);
+              setSelectedPacienteId('');
+            }}
+          >
+            {isNewPatient ? 'Selecionar Existente' : 'Novo Paciente'}
+          </Button>
+        </div>
+      </div>
+
+      {isNewPatient && (
+        <div className="p-4 border rounded-lg bg-muted/50 space-y-3">
+          <h4 className="font-semibold text-sm">Cadastrar Novo Paciente</h4>
+          <Input 
+            placeholder="Nome" 
+            required={isNewPatient} 
+            value={newPacienteData.nome}
+            onChange={e => setNewPacienteData(p => ({ ...p, nome: e.target.value }))}
+          />
+          <Input 
+            placeholder="CPF" 
+            required={isNewPatient} 
+            value={newPacienteData.cpf}
+            onChange={e => setNewPacienteData(p => ({ ...p, cpf: e.target.value }))}
+          />
+          <Input 
+            placeholder="Telefone (WhatsApp)" 
+            required={isNewPatient} 
+            value={newPacienteData.telefone}
+            onChange={e => setNewPacienteData(p => ({ ...p, telefone: e.target.value }))}
+          />
+        </div>
+      )}
+
+      <div className="space-y-2">
+        <Label htmlFor="dentista_id">Dentista</Label>
+        <Select name="dentista_id" required disabled={!selectedPacienteId && !isNewPatient}>
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione o dentista" />
+          </SelectTrigger>
+          <SelectContent>
+            {dentistas.map((dentista: any) => (
+              <SelectItem key={dentista.id} value={dentista.id}>
+                <Stethoscope className="w-4 h-4 inline-block mr-2" /> {dentista.nome}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="data_hora_inicio">Data e Hora Início</Label>
+          <Input id="data_hora_inicio" name="data_hora_inicio" type="datetime-local" required />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="data_hora_fim">Data e Hora Fim</Label>
+          <Input id="data_hora_fim" name="data_hora_fim" type="datetime-local" required />
+        </div>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="valor_total">Valor total (R$)</Label>
+        <Input id="valor_total" name="valor_total" type="number" step="0.01" placeholder="100.00" />
+      </div>
+      <div className="flex flex-col sm:flex-row gap-3 pt-4">
+        <Button type="button" variant="outline" className="flex-1" onClick={onSuccess}>
+          Cancelar
+        </Button>
+        <Button type="submit" className="flex-1" disabled={createConsulta.isPending || clinicas.length === 0 || (isNewPatient && createPaciente.isPending)}>
+          {createConsulta.isPending || createPaciente.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Criar Consulta'}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+// Componente auxiliar para edição de preço
+function EditValueDialog({ consulta, updateConsultaValue, isOpen, setIsOpen }: { consulta: Consulta, updateConsultaValue: any, isOpen: boolean, setIsOpen: (open: boolean) => void }) {
+  const [newValue, setNewValue] = useState(consulta.valor_total.toFixed(2));
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateConsultaValue.mutate({
+      id: consulta.id,
+      valor_total: parseFloat(newValue)
+    }, {
+      onSuccess: () => setIsOpen(false)
+    });
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogContent className="sm:max-w-xs">
+        <DialogHeader>
+          <DialogTitle>Editar Valor</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSave} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="edit_valor">Novo Valor (R$)</Label>
+            <Input 
+              id="edit_valor" 
+              type="number" 
+              step="0.01" 
+              value={newValue} 
+              onChange={e => setNewValue(e.target.value)} 
+              required 
+            />
+          </div>
+          <DialogFooter>
+            <Button type="submit" disabled={updateConsultaValue.isPending}>
+              {updateConsultaValue.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
 export default function Consultas() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedPaciente, setSelectedPaciente] = useState('');
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditValueDialogOpen, setIsEditValueDialogOpen] = useState(false);
+  const [selectedConsultaToEdit, setSelectedConsultaToEdit] = useState<Consulta | null>(null);
 
   const { data: consultas = [], isLoading } = useConsultas();
   const { data: dentistas = [] } = useDentistas();
   const { data: pacientes = [] } = usePacientes();
   const { data: clinicas = [] } = useClinicas();
   const createConsulta = useCreateConsulta();
+  const createPaciente = useCreatePaciente(); // Novo hook
   const updateStatus = useUpdateConsultaStatus();
+  const deleteConsulta = useDeleteConsulta(); // Novo hook
+  const updateConsultaValue = useUpdateConsultaValue(); // Novo hook
 
   const getDentista = (dentistaId: string) => dentistas.find(d => d.id === dentistaId);
   const getPaciente = (pacienteId: string) => pacientes.find(p => p.id === pacienteId);
@@ -63,28 +285,9 @@ export default function Consultas() {
     return matchSearch && matchStatus;
   });
 
-  const handleAddConsulta = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (clinicas.length === 0) return;
-
-    const formData = new FormData(e.currentTarget);
-    createConsulta.mutate({
-      paciente_id: formData.get('paciente_id') as string,
-      dentista_id: formData.get('dentista_id') as string,
-      clinica_id: clinicas[0].id, 
-      data_hora_inicio: formData.get('data_hora_inicio') as string,
-      data_hora_fim: formData.get('data_hora_fim') as string,
-      procedimentos: [],
-      valor_total: parseFloat(formData.get('valor_total') as string) || 0,
-      pix_txid: null,
-      pix_qr_code_base64: null,
-      pix_copia_e_cola: null,
-    }, {
-      onSuccess: () => {
-        setIsDialogOpen(false);
-        setSelectedPaciente('');
-      }
-    });
+  const handleOpenEditValueDialog = (consulta: Consulta) => {
+    setSelectedConsultaToEdit(consulta);
+    setIsEditValueDialogOpen(true);
   };
 
   return (
@@ -98,71 +301,25 @@ export default function Consultas() {
             </p>
           </div>
           
-          <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) setSelectedPaciente(''); }}>
+          <Dialog open={isCreateDialogOpen} onOpenChange={(open) => { setIsCreateDialogOpen(open); }}>
             <DialogTrigger asChild>
               <Button size="lg" className="w-full md:w-auto">
                 <Plus className="w-5 h-5 mr-2" />
                 Nova Consulta
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+            <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Nova Consulta</DialogTitle>
               </DialogHeader>
-              <form onSubmit={handleAddConsulta} className="space-y-4 mt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="paciente_id">Paciente</Label>
-                  <Select name="paciente_id" required onValueChange={setSelectedPaciente}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o paciente" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {pacientes.map(paciente => (
-                        <SelectItem key={paciente.id} value={paciente.id}>
-                          {paciente.nome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="dentista_id">Dentista</Label>
-                  <Select name="dentista_id" required disabled={!selectedPaciente}>
-                    <SelectTrigger>
-                      <SelectValue placeholder={selectedPaciente ? "Selecione o dentista" : "Selecione o paciente primeiro"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {dentistas.map(dentista => (
-                        <SelectItem key={dentista.id} value={dentista.id}>
-                          <Stethoscope className="w-4 h-4 inline-block mr-2" /> {dentista.nome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="data_hora_inicio">Data e Hora Início</Label>
-                    <Input id="data_hora_inicio" name="data_hora_inicio" type="datetime-local" required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="data_hora_fim">Data e Hora Fim</Label>
-                    <Input id="data_hora_fim" name="data_hora_fim" type="datetime-local" required />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="valor_total">Valor total (R$)</Label>
-                  <Input id="valor_total" name="valor_total" type="number" step="0.01" placeholder="100.00" />
-                </div>
-                <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                  <Button type="button" variant="outline" className="flex-1" onClick={() => setIsDialogOpen(false)}>
-                    Cancelar
-                  </Button>
-                  <Button type="submit" className="flex-1" disabled={createConsulta.isPending || clinicas.length === 0}>
-                    {createConsulta.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Criar Consulta'}
-                  </Button>
-                </div>
-              </form>
+              <NewConsultaForm 
+                dentistas={dentistas}
+                pacientes={pacientes}
+                clinicas={clinicas}
+                createConsulta={createConsulta}
+                createPaciente={createPaciente}
+                onSuccess={() => setIsCreateDialogOpen(false)}
+              />
             </DialogContent>
           </Dialog>
         </div>
@@ -210,7 +367,7 @@ export default function Consultas() {
               return (
                 <div 
                   key={consulta.id}
-                  className="bg-card rounded-2xl p-4 md:p-6 shadow-card hover:shadow-elevated transition-all duration-300 animate-slide-up cursor-pointer group"
+                  className="bg-card rounded-2xl p-4 md:p-6 shadow-card hover:shadow-elevated transition-all duration-300 animate-slide-up group"
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center gap-3 md:gap-4">
@@ -257,9 +414,26 @@ export default function Consultas() {
                     
                     <div className="flex items-center gap-4 mt-3 sm:mt-0">
                       <div className="text-right">
-                        <p className="text-xl md:text-2xl font-bold text-foreground">
+                        <p className="text-xl md:text-2xl font-bold text-foreground flex items-center gap-2">
                           R$ {Number(consulta.valor_total || 0).toFixed(2)}
+                          <Button 
+                            size="icon" 
+                            variant="ghost" 
+                            className="h-6 w-6 text-muted-foreground hover:text-primary"
+                            onClick={() => handleOpenEditValueDialog(consulta)}
+                          >
+                            <Edit className="w-3 h-3" />
+                          </Button>
                         </p>
+                        <Button 
+                          size="icon" 
+                          variant="ghost" 
+                          className="h-6 w-6 text-destructive hover:bg-destructive/10"
+                          onClick={() => deleteConsulta.mutate(consulta.id)}
+                          disabled={deleteConsulta.isPending}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
                       </div>
                       <ChevronRight className="w-4 h-4 md:w-5 md:h-5 text-muted-foreground group-hover:text-primary transition-colors" />
                     </div>
@@ -268,6 +442,15 @@ export default function Consultas() {
               );
             })}
           </div>
+        )}
+        
+        {selectedConsultaToEdit && (
+          <EditValueDialog 
+            consulta={selectedConsultaToEdit}
+            updateConsultaValue={updateConsultaValue}
+            isOpen={isEditValueDialogOpen}
+            setIsOpen={setIsEditValueDialogOpen}
+          />
         )}
       </div>
     </Layout>
