@@ -28,7 +28,7 @@ export function useCreateConsulta() {
         .insert({
           ...consulta,
           codigo_consulta: codigoConsulta,
-          status: 'agendada',
+          status: 'confirmada', // Alterado de 'agendada' para 'confirmada'
           pagamento_status: 'pendente',
         })
         .select()
@@ -40,7 +40,7 @@ export function useCreateConsulta() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['consultas'] });
-      toast({ title: 'Consulta criada com sucesso!' });
+      toast({ title: 'Consulta confirmada com sucesso!' });
     },
   });
 }

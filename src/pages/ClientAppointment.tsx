@@ -5,7 +5,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Loader2, CheckCircle, Clock, Stethoscope, CreditCard, ChevronLeft, Cake } from 'lucide-react';
+import { Loader2, CheckCircle, Clock, Stethoscope, ChevronLeft, Cake, CalendarCheck } from 'lucide-react';
 import { useDentistas } from '@/hooks/useDentistas';
 import { usePacientes, useCreatePaciente } from '@/hooks/usePacientes';
 import { useClinicas } from '@/hooks/useClinicas';
@@ -27,7 +27,6 @@ export default function ClientAppointment() {
   const [selectedDentistaId, setSelectedDentistaId] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedSlot, setSelectedSlot] = useState<string>('');
-  const [pixData, setPixData] = useState<any>(null);
   
   const [nome, setNome] = useState('');
   const [telefone, setTelefone] = useState('');
@@ -59,7 +58,6 @@ export default function ClientAppointment() {
       const isOccupied = agenda.horarios_ocupados.includes(slot);
       if (isOccupied) return false;
 
-      // Se for hoje, filtra horários que já passaram
       if (isToday) {
         return slot > currentHourMin;
       }
@@ -72,7 +70,7 @@ export default function ClientAppointment() {
     e.preventDefault();
     try {
       if (!nome || !telefone || !cpf || !dataNascimento) {
-        toast.error("Por favor, preencha todos os campos, incluindo sua data de nascimento.");
+        toast.error("Por favor, preencha todos os campos.");
         return;
       }
 
@@ -90,7 +88,7 @@ export default function ClientAppointment() {
 
       if (existingPatients && existingPatients.length > 0) {
         pacienteToUse = existingPatients[0] as Paciente;
-        toast.info(`Paciente "${pacienteToUse.nome}" já cadastrado. Usando perfil existente.`);
+        toast.info(`Paciente "${pacienteToUse.nome}" já cadastrado.`);
       } else {
         const newPaciente = await createPaciente.mutateAsync({ 
           nome, 
@@ -111,8 +109,7 @@ export default function ClientAppointment() {
       }
 
     } catch (err: any) { 
-      console.error("Erro no cadastro:", err);
-      toast.error(`Erro ao cadastrar: ${err.message || 'Verifique se os dados já existem.'}`); 
+      toast.error(`Erro ao cadastrar: ${err.message}`); 
     }
   };
 
@@ -126,7 +123,7 @@ export default function ClientAppointment() {
     }
 
     if (!currentPacienteId || !selectedDate || !selectedSlot || !selectedDentista) {
-      toast.error("Por favor, selecione o dentista, a data e o horário.");
+      toast.error("Por favor, selecione todos os campos.");
       return;
     }
 
@@ -134,7 +131,7 @@ export default function ClientAppointment() {
     const endDateTime = addMinutes(startDateTime, 30);
 
     try {
-      const newConsulta = await createConsulta.mutateAsync({
+      await createConsulta.mutateAsync({
         paciente_id: currentPacienteId,
         dentista_id: selectedDentistaId,
         clinica_id: clinicas[0]?.id || '',
@@ -163,25 +160,18 @@ export default function ClientAppointment() {
             calendarId: selectedDentista.google_calendar_id,
             eventData: {
               summary: `Consulta: ${paciente?.nome} com ${selectedDentista.nome}`,
-              description: `Paciente: ${paciente?.nome}\nTelefone: ${paciente?.telefone}\nConsulta ID: ${newConsulta.id}`,
+              description: `Paciente: ${paciente?.nome}\nTelefone: ${paciente?.telefone}`,
               start: { dateTime: startDateTime.toISOString(), timeZone: 'America/Sao_Paulo' },
               end: { dateTime: endDateTime.toISOString(), timeZone: 'America/Sao_Paulo' },
-              attendees: [{ email: paciente?.email || '' }, { email: selectedDentista.email || '' }].filter(a => a.email),
             }
           });
         } catch (syncErr) {
-          console.error("Falha na sincronização do Google Calendar:", syncErr);
+          console.error("Erro Google Calendar:", syncErr);
         }
       }
 
-      setPixData({ 
-        qrCodeBase64: 'placeholder', 
-        pixCopiaECola: '00020126360014BR.GOV.BCB.PIX0114241648318805204000053039865802BR5925DentalClinic6009SAO PAULO62070503***6304' 
-      });
       setStep(4);
-      toast.success("Reserva realizada!");
     } catch (err: any) { 
-      console.error("Erro no agendamento:", err);
       toast.error(`Erro ao gerar agendamento: ${err.message}`); 
     }
   };
@@ -303,53 +293,53 @@ export default function ClientAppointment() {
                   </div>
                 ) : (
                   <div className="py-12 text-center bg-muted/30 rounded-xl border border-dashed">
-                    <p className="text-muted-foreground">Desculpe, não há horários livres para este dia no momento.</p>
+                    <p className="text-muted-foreground">Não há horários livres para este dia.</p>
                   </div>
                 )}
               </div>
 
-              <div className="pt-6 border-t flex flex-col gap-3">
-                <div className="flex justify-between items-center text-sm font-medium">
-                  <span className="text-muted-foreground">Valor da Consulta:</span>
-                  <span className="text-lg font-bold text-primary">R$ 150,00</span>
-                </div>
+              <div className="pt-6 border-t">
                 <Button 
                   className="w-full h-14 text-lg font-bold shadow-xl shadow-primary/20" 
                   disabled={!selectedSlot || createConsulta.isPending}
                   onClick={handleBook}
                 >
-                  {createConsulta.isPending ? <Loader2 className="animate-spin mr-2" /> : <CreditCard className="mr-2" />}
+                  {createConsulta.isPending ? <Loader2 className="animate-spin mr-2" /> : <CalendarCheck className="mr-2" />}
                   Confirmar Agendamento
                 </Button>
               </div>
             </div>
           )}
 
-          {step === 4 && pixData && (
-            <div className="space-y-8 text-center animate-fade-in">
-              <div className="bg-primary/10 p-6 rounded-full inline-block animate-bounce-subtle">
-                <CheckCircle className="text-primary w-12 h-12" />
+          {step === 4 && (
+            <div className="space-y-8 text-center animate-fade-in py-10">
+              <div className="bg-emerald-100 p-6 rounded-full inline-block animate-bounce-subtle">
+                <CheckCircle className="text-emerald-600 w-12 h-12" />
               </div>
-              <div className="space-y-2">
-                <h3 className="text-2xl font-bold text-foreground">Reserva Concluída!</h3>
-                <p className="text-muted-foreground">Agora, realize o pagamento via Pix para confirmar seu horário.</p>
+              <div className="space-y-4">
+                <h3 className="text-2xl font-bold text-foreground">Agendamento Confirmado!</h3>
+                <p className="text-muted-foreground">
+                  Sua consulta foi agendada com sucesso. Você receberá um lembrete via WhatsApp próximo ao horário do atendimento.
+                </p>
+                <div className="bg-muted/50 p-4 rounded-xl border space-y-2 text-sm text-left">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Data:</span>
+                    <span className="font-bold">{selectedDate ? format(selectedDate, "dd/MM/yyyy") : ''}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Horário:</span>
+                    <span className="font-bold">{selectedSlot}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Pagamento:</span>
+                    <span className="font-bold text-primary">A realizar na clínica</span>
+                  </div>
+                </div>
               </div>
               
-              <div className="bg-white p-6 rounded-2xl border-2 border-primary/20 shadow-lg mx-auto w-fit">
-                <div className="w-56 h-56 bg-muted flex items-center justify-center text-muted-foreground">
-                   [QR CODE PIX]
-                </div>
-              </div>
-
-              <div className="space-y-3 text-left">
-                <Label className="text-xs uppercase font-bold text-muted-foreground ml-1">Chave Pix (Copia e Cola)</Label>
-                <div className="flex gap-2">
-                  <Input value={pixData.pixCopiaECola} readOnly className="font-mono text-sm bg-muted/50 border-primary/20" />
-                  <Button size="icon" className="flex-shrink-0" onClick={() => { navigator.clipboard.writeText(pixData.pixCopiaECola); toast.success('Chave Pix copiada!'); }}>
-                    <CheckCircle size={18} />
-                  </Button>
-                </div>
-              </div>
+              <Button variant="outline" className="w-full" onClick={() => window.location.reload()}>
+                Novo Agendamento
+              </Button>
             </div>
           )}
         </CardContent>
