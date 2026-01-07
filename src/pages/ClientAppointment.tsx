@@ -121,6 +121,7 @@ export default function ClientAppointment() {
     const endDateTime = addMinutes(startDateTime, 30); // Assumindo consultas de 30 minutos
 
     try {
+      // 1. Criar a consulta (Isso já dispara as mensagens UAZAP, então se falhar aqui, o erro é no uazap-send)
       const newConsulta = await createConsulta.mutateAsync({
         paciente_id: currentPacienteId, // Usar currentPacienteId
         dentista_id: selectedDentistaId,
@@ -134,7 +135,7 @@ export default function ClientAppointment() {
         pix_copia_e_cola: null,
       });
 
-      // Atualizar agenda do dentista no Supabase para marcar o horário como ocupado
+      // 2. Atualizar agenda do dentista no Supabase
       const agendaDoDia = todasAgendas.find((a: AgendaDentista) => a.dentista_id === selectedDentistaId && a.data === format(selectedDate, 'yyyy-MM-dd'));
       if (agendaDoDia) {
         const newHorariosOcupados = [...agendaDoDia.horarios_ocupados, selectedSlot].sort();
@@ -144,21 +145,24 @@ export default function ClientAppointment() {
         });
       }
 
-      // Sincronizar com Google Calendar
+      // 3. Sincronizar com Google Calendar (TENTATIVA NÃO BLOQUEANTE)
       if (selectedDentista.google_calendar_id) {
-        await googleCalendarSync.mutateAsync({
-          action: 'createEvent',
-          calendarId: selectedDentista.google_calendar_id,
-          eventData: {
-            summary: `Consulta: ${paciente?.nome} com ${selectedDentista.nome}`,
-            description: `Paciente: ${paciente?.nome}\nTelefone: ${paciente?.telefone}\nConsulta ID: ${newConsulta.id}`,
-            start: { dateTime: startDateTime.toISOString(), timeZone: 'America/Sao_Paulo' },
-            end: { dateTime: endDateTime.toISOString(), timeZone: 'America/Sao_Paulo' },
-            attendees: [{ email: paciente?.email || '' }, { email: selectedDentista.email || '' }].filter(a => a.email),
-          }
-        });
-      } else {
-        toast.warning("ID do Google Calendar não configurado para este dentista. Agendamento não sincronizado.");
+        try {
+          await googleCalendarSync.mutateAsync({
+            action: 'createEvent',
+            calendarId: selectedDentista.google_calendar_id,
+            eventData: {
+              summary: `Consulta: ${paciente?.nome} com ${selectedDentista.nome}`,
+              description: `Paciente: ${paciente?.nome}\nTelefone: ${paciente?.telefone}\nConsulta ID: ${newConsulta.id}`,
+              start: { dateTime: startDateTime.toISOString(), timeZone: 'America/Sao_Paulo' },
+              end: { dateTime: endDateTime.toISOString(), timeZone: 'America/Sao_Paulo' },
+              attendees: [{ email: paciente?.email || '' }, { email: selectedDentista.email || '' }].filter(a => a.email),
+            }
+          });
+        } catch (syncErr) {
+          console.error("Falha na sincronização do Google Calendar, mas o agendamento foi salvo:", syncErr);
+          toast.warning("Agendamento realizado, mas houve um erro ao sincronizar com o calendário do Google.");
+        }
       }
 
       setPixData({ 
@@ -169,7 +173,7 @@ export default function ClientAppointment() {
       toast.success("Reserva realizada! Efetue o pagamento para confirmar.");
     } catch (err: any) { 
       console.error("Erro no agendamento:", err);
-      toast.error(`Erro ao gerar agendamento: ${err.message}`); 
+      toast.error(`Erro ao gerar agendamento: ${err.message || 'Verifique se as funções Edge estão publicadas.'}`); 
     }
   };
 
