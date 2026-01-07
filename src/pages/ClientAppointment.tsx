@@ -12,7 +12,7 @@ import { useClinicas } from '@/hooks/useClinicas';
 import { useTodasAgendas, useUpdateAgendaDentista } from '@/hooks/useAgendaDentista';
 import { useCreateConsulta } from '@/hooks/useConsultas';
 import { useGoogleCalendarSync } from '@/hooks/useGoogleCalendar';
-import { format, addMinutes, parseISO, isSameDay, startOfDay } from 'date-fns';
+import { format, addMinutes, parseISO, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -45,19 +45,23 @@ export default function ClientAppointment() {
 
   const availableSlots = useMemo(() => {
     if (!selectedDate || !selectedDentistaId) return [];
+    
+    // Usamos format para pegar apenas a data yyyy-MM-dd sem interferência de fuso horário na busca
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
     const agenda = todasAgendas.find((a: AgendaDentista) => a.dentista_id === selectedDentistaId && a.data === dateStr);
     
     if (!agenda) return [];
 
     const now = new Date();
-    const isToday = isSameDay(selectedDate, now);
+    // Compara se o dia selecionado é hoje de forma robusta
+    const isToday = format(selectedDate, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd');
     const currentHourMin = format(now, 'HH:mm');
 
     return agenda.horarios_disponiveis.filter((slot: string) => {
       const isOccupied = agenda.horarios_ocupados.includes(slot);
       if (isOccupied) return false;
 
+      // Se for hoje, só mostramos horários futuros
       if (isToday) {
         return slot > currentHourMin;
       }
@@ -263,7 +267,11 @@ export default function ClientAppointment() {
                     onSelect={(d) => { setSelectedDate(d); if(d) setStep(3); }}
                     locale={ptBR}
                     className="mx-auto rounded-xl border shadow-sm"
-                    disabled={(date) => date < startOfDay(new Date())}
+                    disabled={(date) => {
+                      // Desabilita dias anteriores a hoje
+                      const today = startOfDay(new Date());
+                      return date < today;
+                    }}
                   />
                 </div>
               )}
