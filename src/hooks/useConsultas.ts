@@ -28,7 +28,7 @@ export function useCreateConsulta() {
         .insert({
           ...consulta,
           codigo_consulta: codigoConsulta,
-          status: 'confirmada', // Alterado de 'agendada' para 'confirmada'
+          status: 'confirmada',
           pagamento_status: 'pendente',
         })
         .select()
@@ -101,12 +101,51 @@ export function useDeleteConsulta() {
   
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('consultas').delete().eq('id', id);
-      if (error) throw error;
+      // 1. Buscar detalhes da consulta para saber o horário e dentista
+      const { data: consulta, error: fetchError } = await supabase
+        .from('consultas')
+        .select('*')
+        .eq('id', id)
+        .single();
+        
+      if (fetchError) throw fetchError;
+      if (!consulta) throw new Error("Consulta não encontrada.");
+
+      // 2. Tentar liberar o horário na agenda_dentista
+      const dataISO = consulta.data_hora_inicio.split('T')[0];
+      const horario = consulta.data_hora_inicio.split('T')[1].substring(0, 5); // Pega o HH:mm
+
+      const { data: agenda, error: agendaError } = await supabase
+        .from('agenda_dentista')
+        .select('*')
+        .eq('dentista_id', consulta.dentista_id)
+        .eq('data', dataISO)
+        .maybeSingle();
+
+      if (!agendaError && agenda) {
+        // Remove do array de ocupados e devolve para o array de disponíveis
+        const novosOcupados = agenda.horarios_ocupados.filter((h: string) => h !== horario);
+        const novosDisponiveis = [...agenda.horarios_disponiveis, horario].sort();
+
+        await supabase
+          .from('agenda_dentista')
+          .update({
+            horarios_ocupados: novosOcupados,
+            horarios_disponiveis: novosDisponiveis,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', agenda.id);
+      }
+
+      // 3. Deletar a consulta
+      const { error: deleteError } = await supabase.from('consultas').delete().eq('id', id);
+      if (deleteError) throw deleteError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['consultas'] });
-      toast({ title: 'Consulta excluída com sucesso.' });
+      queryClient.invalidateQueries({ queryKey: ['todasAgendas'] });
+      queryClient.invalidateQueries({ queryKey: ['agendaDentistaDoDia'] });
+      toast({ title: 'Consulta excluída e horário liberado na agenda.' });
     },
     onError: (error: Error) => {
       toast({ title: 'Erro ao excluir consulta', description: error.message, variant: 'destructive' });
