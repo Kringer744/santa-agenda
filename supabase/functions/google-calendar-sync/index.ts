@@ -17,9 +17,13 @@ serve(async (req: Request) => {
   console.log("[google-calendar-sync] Nova requisição recebida.");
 
   try {
-    const GOOGLE_CLIENT_ID = "217643829089-rv6qdig8von36faa2horjnpn3b9o68ip.apps.googleusercontent.com";
-    const GOOGLE_CLIENT_SECRET = "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";
-    const GOOGLE_REFRESH_TOKEN = "1//04ZqEaumTtZ8PCgYIARAAGAQSNwF-L9IrGL_ZAZ05o1NduM2dmXAwq2P6LlvWmZkEwq6wTK0ZSD1XYlH135uwJSSYbe3aaVy5iwI";
+    // SUAS NOVAS CREDENCIAIS FORNECIDAS
+    const GOOGLE_CLIENT_ID = "1076641595234-bkhuehgagg5dmj3hl8rsip13aoo0dksh.apps.googleusercontent.com";
+    const GOOGLE_CLIENT_SECRET = "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";
+    
+    // IMPORTANTE: Você precisa gerar um NOVO Refresh Token para estas credenciais acima
+    // Substitua a string abaixo pelo novo token gerado
+    const GOOGLE_REFRESH_TOKEN = "COLOQUE_AQUI_O_NOVO_REFRESH_TOKEN";
 
     const oauth2Client = new google.auth.OAuth2(
       GOOGLE_CLIENT_ID,
@@ -78,9 +82,8 @@ serve(async (req: Request) => {
 
   } catch (error: any) {
     console.error("[google-calendar-sync] Erro durante a execução:", error.message);
-    // Se o erro for de autenticação, logamos explicitamente
     if (error.message.includes('invalid_grant')) {
-      console.error("[google-calendar-sync] Erro crítico: O Refresh Token pode ter expirado ou sido revogado.");
+      console.error("[google-calendar-sync] Erro crítico: O Refresh Token expirou ou é inválido para estas credenciais.");
     }
     
     return new Response(JSON.stringify({ error: error.message }), {
