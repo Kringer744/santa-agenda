@@ -46,14 +46,12 @@ export default function ClientAppointment() {
   const availableSlots = useMemo(() => {
     if (!selectedDate || !selectedDentistaId) return [];
     
-    // Usamos format para pegar apenas a data yyyy-MM-dd sem interferência de fuso horário na busca
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
     const agenda = todasAgendas.find((a: AgendaDentista) => a.dentista_id === selectedDentistaId && a.data === dateStr);
     
     if (!agenda) return [];
 
     const now = new Date();
-    // Compara se o dia selecionado é hoje de forma robusta
     const isToday = format(selectedDate, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd');
     const currentHourMin = format(now, 'HH:mm');
 
@@ -61,7 +59,6 @@ export default function ClientAppointment() {
       const isOccupied = agenda.horarios_ocupados.includes(slot);
       if (isOccupied) return false;
 
-      // Se for hoje, só mostramos horários futuros
       if (isToday) {
         return slot > currentHourMin;
       }
@@ -135,6 +132,7 @@ export default function ClientAppointment() {
     const endDateTime = addMinutes(startDateTime, 30);
 
     try {
+      // 1. Criar a consulta no banco de dados
       await createConsulta.mutateAsync({
         paciente_id: currentPacienteId,
         dentista_id: selectedDentistaId,
@@ -148,6 +146,7 @@ export default function ClientAppointment() {
         pix_copia_e_cola: null,
       });
 
+      // 2. Atualizar a agenda (marcar como ocupado)
       const agendaDoDia = todasAgendas.find((a: AgendaDentista) => a.dentista_id === selectedDentistaId && a.data === format(selectedDate, 'yyyy-MM-dd'));
       if (agendaDoDia) {
         const newHorariosOcupados = [...agendaDoDia.horarios_ocupados, selectedSlot].sort();
@@ -157,7 +156,9 @@ export default function ClientAppointment() {
         });
       }
 
+      // 3. Sincronizar com o Google Calendar
       if (selectedDentista.google_calendar_id) {
+        console.log(`[Sync] Iniciando sincronização para o calendário: ${selectedDentista.google_calendar_id}`);
         try {
           await googleCalendarSync.mutateAsync({
             action: 'createEvent',
@@ -169,9 +170,13 @@ export default function ClientAppointment() {
               end: { dateTime: endDateTime.toISOString(), timeZone: 'America/Sao_Paulo' },
             }
           });
-        } catch (syncErr) {
-          console.error("Erro Google Calendar:", syncErr);
+          console.log("[Sync] Sincronização concluída com sucesso.");
+        } catch (syncErr: any) {
+          console.error("[Sync] Erro na sincronização com Google Calendar:", syncErr);
+          toast.warning("Consulta agendada, mas houve uma falha na sincronização com o Google Agenda.");
         }
+      } else {
+        console.warn("[Sync] Dentista não possui Google Calendar ID configurado.");
       }
 
       setStep(4);
@@ -268,7 +273,6 @@ export default function ClientAppointment() {
                     locale={ptBR}
                     className="mx-auto rounded-xl border shadow-sm"
                     disabled={(date) => {
-                      // Desabilita dias anteriores a hoje
                       const today = startOfDay(new Date());
                       return date < today;
                     }}
@@ -321,7 +325,7 @@ export default function ClientAppointment() {
 
           {step === 4 && (
             <div className="space-y-8 text-center animate-fade-in py-10">
-              <div className="bg-emerald-100 p-6 rounded-full inline-block animate-bounce-subtle">
+              <div className="bg-emerald-100 p-6 rounded-full inline-block">
                 <CheckCircle className="text-emerald-600 w-12 h-12" />
               </div>
               <div className="space-y-4">
