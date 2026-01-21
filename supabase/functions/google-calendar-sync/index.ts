@@ -25,7 +25,7 @@ serve(async (req: Request) => {
     // NOVAS CREDENCIAIS FORNECIDAS PELO USUÁRIO
     const GOOGLE_CLIENT_ID = "1076641595234-ogtpvqf21emhq735un892nrrv0mhkcma.apps.googleusercontent.com";
     const GOOGLE_CLIENT_SECRET = "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";
-    const GOOGLE_REFRESH_TOKEN = "1//04M_9FKtzNGeQCgYIARAAGAQSNwF-L9IrtPIjsIYU8SMwtLKEmb1CLY7s5I-Kpft0VIzCGh4QKIAsJ6ummf_7yJ-sp2M62gUXZjU";
+    const GOOGLE_REFRESH_TOKEN = "1//0408aqbSE2DdQCgYIARAAGAQSNwF-L9IrV7vh7W3Ocadnd9K3vIzwsENnQBkZvky4e-vcYoNKAOA9n9clfay38cMrubs_8zqJIts";
 
     const body = await req.json().catch(() => ({}));
     const { action, eventData, calendarId } = body;
