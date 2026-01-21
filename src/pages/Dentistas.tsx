@@ -9,8 +9,20 @@ import {
   DialogContent, 
   DialogHeader, 
   DialogTitle, 
-  DialogTrigger 
+  DialogTrigger,
+  DialogFooter
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Label } from '@/components/ui/label';
 import { 
   Select,
@@ -19,18 +31,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Search, Loader2, Phone, Stethoscope } from 'lucide-react'; 
-import { useDentistas, useCreateDentista } from '@/hooks/useDentistas';
+import { Plus, Search, Loader2, Phone, Stethoscope, Edit, Trash2 } from 'lucide-react'; 
+import { useDentistas, useCreateDentista, useUpdateDentista, useDeleteDentista } from '@/hooks/useDentistas';
 import { useProcedimentos } from '@/hooks/useProcedimentos';
+import { Dentista } from '@/types';
 
 export default function Dentistas() {
   const [search, setSearch] = useState('');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingDentista, setEditingDentista] = useState<Dentista | null>(null);
   const [selectedProcs, setSelectedProcs] = useState<string[]>([]);
   
   const { data: dentistas = [], isLoading } = useDentistas();
   const { data: procedimentos = [] } = useProcedimentos();
   const createDentista = useCreateDentista();
+  const updateDentista = useUpdateDentista();
+  const deleteDentista = useDeleteDentista();
 
   const filteredDentistas = dentistas.filter(dentista => 
     dentista.nome.toLowerCase().includes(search.toLowerCase()) ||
@@ -42,6 +59,12 @@ export default function Dentistas() {
     setSelectedProcs(prev => 
       prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
     );
+  };
+
+  const handleOpenEdit = (dentista: Dentista) => {
+    setEditingDentista(dentista);
+    setSelectedProcs(dentista.procedimentos || []);
+    setIsEditDialogOpen(true);
   };
 
   const handleAddDentista = (e: React.FormEvent<HTMLFormElement>) => {
@@ -57,9 +80,27 @@ export default function Dentistas() {
       procedimentos: selectedProcs,
     }, {
       onSuccess: () => {
-        setIsDialogOpen(false);
+        setIsCreateDialogOpen(false);
         setSelectedProcs([]);
       }
+    });
+  };
+
+  const handleUpdateDentista = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingDentista) return;
+
+    const formData = new FormData(e.currentTarget);
+    updateDentista.mutate({
+      id: editingDentista.id,
+      nome: formData.get('nome') as string,
+      cro: formData.get('cro') as string,
+      especialidade: formData.get('especialidade') as string || null,
+      telefone: formData.get('telefone') as string || null,
+      email: formData.get('email') as string || null,
+      procedimentos: selectedProcs,
+    }, {
+      onSuccess: () => setIsEditDialogOpen(false)
     });
   };
 
@@ -69,16 +110,13 @@ export default function Dentistas() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 animate-fade-in">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-foreground">Dentistas</h1>
-            <p className="text-muted-foreground mt-1 text-sm md:text-base">
-              Corpo clínico da DentalClinic
-            </p>
+            <p className="text-muted-foreground mt-1 text-sm md:text-base">Corpo clínico da DentalClinic</p>
           </div>
           
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
               <Button className="w-full md:w-auto">
-                <Plus className="w-4 h-4 mr-2" />
-                Novo Dentista
+                <Plus className="w-4 h-4 mr-2" /> Novo Dentista
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
@@ -124,7 +162,6 @@ export default function Dentistas() {
                         <label htmlFor={`proc-${proc.id}`} className="text-xs cursor-pointer">{proc.nome}</label>
                       </div>
                     ))}
-                    {procedimentos.length === 0 && <p className="text-xs text-muted-foreground col-span-2">Cadastre procedimentos nas configurações.</p>}
                   </div>
                 </div>
 
@@ -139,14 +176,12 @@ export default function Dentistas() {
                   </div>
                 </div>
                 
-                <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                  <Button type="button" variant="outline" className="flex-1" onClick={() => setIsDialogOpen(false)}>
-                    Cancelar
-                  </Button>
+                <DialogFooter className="flex gap-3">
+                  <Button type="button" variant="outline" className="flex-1" onClick={() => setIsCreateDialogOpen(false)}>Cancelar</Button>
                   <Button type="submit" className="flex-1" disabled={createDentista.isPending}>
                     {createDentista.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar Dentista'}
                   </Button>
-                </div>
+                </DialogFooter>
               </form>
             </DialogContent>
           </Dialog>
@@ -180,19 +215,44 @@ export default function Dentistas() {
               >
                 <div className="h-24 bg-primary/5 flex items-center justify-center relative">
                   <Stethoscope className="w-10 h-10 text-primary" />
+                  <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button size="icon" variant="secondary" className="h-8 w-8 shadow-sm" onClick={() => handleOpenEdit(dentista)}>
+                      <Edit size={14} className="text-primary" />
+                    </Button>
+                    
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button size="icon" variant="secondary" className="h-8 w-8 shadow-sm">
+                          <Trash2 size={14} className="text-destructive" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Excluir Dentista?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Deseja remover {dentista.nome} do sistema? Esta ação não pode ser desfeita.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => deleteDentista.mutate(dentista.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            Confirmar Exclusão
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                 </div>
                 
                 <div className="p-5">
                   <div className="flex justify-between items-start">
                     <h3 className="text-lg font-bold text-foreground">{dentista.nome}</h3>
-                    <Badge variant="secondary" className="text-[10px]">{dentista.especialidade || 'Geral'}</Badge>
+                    <Badge variant="secondary" className="text-[10px] uppercase">{dentista.especialidade || 'Geral'}</Badge>
                   </div>
-                  
                   <div className="mt-3 space-y-1 text-xs text-muted-foreground border-b pb-3 mb-3">
                     <p className="flex items-center gap-2"><Phone size={12} /> {dentista.telefone || 'N/A'}</p>
                     <p className="font-medium">CRO: {dentista.cro}</p>
                   </div>
-
                   <div className="space-y-1">
                     <p className="text-[10px] font-bold uppercase text-muted-foreground">Procedimentos:</p>
                     <div className="flex flex-wrap gap-1">
@@ -208,6 +268,77 @@ export default function Dentistas() {
             ))}
           </div>
         )}
+
+        {/* Dialog de Edição */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Editar Dados do Dentista</DialogTitle>
+            </DialogHeader>
+            {editingDentista && (
+              <form onSubmit={handleUpdateDentista} className="space-y-4 mt-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit_nome">Nome do dentista</Label>
+                  <Input id="edit_nome" name="nome" required defaultValue={editingDentista.nome} />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit_cro">CRO</Label>
+                    <Input id="edit_cro" name="cro" required defaultValue={editingDentista.cro} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit_especialidade">Especialidade</Label>
+                    <Select name="especialidade" defaultValue={editingDentista.especialidade || 'geral'}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="geral">Clínico Geral</SelectItem>
+                        <SelectItem value="ortodontia">Ortodontia</SelectItem>
+                        <SelectItem value="implantodontia">Implantodontia</SelectItem>
+                        <SelectItem value="endodontia">Endodontia</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Procedimentos Realizados</Label>
+                  <div className="grid grid-cols-2 gap-2 p-3 border rounded-lg max-h-40 overflow-y-auto">
+                    {procedimentos.map(proc => (
+                      <div key={proc.id} className="flex items-center gap-2">
+                        <Checkbox 
+                          id={`edit-proc-${proc.id}`} 
+                          checked={selectedProcs.includes(proc.id)}
+                          onCheckedChange={() => handleToggleProc(proc.id)}
+                        />
+                        <label htmlFor={`edit-proc-${proc.id}`} className="text-xs cursor-pointer">{proc.nome}</label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit_telefone">Telefone</Label>
+                    <Input id="edit_telefone" name="telefone" defaultValue={editingDentista.telefone || ''} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit_email">E-mail</Label>
+                    <Input id="edit_email" name="email" type="email" defaultValue={editingDentista.email || ''} />
+                  </div>
+                </div>
+                
+                <DialogFooter className="flex gap-3">
+                  <Button type="button" variant="outline" className="flex-1" onClick={() => setIsEditDialogOpen(false)}>Cancelar</Button>
+                  <Button type="submit" className="flex-1" disabled={updateDentista.isPending}>
+                    {updateDentista.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar Alterações'}
+                  </Button>
+                </DialogFooter>
+              </form>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );
