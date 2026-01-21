@@ -22,12 +22,10 @@ serve(async (req: Request) => {
   console.log("[google-calendar-sync] Nova requisição recebida.");
 
   try {
-    // SUAS NOVAS CREDENCIAIS FORNECIDAS
-    const GOOGLE_CLIENT_ID = "1076641595234-bkhuehgagg5dmj3hl8rsip13aoo0dksh.apps.googleusercontent.com";
-    const GOOGLE_CLIENT_SECRET = "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";
-    // IMPORTANTE: Substitua este placeholder pelo seu Refresh Token válido do Google.
-    // Você deve obter este token através do fluxo OAuth 2.0 inicial.
-    const GOOGLE_REFRESH_TOKEN = "COLOQUE_AQUI_O_NOVO_REFRESH_TOKEN"; 
+    // NOVAS CREDENCIAIS FORNECIDAS PELO USUÁRIO
+    const GOOGLE_CLIENT_ID = "1076641595234-6i5uj3js5gmvp9kekn6fmtckqi6rtdva.apps.googleusercontent.com";
+    const GOOGLE_CLIENT_SECRET = "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";
+    const GOOGLE_REFRESH_TOKEN = "1//04NkBpJSVeDqKCgYIARAAGAQSNwF-L9IrFPjqNIqGVONnYOdidvBj8Of1GZwgdt7lGbKPQeFQ33lE0maSkhUoneEAaVtfIMfMPyM";
 
     const body = await req.json().catch(() => ({}));
     const { action, eventData, calendarId } = body;
