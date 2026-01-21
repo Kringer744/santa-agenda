@@ -3,6 +3,7 @@ import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { 
   Dialog, 
   DialogContent, 
@@ -10,17 +11,6 @@ import {
   DialogTitle, 
   DialogTrigger 
 } from '@/components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Label } from '@/components/ui/label';
 import { 
   Select,
@@ -29,22 +19,30 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Search, Trash2, Loader2, Smile, Mail, Phone } from 'lucide-react'; 
-import { useDentistas, useCreateDentista, useDeleteDentista } from '@/hooks/useDentistas';
+import { Plus, Search, Loader2, Phone, Stethoscope } from 'lucide-react'; 
+import { useDentistas, useCreateDentista } from '@/hooks/useDentistas';
+import { useProcedimentos } from '@/hooks/useProcedimentos';
 
 export default function Dentistas() {
   const [search, setSearch] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedProcs, setSelectedProcs] = useState<string[]>([]);
   
   const { data: dentistas = [], isLoading } = useDentistas();
+  const { data: procedimentos = [] } = useProcedimentos();
   const createDentista = useCreateDentista();
-  const deleteDentista = useDeleteDentista();
 
   const filteredDentistas = dentistas.filter(dentista => 
     dentista.nome.toLowerCase().includes(search.toLowerCase()) ||
     (dentista.especialidade?.toLowerCase().includes(search.toLowerCase()) ?? false) ||
     dentista.cro.toLowerCase().includes(search.toLowerCase())
   );
+
+  const handleToggleProc = (id: string) => {
+    setSelectedProcs(prev => 
+      prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
+    );
+  };
 
   const handleAddDentista = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -56,8 +54,12 @@ export default function Dentistas() {
       telefone: formData.get('telefone') as string || null,
       email: formData.get('email') as string || null,
       google_calendar_id: null,
+      procedimentos: selectedProcs,
     }, {
-      onSuccess: () => setIsDialogOpen(false)
+      onSuccess: () => {
+        setIsDialogOpen(false);
+        setSelectedProcs([]);
+      }
     });
   };
 
@@ -79,7 +81,7 @@ export default function Dentistas() {
                 Novo Dentista
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+            <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Cadastrar Dentista</DialogTitle>
               </DialogHeader>
@@ -108,20 +110,41 @@ export default function Dentistas() {
                     </Select>
                   </div>
                 </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="telefone">Telefone</Label>
-                  <Input id="telefone" name="telefone" placeholder="11999999999" />
+                  <Label>Procedimentos Realizados</Label>
+                  <div className="grid grid-cols-2 gap-2 p-3 border rounded-lg max-h-40 overflow-y-auto">
+                    {procedimentos.map(proc => (
+                      <div key={proc.id} className="flex items-center gap-2">
+                        <Checkbox 
+                          id={`proc-${proc.id}`} 
+                          checked={selectedProcs.includes(proc.id)}
+                          onCheckedChange={() => handleToggleProc(proc.id)}
+                        />
+                        <label htmlFor={`proc-${proc.id}`} className="text-xs cursor-pointer">{proc.nome}</label>
+                      </div>
+                    ))}
+                    {procedimentos.length === 0 && <p className="text-xs text-muted-foreground col-span-2">Cadastre procedimentos nas configurações.</p>}
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">E-mail</Label>
-                  <Input id="email" name="email" type="email" placeholder="dr.joao@clinica.com" />
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="telefone">Telefone</Label>
+                    <Input id="telefone" name="telefone" placeholder="11999999999" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">E-mail</Label>
+                    <Input id="email" name="email" type="email" placeholder="dr.joao@clinica.com" />
+                  </div>
                 </div>
+                
                 <div className="flex flex-col sm:flex-row gap-3 pt-4">
                   <Button type="button" variant="outline" className="flex-1" onClick={() => setIsDialogOpen(false)}>
                     Cancelar
                   </Button>
                   <Button type="submit" className="flex-1" disabled={createDentista.isPending}>
-                    {createDentista.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar'}
+                    {createDentista.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar Dentista'}
                   </Button>
                 </div>
               </form>
@@ -156,43 +179,29 @@ export default function Dentistas() {
                 style={{ animationDelay: `${index * 50}ms` }}
               >
                 <div className="h-24 bg-primary/5 flex items-center justify-center relative">
-                  <Smile className="w-10 h-10 text-primary" />
-                  
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button 
-                        size="icon" 
-                        variant="ghost" 
-                        className="absolute top-2 right-2 h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Excluir Dentista</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Deseja remover {dentista.nome}? Isso pode afetar agendas vinculadas.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => deleteDentista.mutate(dentista.id)} className="bg-destructive text-white">
-                          Excluir
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                  <Stethoscope className="w-10 h-10 text-primary" />
                 </div>
                 
                 <div className="p-5">
-                  <h3 className="text-lg font-bold text-foreground">{dentista.nome}</h3>
-                  <Badge variant="secondary" className="mt-1">{dentista.especialidade || 'Geral'}</Badge>
+                  <div className="flex justify-between items-start">
+                    <h3 className="text-lg font-bold text-foreground">{dentista.nome}</h3>
+                    <Badge variant="secondary" className="text-[10px]">{dentista.especialidade || 'Geral'}</Badge>
+                  </div>
                   
-                  <div className="mt-3 space-y-1 text-xs text-muted-foreground">
+                  <div className="mt-3 space-y-1 text-xs text-muted-foreground border-b pb-3 mb-3">
                     <p className="flex items-center gap-2"><Phone size={12} /> {dentista.telefone || 'N/A'}</p>
-                    <p className="flex items-center gap-2"><Mail size={12} /> {dentista.email || 'N/A'}</p>
-                    <p className="font-medium mt-2">CRO: {dentista.cro}</p>
+                    <p className="font-medium">CRO: {dentista.cro}</p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-bold uppercase text-muted-foreground">Procedimentos:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {(dentista.procedimentos || []).map(pid => {
+                        const proc = procedimentos.find(p => p.id === pid);
+                        return proc ? <Badge key={pid} variant="outline" className="text-[9px] px-1 h-4">{proc.nome}</Badge> : null;
+                      })}
+                      {(dentista.procedimentos || []).length === 0 && <span className="text-[10px] text-muted-foreground italic">Nenhum vinculado</span>}
+                    </div>
                   </div>
                 </div>
               </div>

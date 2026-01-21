@@ -43,7 +43,8 @@ export function DentistaSelectorAndCreator({
         especialidade: formData.get('especialidade') as string || null,
         telefone: formData.get('telefone') as string || null,
         email: formData.get('email') as string || null,
-        google_calendar_id: null, // Adicionado para satisfazer o tipo
+        google_calendar_id: null,
+        procedimentos: [], // Adicionado para satisfazer o tipo Omit<Dentista, 'id' | 'created_at' | 'updated_at'>
       });
       toast.success('Dentista cadastrado com sucesso!');
       onSelectDentista(newDentista.id);

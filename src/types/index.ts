@@ -9,7 +9,7 @@ export interface Paciente {
   updated_at: string;
   tags: string[];
   observacoes: string | null;
-  meses_retorno: number | null; // Periodicidade de limpeza/retorno em meses
+  meses_retorno: number | null;
 }
 
 export interface Dentista {
@@ -20,6 +20,7 @@ export interface Dentista {
   telefone: string | null;
   email: string | null;
   google_calendar_id: string | null;
+  procedimentos: string[]; // IDs dos procedimentos vinculados
   created_at: string;
   updated_at: string;
 }
@@ -91,7 +92,7 @@ export interface WhatsAppMenuConfig {
   opcoes_menu: WhatsAppMenuOption[];
   footer_text: string | null;
   list_button_text: string | null;
-  parabens_automatico: boolean; // NOVO
+  parabens_automatico: boolean;
   created_at?: string | null;
   updated_at?: string | null;
 }
