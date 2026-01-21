@@ -19,6 +19,7 @@ import {
 } from '@/lib/uazap';
 import { WhatsAppMenuConfig, WhatsAppMenuOption } from '@/types';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 
 const DEFAULT_MENU_CONFIG: WhatsAppMenuConfig = {
   api_url: '',
@@ -37,19 +38,20 @@ const DEFAULT_MENU_CONFIG: WhatsAppMenuConfig = {
 
 export default function WhatsApp() {
   const [config, setConfig] = useState<WhatsAppMenuConfig>(DEFAULT_MENU_CONFIG);
+  const [birthdayMessage, setBirthdayMessage] = useState('');
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
   const [isTesting, setIsTesting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     loadConfig();
+    loadBirthdayTemplate();
   }, []);
 
   const loadConfig = async () => {
     try {
       const data = await getWhatsAppConfig();
       if (data) {
-        // Garantindo que todas as propriedades da interface existam no estado
         setConfig({
           ...DEFAULT_MENU_CONFIG,
           ...data,
@@ -62,12 +64,34 @@ export default function WhatsApp() {
     }
   };
 
+  const loadBirthdayTemplate = async () => {
+    const { data } = await supabase
+      .from('whatsapp_templates')
+      .select('mensagem')
+      .eq('tipo', 'aniversario_paciente')
+      .maybeSingle();
+    
+    if (data) setBirthdayMessage(data.mensagem);
+  };
+
   const handleSaveConfig = async () => {
     setIsSaving(true);
     try {
+      // Salva a configuração geral
       const updatedConfig = await updateWhatsAppConfig(config);
       setConfig(prev => ({ ...prev, id: updatedConfig.id }));
-      toast.success('Configuração salva com sucesso!');
+
+      // Salva o template de aniversário
+      await supabase
+        .from('whatsapp_templates')
+        .upsert({ 
+          tipo: 'aniversario_paciente', 
+          nome: 'Parabéns ao Paciente',
+          mensagem: birthdayMessage,
+          ativo: true 
+        }, { onConflict: 'tipo' });
+
+      toast.success('Configurações salvas com sucesso!');
     } catch (error) { 
       toast.error('Erro ao salvar configuração'); 
     } finally {
@@ -181,7 +205,7 @@ export default function WhatsApp() {
                 <CardDescription>O sistema enviará mensagens ao abrir o Dashboard.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="p-4 border rounded-xl space-y-4">
+                <div className="p-4 border rounded-xl space-y-6">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="font-bold">Lembretes de Consulta</p>
@@ -190,15 +214,33 @@ export default function WhatsApp() {
                     <Badge variant="outline" className="text-emerald-600 bg-emerald-50">Sempre Ativo</Badge>
                   </div>
                   
-                  <div className="pt-4 border-t flex items-center justify-between">
-                    <div>
-                      <p className="font-bold">Parabéns Automático</p>
-                      <p className="text-sm text-muted-foreground">Envia mensagem no dia do aniversário do paciente.</p>
+                  <div className="pt-4 border-t space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-bold">Parabéns Automático</p>
+                        <p className="text-sm text-muted-foreground">Envia mensagem no dia do aniversário do paciente.</p>
+                      </div>
+                      <Switch 
+                        checked={config.parabens_automatico} 
+                        onCheckedChange={(val) => setConfig(p => ({ ...p, parabens_automatico: val }))}
+                      />
                     </div>
-                    <Switch 
-                      checked={config.parabens_automatico} 
-                      onCheckedChange={(val) => setConfig(p => ({ ...p, parabens_automatico: val }))}
-                    />
+                    
+                    {config.parabens_automatico && (
+                      <div className="space-y-2 animate-fade-in">
+                        <Label htmlFor="birthday_msg">Mensagem de Parabéns</Label>
+                        <Textarea 
+                          id="birthday_msg"
+                          value={birthdayMessage}
+                          onChange={(e) => setBirthdayMessage(e.target.value)}
+                          placeholder="Use {{nome}} para o nome do paciente..."
+                          className="min-h-[100px]"
+                        />
+                        <p className="text-[10px] text-muted-foreground">
+                          Sugestão: Olá {"{{nome}}"}! 🎂 A equipe da DentalClinic passa para desejar um feliz aniversário!
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
                 
