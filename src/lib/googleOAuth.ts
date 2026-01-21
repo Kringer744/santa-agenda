@@ -12,6 +12,7 @@ interface OAuthTokenResponse {
 }
 
 interface GoogleCalendarEvent {
+  id?: string; // Adicionado para permitir o ID retornado/usado em updates/deletes
   summary: string;
   description?: string;
   start: { dateTime: string; timeZone: string };
@@ -88,7 +89,7 @@ export async function refreshAccessToken(
 export async function createGoogleCalendarEvent(
   accessToken: string,
   calendarId: string,
-  event: GoogleCalendarEvent
+  event: Omit<GoogleCalendarEvent, 'id'> // Evento a ser criado não tem ID ainda
 ): Promise<GoogleCalendarEvent | null> {
   try {
     const response = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`, {
@@ -129,7 +130,7 @@ export async function updateGoogleCalendarEvent(
   accessToken: string,
   calendarId: string,
   eventId: string,
-  event: GoogleCalendarEvent
+  event: Omit<GoogleCalendarEvent, 'id'> // Evento a ser atualizado não precisa do ID no body
 ): Promise<GoogleCalendarEvent | null> {
   try {
     const response = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`, {

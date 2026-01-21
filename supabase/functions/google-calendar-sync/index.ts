@@ -1,11 +1,18 @@
 // @ts-ignore: Deno environment
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
 };
+
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
 
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -18,22 +25,21 @@ serve(async (req: Request) => {
     // SUAS NOVAS CREDENCIAIS FORNECIDAS
     const GOOGLE_CLIENT_ID = "1076641595234-bkhuehgagg5dmj3hl8rsip13aoo0dksh.apps.googleusercontent.com";
     const GOOGLE_CLIENT_SECRET = "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";
-    const GOOGLE_REFRESH_TOKEN = "COLOQUE_AQUI_O_NOVO_REFRESH_TOKEN";
+    // IMPORTANTE: Substitua este placeholder pelo seu Refresh Token válido do Google.
+    // Você deve obter este token através do fluxo OAuth 2.0 inicial.
+    const GOOGLE_REFRESH_TOKEN = "COLOQUE_AQUI_O_NOVO_REFRESH_TOKEN"; 
 
     const body = await req.json().catch(() => ({}));
     const { action, eventData, calendarId } = body;
 
     if (!calendarId) {
       console.error("[google-calendar-sync] Erro: calendarId não fornecido.");
-      return new Response(JSON.stringify({ error: "calendarId é obrigatório." }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return jsonResponse({ error: "calendarId é obrigatório." }, 400);
     }
 
     console.log(`[google-calendar-sync] Executando ação: ${action} no calendário: ${calendarId}`);
 
-    // Função para renovar o access token
+    // Função para renovar o access token usando fetch puro
     async function refreshAccessToken(): Promise<string | null> {
       try {
         const params = new URLSearchParams();
@@ -53,27 +59,26 @@ serve(async (req: Request) => {
         const data = await response.json();
 
         if (!response.ok) {
-          if (data.error && data.error.code === 400 && data.error.status === 'INVALID_ARGUMENT') {
-            console.error("[google-calendar-sync] Refresh token inválido ou expirado:", data.error);
-            return null;
+          if (data.error === 'invalid_grant') {
+            console.error("[google-calendar-sync] Erro crítico: Refresh token inválido ou expirado. É necessário reautorizar o acesso.", data);
+            throw new Error("Refresh token inválido ou expirado. Por favor, reautorize o acesso ao Google Calendar.");
           }
-          throw new Error(`OAuth Error: ${JSON.stringify(data)}`);
+          console.error("[google-calendar-sync] Erro ao renovar token:", data);
+          throw new Error(`OAuth Error: ${data.error_description || JSON.stringify(data)}`);
         }
 
+        console.log("[google-calendar-sync] Access token renovado com sucesso.");
         return data.access_token;
       } catch (error) {
-        console.error("[google-calendar-sync] Erro ao renovar token:", error);
-        return null;
+        console.error("[google-calendar-sync] Erro na função refreshAccessToken:", error);
+        throw error; // Re-lança o erro para ser capturado pelo bloco try/catch principal
       }
     }
 
     // Obter um access token válido
     const accessToken = await refreshAccessToken();
     if (!accessToken) {
-      return new Response(JSON.stringify({ error: "Falha ao obter access token. Verifique suas credenciais." }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return jsonResponse({ error: "Falha ao obter access token. Verifique suas credenciais e o refresh token." }, 401);
     }
 
     let result;
@@ -94,10 +99,7 @@ serve(async (req: Request) => {
 
         if (!createRes.ok) {
           console.error("[google-calendar-sync] Erro ao criar evento:", createData);
-          return new Response(JSON.stringify({ error: createData.error || "Erro ao criar evento" }), {
-            status: createRes.status,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
+          return jsonResponse({ error: createData.error?.message || "Erro ao criar evento" }, createRes.status);
         }
 
         result = { success: true, event: createData };
@@ -122,10 +124,7 @@ serve(async (req: Request) => {
 
         if (!updateRes.ok) {
           console.error("[google-calendar-sync] Erro ao atualizar evento:", updateData);
-          return new Response(JSON.stringify({ error: updateData.error || "Erro ao atualizar evento" }), {
-            status: updateRes.status,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
+          return jsonResponse({ error: updateData.error?.message || "Erro ao atualizar evento" }, updateRes.status);
         }
 
         result = { success: true, event: updateData };
@@ -147,10 +146,7 @@ serve(async (req: Request) => {
         if (!deleteRes.ok) {
           const errorData = await deleteRes.json();
           console.error("[google-calendar-sync] Erro ao excluir evento:", errorData);
-          return new Response(JSON.stringify({ error: errorData.error || "Erro ao excluir evento" }), {
-            status: deleteRes.status,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
+          return jsonResponse({ error: errorData.error?.message || "Erro ao excluir evento" }, deleteRes.status);
         }
 
         result = { success: true };
@@ -161,20 +157,10 @@ serve(async (req: Request) => {
         throw new Error(`Ação '${action}' não reconhecida.`);
     }
 
-    return new Response(JSON.stringify(result), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return jsonResponse(result, 200);
 
   } catch (error: any) {
     console.error("[google-calendar-sync] Erro durante a execução:", error.message);
-    if (error.message.includes('invalid_grant')) {
-      console.error("[google-calendar-sync] Erro crítico: O Refresh Token expirou ou é inválido para estas credenciais.");
-    }
-
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return jsonResponse({ error: error.message }, 500);
   }
 });

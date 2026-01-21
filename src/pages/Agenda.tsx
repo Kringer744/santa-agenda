@@ -69,7 +69,7 @@ export default function Agenda() {
     if (!selectedDentistaId || clinicas.length === 0 || !formattedDate || !selectedDentista) return;
 
     const slots = open ? DEFAULT_TIME_SLOTS : [];
-    let newGoogleEventId: string | null = null;
+    let newGoogleEventId: string | null | undefined = null; // Alterado para aceitar 'undefined'
 
     try {
       if (agendaExistente) {
@@ -181,7 +181,7 @@ export default function Agenda() {
     }
 
     const newSlotFormatted = `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
-    let newGoogleEventId: string | null = null;
+    let newGoogleEventId: string | null | undefined = null; // Alterado para aceitar 'undefined'
 
     try {
       if (agendaExistente) {
