@@ -11,12 +11,24 @@ import {
   DialogTrigger,
   DialogFooter
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea'; // Importar Textarea
-import { Plus, Search, Phone, Mail, Calendar, Trash2, Loader2, Smile, Edit } from 'lucide-react'; 
-import { usePacientes, useCreatePaciente, useDeletePaciente, useUpdatePaciente } from '@/hooks/usePacientes'; // Importar useUpdatePaciente
+import { Textarea } from '@/components/ui/textarea';
+import { Plus, Search, Phone, Trash2, Loader2, Smile, Edit, Clock } from 'lucide-react'; 
+import { usePacientes, useCreatePaciente, useDeletePaciente, useUpdatePaciente } from '@/hooks/usePacientes';
 import { useConsultas } from '@/hooks/useConsultas';
-import { Paciente } from '@/types'; // Importar tipo Paciente
+import { Paciente } from '@/types';
+import { format } from 'date-fns';
 
 export default function Pacientes() {
   const [search, setSearch] = useState('');
@@ -28,7 +40,7 @@ export default function Pacientes() {
   const { data: consultas = [] } = useConsultas();
   const createPaciente = useCreatePaciente();
   const deletePaciente = useDeletePaciente();
-  const updatePaciente = useUpdatePaciente(); // Novo hook de atualização
+  const updatePaciente = useUpdatePaciente();
   
   const filteredPacientes = pacientes.filter(paciente => 
     paciente.nome.toLowerCase().includes(search.toLowerCase()) ||
@@ -49,7 +61,8 @@ export default function Pacientes() {
       email: formData.get('email') as string || null,
       data_nascimento: formData.get('data_nascimento') as string || null,
       tags: ['novo'],
-      observacoes: null, // Novo campo
+      observacoes: null,
+      meses_retorno: 6,
     }, {
       onSuccess: () => setIsCreateDialogOpen(false)
     });
@@ -67,7 +80,8 @@ export default function Pacientes() {
       telefone: formData.get('telefone') as string,
       email: formData.get('email') as string || null,
       data_nascimento: formData.get('data_nascimento') as string || null,
-      observacoes: formData.get('observacoes') as string || null, // Novo campo
+      observacoes: formData.get('observacoes') as string || null,
+      meses_retorno: parseInt(formData.get('meses_retorno') as string) || 6,
     }, {
       onSuccess: () => setIsEditDialogOpen(false)
     });
@@ -80,7 +94,7 @@ export default function Pacientes() {
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-foreground">Pacientes</h1>
             <p className="text-muted-foreground mt-1 text-sm md:text-base">
-              {pacientes.length} pacientes cadastrados
+              Gerencie seu cadastro de clientes e histórico de consultas
             </p>
           </div>
           
@@ -157,37 +171,44 @@ export default function Pacientes() {
               return (
                 <div 
                   key={paciente.id}
-                  className="bg-card rounded-2xl p-6 shadow-card hover:shadow-elevated transition-all duration-300 animate-slide-up"
+                  className="bg-card rounded-2xl p-6 shadow-card hover:shadow-elevated transition-all duration-300 animate-slide-up border border-border/50"
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
                   <div className="flex items-start justify-between mb-4">
-                    <div className="w-14 h-14 rounded-xl gradient-hero flex items-center justify-center text-2xl font-bold text-primary-foreground">
+                    <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center text-2xl font-bold text-primary">
                       {paciente.nome.charAt(0)}
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="flex gap-1 flex-wrap justify-end">
-                        {paciente.tags?.map(tag => (
-                          <Badge key={tag} variant="secondary" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
                       <Button 
                         size="icon" 
                         variant="ghost" 
-                        className="h-8 w-8 text-primary"
+                        className="h-8 w-8 text-primary hover:bg-primary/10"
                         onClick={() => { setEditingPaciente(paciente); setIsEditDialogOpen(true); }}
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
-                      <Button 
-                        size="icon" 
-                        variant="ghost" 
-                        className="h-8 w-8 text-destructive"
-                        onClick={() => deletePaciente.mutate(paciente.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:bg-destructive/10">
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Deseja mesmo excluir o paciente {paciente.nome}? Esta ação removerá todos os dados permanentemente.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => deletePaciente.mutate(paciente.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                              Confirmar Exclusão
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </div>
                   
@@ -199,86 +220,83 @@ export default function Pacientes() {
                       <Phone className="w-4 h-4" />
                       <span>{paciente.telefone}</span>
                     </div>
-                    {paciente.email && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Mail className="w-4 h-4" />
-                        <span className="truncate">{paciente.email}</span>
-                      </div>
-                    )}
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Calendar className="w-4 h-4" />
-                      <span>Cliente desde {new Date(paciente.created_at).toLocaleDateString('pt-BR')}</span>
+                      <Clock className="w-4 h-4" />
+                      <span>Retorno a cada {paciente.meses_retorno || 6} meses</span>
                     </div>
                   </div>
 
                   {paciente.observacoes && (
                     <div className="mt-4 pt-4 border-t border-border">
-                      <p className="text-xs text-muted-foreground mb-2 font-semibold">Observações:</p>
-                      <p className="text-sm text-foreground line-clamp-3">{paciente.observacoes}</p>
+                      <p className="text-xs text-muted-foreground mb-1 font-semibold">Observações / Último Procedimento:</p>
+                      <p className="text-xs text-foreground line-clamp-3 bg-muted/30 p-2 rounded">{paciente.observacoes}</p>
                     </div>
                   )}
 
-                  {pacienteConsultas.length > 0 && (
-                    <div className="mt-4 pt-4 border-t border-border">
-                      <p className="text-xs text-muted-foreground mb-2">Consultas agendadas</p>
-                      <div className="flex gap-2 flex-wrap">
-                        {pacienteConsultas.map(consulta => (
-                          <Badge key={consulta.id} className="bg-coral-light text-primary">
-                            <Smile className="w-3 h-3 mr-1" /> {consulta.codigo_consulta}
-                          </Badge>
-                        ))}
-                      </div>
+                  <div className="mt-4 pt-4 border-t border-border">
+                    <p className="text-xs text-muted-foreground mb-2">Histórico Recente</p>
+                    <div className="flex gap-2 flex-wrap">
+                      {pacienteConsultas.slice(0, 2).map(consulta => (
+                        <Badge key={consulta.id} variant="secondary" className="text-[10px] bg-primary/5 text-primary border-primary/20">
+                          <Smile className="w-3 h-3 mr-1" /> {format(new Date(consulta.data_hora_inicio), 'dd/MM/yy')}
+                        </Badge>
+                      ))}
+                      {pacienteConsultas.length === 0 && <span className="text-[10px] text-muted-foreground">Nenhum atendimento</span>}
                     </div>
-                  )}
+                  </div>
                 </div>
               );
             })}
           </div>
         )}
 
-        {/* Dialog de Edição de Paciente */}
         {editingPaciente && (
           <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
             <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Editar Paciente</DialogTitle>
+                <DialogTitle>Perfil do Paciente</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleEditPaciente} className="space-y-4 mt-4">
                 <div className="space-y-2">
                   <Label htmlFor="edit_nome">Nome completo</Label>
-                  <Input id="edit_nome" name="nome" required defaultValue={editingPaciente.nome} placeholder="Maria Silva" />
+                  <Input id="edit_nome" name="nome" required defaultValue={editingPaciente.nome} />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="edit_cpf">CPF</Label>
-                    <Input id="edit_cpf" name="cpf" required defaultValue={editingPaciente.cpf} placeholder="000.000.000-00" />
+                    <Input id="edit_cpf" name="cpf" required defaultValue={editingPaciente.cpf} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="edit_telefone">WhatsApp</Label>
-                    <Input id="edit_telefone" name="telefone" required defaultValue={editingPaciente.telefone} placeholder="11999999999" />
+                    <Input id="edit_telefone" name="telefone" required defaultValue={editingPaciente.telefone} />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit_email">E-mail</Label>
-                  <Input id="edit_email" name="email" type="email" defaultValue={editingPaciente.email || ''} placeholder="maria@email.com" />
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit_data_nascimento">Data de nascimento</Label>
+                    <Input id="edit_data_nascimento" name="data_nascimento" type="date" defaultValue={editingPaciente.data_nascimento || ''} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="meses_retorno">Periodicidade Retorno (Meses)</Label>
+                    <Input id="meses_retorno" name="meses_retorno" type="number" defaultValue={editingPaciente.meses_retorno || 6} />
+                  </div>
                 </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="edit_data_nascimento">Data de nascimento</Label>
-                  <Input id="edit_data_nascimento" name="data_nascimento" type="date" defaultValue={editingPaciente.data_nascimento || ''} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit_observacoes">Observações</Label>
+                  <Label htmlFor="edit_observacoes">Observações (O que foi feito? Última consulta?)</Label>
                   <Textarea 
                     id="edit_observacoes" 
                     name="observacoes" 
                     defaultValue={editingPaciente.observacoes || ''} 
-                    placeholder="Último atendimento, procedimentos realizados, alergias, etc." 
-                    className="min-h-[100px]"
+                    placeholder="Ex: Realizada limpeza em 10/10. Paciente tem sensibilidade no dente 22." 
+                    className="min-h-[120px]"
                   />
                 </div>
+
                 <DialogFooter className="flex flex-col sm:flex-row gap-3 pt-4">
                   <Button type="button" variant="outline" className="flex-1" onClick={() => setIsEditDialogOpen(false)}>
-                    Cancelar
+                    Fechar
                   </Button>
                   <Button type="submit" className="flex-1" disabled={updatePaciente.isPending}>
                     {updatePaciente.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar Alterações'}

@@ -8,17 +8,18 @@ export interface Paciente {
   created_at: string;
   updated_at: string;
   tags: string[];
-  observacoes: string | null; // NOVO: Campo para observações
+  observacoes: string | null;
+  meses_retorno: number | null; // Periodicidade de limpeza/retorno em meses
 }
 
 export interface Dentista {
   id: string;
   nome: string;
-  cro: string; // Conselho Regional de Odontologia
+  cro: string;
   especialidade: string | null;
   telefone: string | null;
   email: string | null;
-  google_calendar_id: string | null; // NOVO: ID do Google Calendar do dentista
+  google_calendar_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -28,12 +29,12 @@ export interface Consulta {
   paciente_id: string;
   dentista_id: string;
   clinica_id: string;
-  data_hora_inicio: string; // Changed from check_in
-  data_hora_fim: string;    // Changed from check_out
-  procedimentos: string[]; // Changed from servicos_adicionais
-  status: 'agendada' | 'confirmada' | 'realizada' | 'cancelada' | 'reagendada'; // Updated statuses
+  data_hora_inicio: string;
+  data_hora_fim: string;
+  procedimentos: string[];
+  status: 'agendada' | 'confirmada' | 'realizada' | 'cancelada' | 'reagendada';
   valor_total: number;
-  codigo_consulta: string | null; // Changed from codigo_estadia
+  codigo_consulta: string | null;
   pagamento_status: 'pendente' | 'aprovado' | 'recusado';
   created_at: string;
   updated_at: string;
@@ -54,7 +55,7 @@ export interface Procedimento {
 export interface Clinica {
   id: string;
   nome: string;
-  capacidade_atendimentos: number; // Changed from capacidade_cachorro/gato
+  capacidade_atendimentos: number;
   endereco: string | null;
   cidade: string | null;
   estado: string | null;
@@ -62,34 +63,22 @@ export interface Clinica {
   updated_at: string;
 }
 
-export interface AgendaDentista { // Changed from VagaDia
+export interface AgendaDentista {
   id: string;
   data: string;
-  dentista_id: string; // Link to Dentista
-  clinica_id: string; // Link to Clinica
-  horarios_disponiveis: string[]; // Array of time slots, e.g., ['09:00', '09:30']
-  horarios_ocupados: string[]; // Array of occupied time slots
-  google_event_id: string | null; // NOVO: ID do evento principal no Google Calendar para este dia
-  created_at: string; // Added created_at
-  updated_at: string; // Added updated_at
+  dentista_id: string;
+  clinica_id: string;
+  horarios_disponiveis: string[];
+  horarios_ocupados: string[];
+  google_event_id: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
-export interface MensagemClinicaAgendada { // Changed from MensagemAgendada
-  id: string;
-  tipo: 'lembrete_consulta' | 'pos_consulta' | 'aniversario_paciente' | 'promocao'; // Updated types
-  consulta_id?: string;
-  paciente_id: string;
-  dentista_id?: string; // Added dentista_id
-  data_envio: string;
-  status: 'agendada' | 'enviada' | 'erro';
-  mensagem: string;
-}
-
-// NOVO: Tipos para o sistema de WhatsApp
 export interface WhatsAppMenuOption {
   id: string;
-  texto: string; // Texto visível no WhatsApp
-  resposta: string; // Mensagem que o bot envia ao selecionar
+  texto: string;
+  resposta: string;
   ativo: boolean;
 }
 
@@ -97,37 +86,12 @@ export interface WhatsAppMenuConfig {
   id?: string;
   api_url: string;
   instance_token: string;
-  mensagem_boas_vindas: string; // Agora será o 'title'
-  menu_ativo: boolean; // Agora será 'is_active'
-  opcoes_menu: WhatsAppMenuOption[]; // Agora será 'options'
-  footer_text: string | null; // NOVO
-  list_button_text: string | null; // NOVO
+  mensagem_boas_vindas: string;
+  menu_ativo: boolean;
+  opcoes_menu: WhatsAppMenuOption[];
+  footer_text: string | null;
+  list_button_text: string | null;
+  parabens_automatico: boolean; // NOVO
   created_at?: string | null;
   updated_at?: string | null;
-}
-
-export interface Conversation {
-  phone_number: string;
-  is_with_attendant: boolean;
-  attendant_assigned_at: string | null;
-  last_attendant_message_at: string | null;
-  last_menu_sent_at: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface InteractionLog {
-  id: string;
-  phone_number: string;
-  option_id: string | null;
-  option_title: string | null;
-  received_text: string | null;
-  created_at: string;
-}
-
-export interface WhatsAppStats {
-  totalMenusSent: number;
-  optionSelections: Record<string, number>;
-  attendedConversations: number;
-  lastMenuSent: Date | null;
 }

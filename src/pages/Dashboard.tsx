@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { StatsCard } from '@/components/dashboard/StatsCard';
-import { CalendarCheck, Users, TrendingUp, Loader2, Stethoscope, Clock, MessageSquare, Send } from 'lucide-react'; 
+import { CalendarCheck, Users, TrendingUp, Loader2, Stethoscope, Clock, MessageSquare, Send, Sparkles } from 'lucide-react'; 
 import { useConsultas } from '@/hooks/useConsultas';
 import { useDentistas } from '@/hooks/useDentistas';
 import { usePacientes } from '@/hooks/usePacientes';
@@ -9,14 +9,12 @@ import { useClinicas } from '@/hooks/useClinicas';
 import { ConsultasList } from '@/components/dashboard/ConsultasList';
 import { AgendaChart } from '@/components/dashboard/AgendaChart';
 import { useTodasAgendas } from '@/hooks/useAgendaDentista';
-import { sendRemindersForTomorrow } from '@/lib/whatsappClinicAutomation';
+import { runDailyAutomations } from '@/lib/whatsappClinicAutomation';
 import { toast } from 'sonner';
-import { format, addDays } from 'date-fns';
 
 export default function Dashboard() {
-  const [isSendingReminders, setIsSendingReminders] = useState(false);
+  const [isProcessingAutomations, setIsProcessingAutomations] = useState(false);
   const hoje = new Date().toISOString().split('T')[0];
-  const amanha = format(addDays(new Date(), 1), 'yyyy-MM-dd');
   
   const { data: consultas = [], isLoading: loadingConsultas } = useConsultas();
   const { data: dentistas = [], isLoading: loadingDentistas } = useDentistas();
@@ -27,32 +25,33 @@ export default function Dashboard() {
   const isLoading = loadingConsultas || loadingDentistas || loadingPacientes || loadingClinicas || loadingAgenda;
 
   const consultasHoje = consultas.filter(c => c.data_hora_inicio.startsWith(hoje));
-  const consultasAmanha = consultas.filter(c => 
-    c.data_hora_inicio.startsWith(amanha) && 
-    (c.status === 'agendada' || c.status === 'confirmada')
-  );
   const consultasPendentes = consultas.filter(c => c.status === 'agendada' || c.status === 'confirmada').length;
 
-  const handleSendReminders = async () => {
-    if (consultasAmanha.length === 0) {
-      toast.info('Nenhuma consulta agendada para amanhã.');
-      return;
-    }
+  // Automação ao carregar
+  useEffect(() => {
+    const triggerAutomations = async () => {
+      // Verifica se já processou hoje na sessão local para evitar spam no refresh
+      const lastRun = localStorage.getItem('last_automation_run');
+      if (lastRun === hoje) return;
 
-    setIsSendingReminders(true);
-    try {
-      const result = await sendRemindersForTomorrow();
-      if (result.total === 0) {
-        toast.info('Nenhum lembrete novo para enviar.');
-      } else {
-        toast.success(`${result.success} de ${result.total} lembretes enviados com sucesso!`);
+      setIsProcessingAutomations(true);
+      try {
+        const result = await runDailyAutomations();
+        if (result.reminders > 0 || result.birthdays > 0) {
+          toast.success(`Automações concluídas: ${result.reminders} lembretes e ${result.birthdays} parabéns enviados.`, {
+            icon: <Sparkles className="text-primary" />
+          });
+        }
+        localStorage.setItem('last_automation_run', hoje);
+      } catch (error) {
+        console.error('Erro nas automações:', error);
+      } finally {
+        setIsProcessingAutomations(false);
       }
-    } catch (error: any) {
-      toast.error(`Erro ao enviar lembretes: ${error.message}`);
-    } finally {
-      setIsSendingReminders(false);
-    }
-  };
+    };
+
+    if (!isLoading) triggerAutomations();
+  }, [isLoading, hoje]);
 
   if (isLoading) {
     return (
@@ -77,19 +76,23 @@ export default function Dashboard() {
             </p>
           </div>
           <div className="bg-white px-4 py-2 rounded-lg border shadow-sm flex items-center gap-2 text-sm font-medium text-primary">
-            <Clock size={16} /> Próximo atendimento em 15 min
+            {isProcessingAutomations ? (
+              <><Loader2 size={16} className="animate-spin" /> Processando automações WhatsApp...</>
+            ) : (
+              <><Clock size={16} /> Próximo atendimento em breve</>
+            )}
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatsCard
-            title="Total de Pacientes"
+            title="Pacientes Ativos"
             value={pacientes.length}
             icon={<Users size={24} />}
             variant="dental"
           />
           <StatsCard
-            title="Total de Dentistas"
+            title="Dentistas"
             value={dentistas.length}
             icon={<Stethoscope size={24} />}
             variant="soft"
@@ -123,22 +126,23 @@ export default function Dashboard() {
             <AgendaChart agenda={agendaParaChart} dentistas={dentistas} clinicas={clinicas} />
             <div className="bg-primary/5 border border-primary/20 rounded-xl p-6">
               <h3 className="font-bold text-primary mb-2 flex items-center gap-2">
-                <MessageSquare size={18} /> Lembretes WhatsApp
+                <MessageSquare size={18} /> WhatsApp Center
               </h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Existem {consultasAmanha.length} pacientes com consulta agendada para amanhã.
+              <p className="text-xs text-muted-foreground mb-4">
+                Lembretes e parabéns são enviados automaticamente quando você abre o painel.
               </p>
               <button 
-                onClick={handleSendReminders}
-                disabled={isSendingReminders || consultasAmanha.length === 0}
-                className="w-full bg-primary text-white py-2 rounded-lg text-sm font-bold hover:bg-primary/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={async () => {
+                  setIsProcessingAutomations(true);
+                  const result = await runDailyAutomations();
+                  toast.success(`Forçado: ${result.reminders} lembretes e ${result.birthdays} parabéns.`);
+                  setIsProcessingAutomations(false);
+                }}
+                disabled={isProcessingAutomations}
+                className="w-full bg-primary text-white py-2 rounded-lg text-sm font-bold hover:bg-primary/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                {isSendingReminders ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Send className="w-4 h-4" />
-                )}
-                {isSendingReminders ? 'Enviando...' : 'Enviar Lembretes para Amanhã'}
+                {isProcessingAutomations ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                Forçar Disparo de Lembretes
               </button>
             </div>
           </div>

@@ -99,6 +99,7 @@ export default function ClientAppointment() {
           tags: ['cliente-web'], 
           email: null,
           observacoes: null,
+          meses_retorno: 6, // Adicionado meses_retorno
         });
         pacienteToUse = newPaciente;
         toast.success(`Olá ${newPaciente.nome}, vamos agendar sua consulta.`);
@@ -132,7 +133,6 @@ export default function ClientAppointment() {
     const endDateTime = addMinutes(startDateTime, 30);
 
     try {
-      // 1. Criar a consulta no banco de dados
       await createConsulta.mutateAsync({
         paciente_id: currentPacienteId,
         dentista_id: selectedDentistaId,
@@ -146,7 +146,6 @@ export default function ClientAppointment() {
         pix_copia_e_cola: null,
       });
 
-      // 2. Atualizar a agenda (marcar como ocupado)
       const agendaDoDia = todasAgendas.find((a: AgendaDentista) => a.dentista_id === selectedDentistaId && a.data === format(selectedDate, 'yyyy-MM-dd'));
       if (agendaDoDia) {
         const newHorariosOcupados = [...agendaDoDia.horarios_ocupados, selectedSlot].sort();
@@ -156,9 +155,7 @@ export default function ClientAppointment() {
         });
       }
 
-      // 3. Sincronizar com o Google Calendar
       if (selectedDentista.google_calendar_id) {
-        console.log(`[Sync] Iniciando sincronização para o calendário: ${selectedDentista.google_calendar_id}`);
         try {
           await googleCalendarSync.mutateAsync({
             action: 'createEvent',
@@ -170,13 +167,10 @@ export default function ClientAppointment() {
               end: { dateTime: endDateTime.toISOString(), timeZone: 'America/Sao_Paulo' },
             }
           });
-          console.log("[Sync] Sincronização concluída com sucesso.");
         } catch (syncErr: any) {
           console.error("[Sync] Erro na sincronização com Google Calendar:", syncErr);
           toast.warning("Consulta agendada, mas houve uma falha na sincronização com o Google Agenda.");
         }
-      } else {
-        console.warn("[Sync] Dentista não possui Google Calendar ID configurado.");
       }
 
       setStep(4);

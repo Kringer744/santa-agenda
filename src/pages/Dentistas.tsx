@@ -3,7 +3,6 @@ import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Dialog, 
   DialogContent, 
@@ -11,6 +10,17 @@ import {
   DialogTitle, 
   DialogTrigger 
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Label } from '@/components/ui/label';
 import { 
   Select,
@@ -21,32 +31,20 @@ import {
 } from '@/components/ui/select';
 import { Plus, Search, Trash2, Loader2, Smile, Mail, Phone } from 'lucide-react'; 
 import { useDentistas, useCreateDentista, useDeleteDentista } from '@/hooks/useDentistas';
-import { cn } from '@/lib/utils';
 
 export default function Dentistas() {
   const [search, setSearch] = useState('');
-  const [activeTab, setActiveTab] = useState('todos');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
   const { data: dentistas = [], isLoading } = useDentistas();
   const createDentista = useCreateDentista();
   const deleteDentista = useDeleteDentista();
 
-  const filteredDentistas = dentistas.filter(dentista => {
-    const matchSearch = dentista.nome.toLowerCase().includes(search.toLowerCase()) ||
-      (dentista.especialidade?.toLowerCase().includes(search.toLowerCase()) ?? false) ||
-      dentista.cro.toLowerCase().includes(search.toLowerCase());
-    
-    if (activeTab === 'todos') return matchSearch;
-    return matchSearch && dentista.especialidade === activeTab;
-  });
-
-  const especialidadeColors: Record<string, string> = {
-    geral: 'bg-mint-light text-secondary',
-    ortodontia: 'bg-honey-light text-accent-foreground',
-    implantodontia: 'bg-coral-light text-primary',
-    endodontia: 'bg-blush-light text-blush',
-  };
+  const filteredDentistas = dentistas.filter(dentista => 
+    dentista.nome.toLowerCase().includes(search.toLowerCase()) ||
+    (dentista.especialidade?.toLowerCase().includes(search.toLowerCase()) ?? false) ||
+    dentista.cro.toLowerCase().includes(search.toLowerCase())
+  );
 
   const handleAddDentista = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -57,7 +55,7 @@ export default function Dentistas() {
       especialidade: formData.get('especialidade') as string || null,
       telefone: formData.get('telefone') as string || null,
       email: formData.get('email') as string || null,
-      google_calendar_id: null, // Adicionado para satisfazer o tipo
+      google_calendar_id: null,
     }, {
       onSuccess: () => setIsDialogOpen(false)
     });
@@ -70,7 +68,7 @@ export default function Dentistas() {
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-foreground">Dentistas</h1>
             <p className="text-muted-foreground mt-1 text-sm md:text-base">
-              {dentistas.length} dentistas cadastrados
+              Corpo clínico da DentalClinic
             </p>
           </div>
           
@@ -101,14 +99,12 @@ export default function Dentistas() {
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione" />
                       </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="geral">Clínico Geral</SelectItem>
-                      <SelectItem value="ortodontia">Ortodontia</SelectItem>
-                      <SelectItem value="implantodontia">Implantodontia</SelectItem>
-                      <SelectItem value="endodontia">Endodontia</SelectItem>
-                      <SelectItem value="periodontia">Periodontia</SelectItem>
-                      <SelectItem value="harmonizacao">Harmonização Facial</SelectItem>
-                    </SelectContent>
+                      <SelectContent>
+                        <SelectItem value="geral">Clínico Geral</SelectItem>
+                        <SelectItem value="ortodontia">Ortodontia</SelectItem>
+                        <SelectItem value="implantodontia">Implantodontia</SelectItem>
+                        <SelectItem value="endodontia">Endodontia</SelectItem>
+                      </SelectContent>
                     </Select>
                   </div>
                 </div>
@@ -133,24 +129,14 @@ export default function Dentistas() {
           </Dialog>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-4 animate-slide-up">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full md:w-auto">
-            <TabsList className="bg-muted grid grid-cols-3">
-              <TabsTrigger value="todos">Todos</TabsTrigger>
-              <TabsTrigger value="geral">Clínico Geral</TabsTrigger>
-              <TabsTrigger value="ortodontia">Ortodontia</TabsTrigger>
-            </TabsList>
-          </Tabs>
-
-          <div className="relative flex-1 max-w-full md:max-w-md">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <Input 
-              placeholder="Buscar por nome, CRO ou especialidade..."
-              className="pl-12 h-10 rounded-xl w-full"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
+        <div className="relative max-w-full md:max-w-md animate-slide-up">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+          <Input 
+            placeholder="Buscar por nome, CRO ou especialidade..."
+            className="pl-12 h-10 rounded-xl w-full"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
 
         {isLoading ? (
@@ -163,58 +149,54 @@ export default function Dentistas() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-            {filteredDentistas.map((dentista, index) => {
-              return (
-                <div 
-                  key={dentista.id}
-                  className="bg-card rounded-2xl overflow-hidden shadow-card hover:shadow-elevated transition-all duration-300 animate-slide-up group"
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
-                  <div className={cn(
-                    "h-32 flex items-center justify-center text-6xl transition-transform duration-300 group-hover:scale-110 relative",
-                    dentista.especialidade === 'ortodontia' ? 'bg-mint-light' : 'bg-coral-light'
-                  )}>
-                    <Smile className="w-12 h-12 text-primary-foreground" />
-                    <Button 
-                      size="icon" 
-                      variant="ghost" 
-                      className="absolute top-2 right-2 h-8 w-8 text-destructive bg-background/80"
-                      onClick={() => deleteDentista.mutate(dentista.id)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
+            {filteredDentistas.map((dentista, index) => (
+              <div 
+                key={dentista.id}
+                className="bg-card rounded-2xl overflow-hidden shadow-card hover:shadow-elevated transition-all duration-300 animate-slide-up border border-border/50 group"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                <div className="h-24 bg-primary/5 flex items-center justify-center relative">
+                  <Smile className="w-10 h-10 text-primary" />
                   
-                  <div className="p-5">
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className="text-lg font-bold text-foreground">{dentista.nome}</h3>
-                      {dentista.especialidade && (
-                        <Badge className={cn("text-xs", especialidadeColors[dentista.especialidade])}>
-                          {dentista.especialidade}
-                        </Badge>
-                      )}
-                    </div>
-                    
-                    {dentista.cro && <p className="text-sm text-muted-foreground">{dentista.cro}</p>}
-                    
-                    <div className="mt-3 space-y-2">
-                      {dentista.telefone && (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Phone className="w-4 h-4" />
-                          <span>{dentista.telefone}</span>
-                        </div>
-                      )}
-                      {dentista.email && (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Mail className="w-4 h-4" />
-                          <span className="truncate">{dentista.email}</span>
-                        </div>
-                      )}
-                    </div>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        size="icon" 
+                        variant="ghost" 
+                        className="absolute top-2 right-2 h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Excluir Dentista</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Deseja remover {dentista.nome}? Isso pode afetar agendas vinculadas.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => deleteDentista.mutate(dentista.id)} className="bg-destructive text-white">
+                          Excluir
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+                
+                <div className="p-5">
+                  <h3 className="text-lg font-bold text-foreground">{dentista.nome}</h3>
+                  <Badge variant="secondary" className="mt-1">{dentista.especialidade || 'Geral'}</Badge>
+                  
+                  <div className="mt-3 space-y-1 text-xs text-muted-foreground">
+                    <p className="flex items-center gap-2"><Phone size={12} /> {dentista.telefone || 'N/A'}</p>
+                    <p className="flex items-center gap-2"><Mail size={12} /> {dentista.email || 'N/A'}</p>
+                    <p className="font-medium mt-2">CRO: {dentista.cro}</p>
                   </div>
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         )}
       </div>
