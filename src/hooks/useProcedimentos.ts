@@ -76,3 +76,32 @@ export function useUpdateProcedimento() {
     },
   });
 }
+
+export function useDeleteProcedimento() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('procedimentos')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['procedimentos'] });
+      toast({
+        title: 'Procedimento removido com sucesso!'
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erro ao remover procedimento',
+        description: error.message,
+        variant: 'destructive'
+      });
+    },
+  });
+}

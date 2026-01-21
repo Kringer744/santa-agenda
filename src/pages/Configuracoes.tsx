@@ -25,7 +25,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Building2, Trash2, CalendarCheck, Save, Loader2, Stethoscope, Plus, Edit } from 'lucide-react'; 
 import { useClinicas, useDeleteClinica, useCreateClinica, useUpdateClinica } from '@/hooks/useClinicas'; 
-import { useProcedimentos, useCreateProcedimento, useUpdateProcedimento } from '@/hooks/useProcedimentos'; 
+import { useProcedimentos, useCreateProcedimento, useUpdateProcedimento, useDeleteProcedimento } from '@/hooks/useProcedimentos'; 
 import { useDentistas, useUpdateDentistaGoogleCalendarId } from '@/hooks/useDentistas';
 import { Clinica, Procedimento } from '@/types';
 
@@ -44,6 +44,7 @@ export default function Configuracoes() {
   const { data: procedimentos = [] } = useProcedimentos(); 
   const createProcedimento = useCreateProcedimento();
   const updateProcedimento = useUpdateProcedimento();
+  const deleteProcedimento = useDeleteProcedimento();
 
   const { data: dentistas = [] } = useDentistas();
   const updateDentistaGoogleCalendarId = useUpdateDentistaGoogleCalendarId();
@@ -267,7 +268,7 @@ export default function Configuracoes() {
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                             <AlertDialogCancel>Não</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => {/* Delete logic should be added to hook if needed */}} className="bg-destructive text-destructive-foreground">Sim, Remover</AlertDialogAction>
+                            <AlertDialogAction onClick={() => deleteProcedimento.mutate(proc.id)} className="bg-destructive text-destructive-foreground">Sim, Remover</AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
