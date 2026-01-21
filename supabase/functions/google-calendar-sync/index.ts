@@ -25,7 +25,8 @@ serve(async (req: Request) => {
     // NOVAS CREDENCIAIS FORNECIDAS PELO USUÁRIO
     const GOOGLE_CLIENT_ID = "1076641595234-6i5uj3js5gmvp9kekn6fmtckqi6rtdva.apps.googleusercontent.com";
     const GOOGLE_CLIENT_SECRET = "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";
-    const GOOGLE_REFRESH_TOKEN = "1//04NkBpJSVeDqKCgYIARAAGAQSNwF-L9IrFPjqNIqGVONnYOdidvBj8Of1GZwgdt7lGbKPQeFQ33lE0maSkhUoneEAaVtfIMfMPyM";
+    // IMPORTANTE: Substitua a string abaixo pelo NOVO refresh token gerado no OAuth 2.0 Playground
+    const GOOGLE_REFRESH_TOKEN = "COLOQUE_AQUI_O_NOVO_REFRESH_TOKEN"; // <--- SUBSTITUA ESTA LINHA
 
     const body = await req.json().catch(() => ({}));
     const { action, eventData, calendarId } = body;
