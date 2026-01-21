@@ -1,10 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
 
-interface WhatsAppConfig {
-  apiUrl: string;
-  instanceToken: string;
-}
-
 interface WhatsAppMenuOption {
   id: string;
   texto: string;
@@ -166,7 +161,7 @@ export async function getWhatsAppConfig(): Promise<WhatsAppMenuConfig> {
         instance_token: data.instance_token,
         mensagem_boas_vindas: data.mensagem_boas_vindas || 'Olá! Como podemos te ajudar?',
         menu_ativo: data.menu_ativo || false,
-        opcoes_menu: data.opcoes_menu || [],
+        opcoes_menu: Array.isArray(data.opcoes_menu) ? data.opcoes_menu : [],
         footer_text: data.footer_text || 'DentalClinic',
         list_button_text: data.list_button_text || 'Ver Opções',
         created_at: data.created_at,
