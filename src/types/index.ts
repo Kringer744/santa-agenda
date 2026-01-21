@@ -71,7 +71,7 @@ export interface AgendaDentista {
   clinica_id: string;
   horarios_disponiveis: string[];
   horarios_ocupados: string[];
-  google_event_id: string | null;
+  google_event_id: string | null | undefined; // Alterado para incluir 'undefined'
   created_at: string;
   updated_at: string;
 }
