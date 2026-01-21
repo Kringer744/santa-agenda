@@ -11,7 +11,6 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { MessageSquare, Play, Pause, Plus, Trash2, Save, Wifi, WifiOff, Loader2, Users, Send } from 'lucide-react';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
 import { 
   testConnection, 
   createBulkCampaign, 
@@ -38,6 +37,14 @@ const DEFAULT_MENU_CONFIG: WhatsAppMenuConfig = {
   footer_text: 'DentalClinic - Atendimento Automático',
   list_button_text: 'Ver Opções',
 };
+
+// Definindo o tipo Lead
+interface Lead {
+  id: string;
+  nome: string;
+  telefone: string;
+  email?: string;
+}
 
 export default function WhatsApp() {
   const [config, setConfig] = useState<WhatsAppMenuConfig>(DEFAULT_MENU_CONFIG);

@@ -12,6 +12,7 @@ interface WhatsAppConfig {
 interface Template {
   id: string;
   nome: string;
+  descricao: string | null;
   tipo: string;
   mensagem: string;
   ativo: boolean;
@@ -24,16 +25,16 @@ export async function loadWhatsAppConfig(): Promise<WhatsAppConfig | null> {
       .select('api_url, instance_token')
       .limit(1)
       .maybeSingle();
-      
+
     if (error) throw error;
-    
+
     if (data) {
       return {
         apiUrl: data.api_url,
         instanceToken: data.instance_token
       };
     }
-    
+
     return null;
   } catch (error) {
     console.error('Erro ao carregar configuração do WhatsApp:', error);
@@ -47,9 +48,9 @@ export async function loadActiveTemplates(): Promise<Template[]> {
       .from('whatsapp_templates')
       .select('*')
       .eq('ativo', true);
-      
+
     if (error) throw error;
-    
+
     return data as any as Template[];
   } catch (error) {
     console.error('Erro ao carregar templates:', error);
@@ -64,9 +65,9 @@ export async function getPaciente(pacienteId: string): Promise<Paciente | null> 
       .select('*')
       .eq('id', pacienteId)
       .maybeSingle();
-      
+
     if (error) throw error;
-    
+
     return data as any as Paciente;
   } catch (error) {
     console.error('Erro ao carregar paciente:', error);
@@ -81,9 +82,9 @@ export async function getDentista(dentistaId: string): Promise<Dentista | null> 
       .select('*')
       .eq('id', dentistaId)
       .maybeSingle();
-      
+
     if (error) throw error;
-    
+
     return data as any as Dentista;
   } catch (error) {
     console.error('Erro ao carregar dentista:', error);
@@ -160,7 +161,7 @@ function replaceTemplateVariables(
       .replace(/\{\{data_consulta\}\}/g, format(new Date(consulta.data_hora_inicio), 'dd/MM/yyyy', { locale: ptBR }))
       .replace(/\{\{hora_consulta\}\}/g, format(new Date(consulta.data_hora_inicio), 'HH:mm', { locale: ptBR }));
   }
-  
+
   return message;
 }
 
@@ -171,18 +172,18 @@ export async function sendAutomatedMessage(
   try {
     const config = await loadWhatsAppConfig();
     if (!config || !config.apiUrl || !config.instanceToken) return false;
-    
+
     const templates = await loadActiveTemplates();
     const template = templates.find(t => t.tipo === templateType);
     if (!template) return false;
-    
+
     const paciente = await getPaciente(consulta.paciente_id);
     const dentista = await getDentista(consulta.dentista_id);
     if (!paciente) return false;
-    
+
     const message = replaceTemplateVariables(template.mensagem, paciente, dentista, consulta);
     const result = await sendTextMessage(config, paciente.telefone, message);
-    
+
     if (result.success) {
       await (supabase.from('whatsapp_messages') as any).insert({
         tipo: templateType,
@@ -250,7 +251,7 @@ export async function checkAndSendAutomatedMessages(consulta: Consulta): Promise
     if (consulta.status === 'confirmada' && consulta.data_hora_inicio) {
       const consultaDate = new Date(consulta.data_hora_inicio);
       const tomorrow = addDays(new Date(), 1);
-      
+
       if (format(consultaDate, 'yyyy-MM-18') === format(tomorrow, 'yyyy-MM-18')) {
         const { data: existingMessage } = await supabase
           .from('whatsapp_messages')
@@ -258,13 +259,13 @@ export async function checkAndSendAutomatedMessages(consulta: Consulta): Promise
           .eq('consulta_id', consulta.id)
           .eq('tipo', 'lembrete_consulta')
           .eq('status', 'enviada');
-        
+
         if (!existingMessage || existingMessage.length === 0) {
           await sendAutomatedMessage(consulta, 'lembrete_consulta');
         }
       }
     }
-    
+
     if (consulta.status === 'realizada') {
       const { data: existingMessage } = await supabase
         .from('whatsapp_messages')
@@ -272,7 +273,7 @@ export async function checkAndSendAutomatedMessages(consulta: Consulta): Promise
         .eq('consulta_id', consulta.id)
         .eq('tipo', 'pos_consulta')
         .eq('status', 'enviada');
-      
+
       if (!existingMessage || existingMessage.length === 0) {
         await sendAutomatedMessage(consulta, 'pos_consulta');
       }
@@ -286,7 +287,7 @@ export async function sendBirthdayMessage(paciente: Paciente, template: Template
   try {
     const message = replaceTemplateVariables(template.mensagem, paciente, null, null);
     const result = await sendTextMessage(config, paciente.telefone, message);
-    
+
     if (result.success) {
       await (supabase.from('whatsapp_messages') as any).insert({
         tipo: 'aniversario_paciente',

@@ -1,289 +1,243 @@
 import { supabase } from '@/integrations/supabase/client';
-import { WhatsAppMenuConfig, WhatsAppMenuOption, Conversation, InteractionLog } from '@/types';
 
-interface UazapConfig {
+interface WhatsAppConfig {
   apiUrl: string;
   instanceToken: string;
 }
 
-// Testar conexão com a API
-export async function testConnection(config: UazapConfig): Promise<{ success: boolean; error?: string }> {
+interface WhatsAppMenuOption {
+  id: string;
+  texto: string;
+  resposta: string;
+  ativo: boolean;
+}
+
+interface WhatsAppMenuConfig {
+  id?: string;
+  api_url: string;
+  instance_token: string;
+  mensagem_boas_vindas: string;
+  menu_ativo: boolean;
+  opcoes_menu: WhatsAppMenuOption[];
+  footer_text: string | null;
+  list_button_text: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+export async function testConnection(config: { apiUrl: string; instanceToken: string }): Promise<{ success: boolean; error?: string }> {
   try {
-    const { data, error } = await supabase.functions.invoke('uazap-send', {
-      body: {
-        action: 'test',
-        apiUrl: config.apiUrl,
-        instanceToken: config.instanceToken,
+    const response = await fetch(`${config.apiUrl}/instance/status`, {
+      method: "GET",
+      headers: {
+        token: config.instanceToken,
+        "Content-Type": "application/json",
       },
     });
 
-    if (error) throw error;
-    return { success: data?.success || false, error: data?.error };
-  } catch (error: any) {
-    console.error('Erro ao testar conexão:', error);
-    return { success: false, error: error.message };
+    const responseText = await response.text();
+
+    if (!response.ok) {
+      return { success: false, error: `Falha na conexão: ${responseText}` };
+    }
+
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "Erro desconhecido" };
   }
 }
 
-// Enviar menu interativo (lista nativa do WhatsApp)
-export async function sendWhatsAppMenu(
-  config: UazapConfig,
-  number: string,
-  welcomeMessage: string,
-  options: WhatsAppMenuOption[],
-  listButtonText: string = 'Ver Opções',
-  footerText: string = 'DentalClinic'
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    const activeOptions = options.filter(o => o.ativo);
-    
-    // Formato UAZAPI: "[Seção]", "Título|id|Descrição"
-    // Alterado: Descrição vazia para manter o menu limpo
-    const choices: string[] = [
-      '[Opções]', 
-      ...activeOptions.map(o => `${o.texto}|${o.id}|`)
-    ];
-
-    const { data, error } = await supabase.functions.invoke('uazap-send', {
-      body: {
-        action: 'send-menu',
-        apiUrl: config.apiUrl,
-        instanceToken: config.instanceToken,
-        number: formatPhoneNumber(number),
-        text: welcomeMessage,
-        choices,
-        listButton: listButtonText,
-        footerText: footerText,
-      },
-    });
-
-    if (error) throw error;
-    return { success: data?.success || false, error: data?.error };
-  } catch (error: any) {
-    console.error('Erro ao enviar menu:', error);
-    return { success: false, error: error.message };
-  }
-}
-
-// Enviar mensagem de texto
 export async function sendTextMessage(
-  config: UazapConfig,
+  config: { apiUrl: string; instanceToken: string },
   number: string,
   text: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const { data, error } = await supabase.functions.invoke('uazap-send', {
-      body: {
-        action: 'send-text',
-        apiUrl: config.apiUrl,
-        instanceToken: config.instanceToken,
-        number: formatPhoneNumber(number),
-        text,
+    const response = await fetch(`${config.apiUrl}/send/text`, {
+      method: "POST",
+      headers: {
+        token: config.instanceToken,
+        "Content-Type": "application/json",
       },
+      body: JSON.stringify({ number, text }),
     });
 
-    if (error) throw error;
-    return { success: data?.success || false, error: data?.error };
-  } catch (error: any) {
-    console.error('Erro ao enviar mensagem:', error);
-    return { success: false, error: error.message };
+    const data = await response.json().catch(async () => ({ raw: await response.text() }));
+
+    if (!response.ok) {
+      return { success: false, error: data.error || "Falha ao enviar mensagem" };
+    }
+
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "Erro desconhecido" };
   }
 }
 
-// Enviar mensagem com imagem (QR Code)
-export async function sendImageMessage(
-  config: UazapConfig,
+export async function sendWhatsAppMenu(
+  config: { apiUrl: string; instanceToken: string },
   number: string,
-  base64Image: string,
-  caption: string
+  text: string,
+  choices: WhatsAppMenuOption[],
+  listButton: string,
+  footerText: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const { data, error } = await supabase.functions.invoke('uazap-send', {
-      body: {
-        action: 'send-image',
-        apiUrl: config.apiUrl,
-        instanceToken: config.instanceToken,
-        number: formatPhoneNumber(number),
-        base64: base64Image,
-        caption: caption,
+    const response = await fetch(`${config.apiUrl}/send/menu`, {
+      method: "POST",
+      headers: {
+        token: config.instanceToken,
+        "Content-Type": "application/json",
       },
+      body: JSON.stringify({
+        number,
+        type: "list",
+        text,
+        choices: choices.map(c => c.texto),
+        listButton,
+        footerText,
+      }),
     });
 
-    if (error) throw error;
-    return { success: data?.success || false, error: data?.error };
-  } catch (error: any) {
-    console.error('Erro ao enviar imagem:', error);
-    return { success: false, error: error.message };
+    const data = await response.json().catch(async () => ({ raw: await response.text() }));
+
+    if (!response.ok) {
+      return { success: false, error: data.error || "Falha ao enviar menu" };
+    }
+
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "Erro desconhecido" };
   }
 }
 
-// Criar campanha de disparo em massa
 export async function createBulkCampaign(
-  config: UazapConfig,
-  leads: { nome: string; telefone: string; email?: string }[],
-  messageTemplate: string,
+  config: { apiUrl: string; instanceToken: string },
+  leads: Array<{ nome: string; telefone: string }>,
+  message: string,
   delayMin: number,
   delayMax: number
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const messages = leads.map(lead => ({
-      number: formatPhoneNumber(lead.telefone),
-      type: 'text',
-      text: replaceTemplateVariables(messageTemplate, lead),
+      number: lead.telefone,
+      text: message.replace(/\{\{nome\}\}/gi, lead.nome),
     }));
 
-    const { data, error } = await supabase.functions.invoke('uazap-send', {
-      body: {
-        action: 'create-campaign',
-        apiUrl: config.apiUrl,
-        instanceToken: config.instanceToken,
+    const response = await fetch(`${config.apiUrl}/create-campaign`, {
+      method: "POST",
+      headers: {
+        token: config.instanceToken,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
         messages,
         delayMin,
         delayMax,
-        info: `Campanha - ${new Date().toLocaleDateString('pt-BR')}`,
-        scheduled_for: 1, // Inicia em 1 minuto
-      },
+      }),
     });
 
+    const data = await response.json().catch(async () => ({ raw: await response.text() }));
+
+    if (!response.ok) {
+      return { success: false, error: data.error || "Falha ao criar campanha" };
+    }
+
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "Erro desconhecido" };
+  }
+}
+
+export async function getWhatsAppConfig(): Promise<WhatsAppMenuConfig> {
+  try {
+    const { data, error } = await supabase
+      .from('whatsapp_config')
+      .select('*')
+      .limit(1)
+      .maybeSingle();
+
     if (error) throw error;
-    return { success: data?.success || false, error: data?.error };
-  } catch (error: any) {
-    console.error('Erro ao criar campanha:', error);
-    return { success: false, error: error.message };
-  }
-}
 
-// Formatar número de telefone para formato brasileiro
-export function formatPhoneNumber(phone: string): string {
-  // Remove tudo que não é número
-  let cleaned = phone.replace(/\D/g, '');
-  
-  // Se não começa com 55, adiciona
-  if (!cleaned.startsWith('55')) {
-    cleaned = '55' + cleaned;
-  }
-  
-  return cleaned;
-}
+    if (data) {
+      return {
+        id: data.id,
+        api_url: data.api_url,
+        instance_token: data.instance_token,
+        mensagem_boas_vindas: data.mensagem_boas_vindas || 'Olá! Como podemos te ajudar?',
+        menu_ativo: data.menu_ativo || false,
+        opcoes_menu: data.opcoes_menu || [],
+        footer_text: data.footer_text || 'DentalClinic',
+        list_button_text: data.list_button_text || 'Ver Opções',
+        created_at: data.created_at,
+        updated_at: data.updated_at,
+      };
+    }
 
-// Substituir variáveis no template de mensagem
-function replaceTemplateVariables(
-  template: string, 
-  lead: { nome: string; telefone: string; email?: string }
-): string {
-  const safeNome = (lead.nome || '').trim() || 'Cliente';
-  const safeTelefone = lead.telefone || '';
-  const safeEmail = lead.email || '';
-
-  return template
-    .replace(/\{\{nome\}\}/gi, safeNome)
-    .replace(/\{\{telefone\}\}/gi, safeTelefone)
-    .replace(/\{\{email\}\}/gi, safeEmail);
-}
-
-// --- NOVAS FUNÇÕES PARA GERENCIAMENTO DE ESTADO E LOGS ---
-
-export const getWhatsAppConfig = async (): Promise<WhatsAppMenuConfig | null> => {
-  const { data, error } = await supabase
-    .from('whatsapp_config')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (error) {
-    console.error("[UAZAP Lib] Erro ao buscar configuração do WhatsApp:", error);
-    return null;
-  }
-
-  if (!data) {
-    // Se não houver configuração, retorna um default para o frontend
     return {
       api_url: '',
       instance_token: '',
-      mensagem_boas_vindas: 'Olá! 🦷 Seja bem-vindo à nossa Clínica Odontológica. Como podemos cuidar do seu sorriso hoje?',
+      mensagem_boas_vindas: 'Olá! Como podemos te ajudar?',
       menu_ativo: false,
-      opcoes_menu: [
-        { id: '1', texto: '🗓️ Agendar uma consulta', resposta: 'Ótimo! Para agendar sua consulta, acesse nosso link: https://dental-clinic.lovable.app/client-appointment', ativo: true },
-        { id: '2', texto: '🦷 Conhecer procedimentos', resposta: 'Temos diversos procedimentos: Limpeza, Clareamento, Ortodontia e mais. Qual você gostaria de saber o preço?', ativo: true },
-        { id: '3', texto: '📞 Falar com atendimento', resposta: 'Vou transferir você para um atendente. Aguarde um momento!', ativo: true },
-      ],
-      footer_text: 'DentalClinic - Atendimento Automático',
+      opcoes_menu: [],
+      footer_text: 'DentalClinic',
+      list_button_text: 'Ver Opções',
+    };
+  } catch (error) {
+    console.error('Erro ao carregar configuração:', error);
+    return {
+      api_url: '',
+      instance_token: '',
+      mensagem_boas_vindas: 'Olá! Como podemos te ajudar?',
+      menu_ativo: false,
+      opcoes_menu: [],
+      footer_text: 'DentalClinic',
       list_button_text: 'Ver Opções',
     };
   }
+}
 
-  return {
-    id: data.id,
-    api_url: data.api_url,
-    instance_token: data.instance_token,
-    mensagem_boas_vindas: data.mensagem_boas_vindas || 'Olá! 🦷 Seja bem-vindo à nossa Clínica Odontológica. Como podemos cuidar do seu sorriso hoje?',
-    menu_ativo: data.menu_ativo || false,
-    opcoes_menu: (data.opcoes_menu as WhatsAppMenuOption[]) || [],
-    footer_text: data.footer_text || 'DentalClinic - Atendimento Automático',
-    list_button_text: data.list_button_text || 'Ver Opções',
-    created_at: data.created_at,
-    updated_at: data.updated_at,
-  };
-};
+export async function updateWhatsAppConfig(config: WhatsAppMenuConfig): Promise<WhatsAppMenuConfig> {
+  try {
+    const payload = {
+      api_url: config.api_url,
+      instance_token: config.instance_token,
+      mensagem_boas_vindas: config.mensagem_boas_vindas,
+      menu_ativo: config.menu_ativo,
+      opcoes_menu: config.opcoes_menu,
+      footer_text: config.footer_text,
+      list_button_text: config.list_button_text,
+      updated_at: new Date().toISOString(),
+    };
 
-export const updateWhatsAppConfig = async (config: WhatsAppMenuConfig) => {
-  const payload = {
-    api_url: config.api_url,
-    instance_token: config.instance_token,
-    mensagem_boas_vindas: config.mensagem_boas_vindas,
-    menu_ativo: config.menu_ativo,
-    opcoes_menu: config.opcoes_menu,
-    footer_text: config.footer_text,
-    list_button_text: config.list_button_text,
-    updated_at: new Date().toISOString()
-  };
+    if (config.id) {
+      const { data, error } = await supabase
+        .from('whatsapp_config')
+        .update(payload)
+        .eq('id', config.id)
+        .select();
 
-  if (config.id) {
-    const { error } = await supabase
-      .from('whatsapp_config')
-      .update(payload)
-      .eq('id', config.id);
-    if (error) throw error;
-  } else {
-    const { data, error } = await supabase
-      .from('whatsapp_config')
-      .insert([payload])
-      .select()
-      .single();
-    if (error) throw error;
-    return data as WhatsAppMenuConfig;
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        return data[0] as any as WhatsAppMenuConfig;
+      }
+    } else {
+      const { data, error } = await supabase
+        .from('whatsapp_config')
+        .insert([payload])
+        .select();
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        return data[0] as any as WhatsAppMenuConfig;
+      }
+    }
+
+    return config;
+  } catch (error) {
+    console.error('Erro ao salvar configuração:', error);
+    throw error;
   }
-  return config;
-};
-
-export const getConversationState = async (phoneNumber: string): Promise<Conversation | null> => {
-  const { data, error } = await supabase
-    .from('conversations')
-    .select('*')
-    .eq('phone_number', phoneNumber)
-    .maybeSingle();
-  
-  if (error) console.error("[UAZAP Lib] Erro ao buscar estado da conversa:", error);
-  return data as Conversation;
-};
-
-export const updateConversationState = async (phoneNumber: string, updates: Partial<Conversation>): Promise<Conversation | null> => {
-  const now = new Date().toISOString();
-  const { data, error } = await supabase
-    .from('conversations')
-    .upsert({ phone_number: phoneNumber, ...updates, updated_at: now }, { onConflict: 'phone_number' })
-    .select()
-    .single();
-  
-  if (error) console.error("[UAZAP Lib] Erro ao atualizar estado da conversa:", error);
-  return data as Conversation;
-};
-
-export const logInteraction = async (log: Omit<InteractionLog, 'id' | 'created_at'>): Promise<void> => {
-  const { error } = await supabase
-    .from('interaction_logs')
-    .insert(log);
-  
-  if (error) console.error("[UAZAP Lib] Erro ao registrar interação:", error);
-};
+}
