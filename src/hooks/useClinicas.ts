@@ -45,6 +45,38 @@ export function useCreateClinica() {
   });
 }
 
+export function useUpdateClinica() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  
+  return useMutation({
+    mutationFn: async ({ id, ...clinica }: Partial<Clinica> & { id: string }) => {
+      const { data, error } = await supabase
+        .from('clinicas')
+        .update({ ...clinica, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as Clinica;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clinicas'] });
+      toast({
+        title: 'Clínica atualizada com sucesso!'
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erro ao atualizar clínica',
+        description: error.message,
+        variant: 'destructive'
+      });
+    },
+  });
+}
+
 export function useDeleteClinica() {
   const queryClient = useQueryClient();
   const { toast } = useToast();

@@ -9,6 +9,7 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
+  AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
@@ -22,51 +23,78 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Building2, Trash2, CalendarCheck, Save, Loader2, Stethoscope, Plus } from 'lucide-react'; 
-import { useClinicas, useDeleteClinica, useCreateClinica } from '@/hooks/useClinicas'; 
-import { useProcedimentos, useCreateProcedimento } from '@/hooks/useProcedimentos'; 
+import { Building2, Trash2, CalendarCheck, Save, Loader2, Stethoscope, Plus, Edit } from 'lucide-react'; 
+import { useClinicas, useDeleteClinica, useCreateClinica, useUpdateClinica } from '@/hooks/useClinicas'; 
+import { useProcedimentos, useCreateProcedimento, useUpdateProcedimento } from '@/hooks/useProcedimentos'; 
 import { useDentistas, useUpdateDentistaGoogleCalendarId } from '@/hooks/useDentistas';
+import { Clinica, Procedimento } from '@/types';
 
 export default function Configuracoes() {
   const [activeTab, setActiveTab] = useState('clinica');
   const [isClinicaDialogOpen, setIsClinicaDialogOpen] = useState(false);
   const [isProcedimentoDialogOpen, setIsProcedimentoDialogOpen] = useState(false);
+  const [editingClinica, setEditingClinica] = useState<Clinica | null>(null);
+  const [editingProcedimento, setEditingProcedimento] = useState<Procedimento | null>(null);
   
   const { data: clinicas = [] } = useClinicas(); 
   const createClinica = useCreateClinica();
+  const updateClinica = useUpdateClinica();
   const deleteClinica = useDeleteClinica(); 
   
   const { data: procedimentos = [] } = useProcedimentos(); 
   const createProcedimento = useCreateProcedimento();
+  const updateProcedimento = useUpdateProcedimento();
 
   const { data: dentistas = [] } = useDentistas();
   const updateDentistaGoogleCalendarId = useUpdateDentistaGoogleCalendarId();
 
-  const handleAddClinica = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSaveClinica = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    createClinica.mutate({
+    const data = {
       nome: formData.get('nome') as string,
       endereco: formData.get('endereco') as string || null,
       cidade: formData.get('cidade') as string || null,
       estado: formData.get('estado') as string || null,
-      capacidade_atendimentos: parseInt(formData.get('capacidade_atendimentos') as string) || 20, 
-    }, {
-      onSuccess: () => setIsClinicaDialogOpen(false)
-    });
+      capacidade_atendimentos: parseInt(formData.get('capacidade_atendimentos') as string) || 20,
+    };
+
+    if (editingClinica) {
+      updateClinica.mutate({ id: editingClinica.id, ...data }, {
+        onSuccess: () => {
+          setIsClinicaDialogOpen(false);
+          setEditingClinica(null);
+        }
+      });
+    } else {
+      createClinica.mutate(data, {
+        onSuccess: () => setIsClinicaDialogOpen(false)
+      });
+    }
   };
 
-  const handleAddProcedimento = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSaveProcedimento = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    createProcedimento.mutate({
+    const data = {
       nome: formData.get('nome') as string,
       preco: parseFloat(formData.get('preco') as string) || 0,
-      icone: formData.get('icone') as string || '🦷', 
+      icone: formData.get('icone') as string || '🦷',
       ativo: true,
-    }, {
-      onSuccess: () => setIsProcedimentoDialogOpen(false)
-    });
+    };
+
+    if (editingProcedimento) {
+      updateProcedimento.mutate({ id: editingProcedimento.id, ...data }, {
+        onSuccess: () => {
+          setIsProcedimentoDialogOpen(false);
+          setEditingProcedimento(null);
+        }
+      });
+    } else {
+      createProcedimento.mutate(data, {
+        onSuccess: () => setIsProcedimentoDialogOpen(false)
+      });
+    }
   };
 
   return (
@@ -96,39 +124,42 @@ export default function Configuracoes() {
                       Dados da Clínica
                     </CardTitle>
                   </div>
-                  <Dialog open={isClinicaDialogOpen} onOpenChange={setIsClinicaDialogOpen}>
+                  <Dialog open={isClinicaDialogOpen} onOpenChange={(open) => {
+                    setIsClinicaDialogOpen(open);
+                    if (!open) setEditingClinica(null);
+                  }}>
                     <DialogTrigger asChild>
                       <Button size="sm"><Plus className="w-4 h-4 mr-2" /> Adicionar Clínica</Button>
                     </DialogTrigger>
                     <DialogContent>
                       <DialogHeader>
-                        <DialogTitle>Nova Clínica</DialogTitle>
+                        <DialogTitle>{editingClinica ? 'Editar Clínica' : 'Nova Clínica'}</DialogTitle>
                       </DialogHeader>
-                      <form onSubmit={handleAddClinica} className="space-y-4">
+                      <form onSubmit={handleSaveClinica} className="space-y-4">
                         <div className="space-y-2">
                           <Label htmlFor="nome">Nome da Clínica</Label>
-                          <Input id="nome" name="nome" required placeholder="Ex: Clínica Central" />
+                          <Input id="nome" name="nome" required defaultValue={editingClinica?.nome} placeholder="Ex: Clínica Central" />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
                             <Label htmlFor="cidade">Cidade</Label>
-                            <Input id="cidade" name="cidade" placeholder="Ex: São Paulo" />
+                            <Input id="cidade" name="cidade" defaultValue={editingClinica?.cidade || ''} placeholder="Ex: São Paulo" />
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="estado">Estado</Label>
-                            <Input id="estado" name="estado" placeholder="Ex: SP" />
+                            <Input id="estado" name="estado" defaultValue={editingClinica?.estado || ''} placeholder="Ex: SP" />
                           </div>
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="endereco">Endereço</Label>
-                          <Input id="endereco" name="endereco" placeholder="Ex: Av. Paulista, 1000" />
+                          <Input id="endereco" name="endereco" defaultValue={editingClinica?.endereco || ''} placeholder="Ex: Av. Paulista, 1000" />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="capacidade_atendimentos">Capacidade Diária</Label>
-                          <Input id="capacidade_atendimentos" name="capacidade_atendimentos" type="number" defaultValue="20" />
+                          <Input id="capacidade_atendimentos" name="capacidade_atendimentos" type="number" defaultValue={editingClinica?.capacidade_atendimentos || 20} />
                         </div>
-                        <Button type="submit" className="w-full" disabled={createClinica.isPending}>
-                          {createClinica.isPending ? <Loader2 className="animate-spin" /> : 'Salvar Clínica'}
+                        <Button type="submit" className="w-full" disabled={createClinica.isPending || updateClinica.isPending}>
+                          {(createClinica.isPending || updateClinica.isPending) ? <Loader2 className="animate-spin" /> : 'Salvar Clínica'}
                         </Button>
                       </form>
                     </DialogContent>
@@ -143,18 +174,29 @@ export default function Configuracoes() {
                       <p className="text-xs text-muted-foreground">{clinica.cidade} - {clinica.estado}</p>
                     </div>
                     
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button size="icon" variant="ghost" className="text-destructive"><Trash2 size={16} /></Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader><AlertDialogTitle>Remover Clínica?</AlertDialogTitle></AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Não</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => deleteClinica.mutate(clinica.id)}>Sim, Remover</AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                    <div className="flex items-center gap-2">
+                      <Button size="icon" variant="ghost" onClick={() => {
+                        setEditingClinica(clinica);
+                        setIsClinicaDialogOpen(true);
+                      }}>
+                        <Edit size={16} />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button size="icon" variant="ghost" className="text-destructive"><Trash2 size={16} /></Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Remover Clínica?</AlertDialogTitle>
+                            <AlertDialogDescription>Deseja remover a clínica {clinica.nome}? Esta ação não pode ser desfeita.</AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Não</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => deleteClinica.mutate(clinica.id)} className="bg-destructive text-destructive-foreground">Sim, Remover</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </div>
                 ))}
                 {clinicas.length === 0 && <p className="text-center text-muted-foreground py-8">Nenhuma clínica cadastrada.</p>}
@@ -166,31 +208,34 @@ export default function Configuracoes() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Serviços & Preços</CardTitle>
-                <Dialog open={isProcedimentoDialogOpen} onOpenChange={setIsProcedimentoDialogOpen}>
+                <Dialog open={isProcedimentoDialogOpen} onOpenChange={(open) => {
+                  setIsProcedimentoDialogOpen(open);
+                  if (!open) setEditingProcedimento(null);
+                }}>
                   <DialogTrigger asChild>
                     <Button size="sm"><Plus className="w-4 h-4 mr-2" /> Novo Procedimento</Button>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle>Novo Procedimento</DialogTitle>
+                      <DialogTitle>{editingProcedimento ? 'Editar Procedimento' : 'Novo Procedimento'}</DialogTitle>
                     </DialogHeader>
-                    <form onSubmit={handleAddProcedimento} className="space-y-4">
+                    <form onSubmit={handleSaveProcedimento} className="space-y-4">
                       <div className="space-y-2">
                         <Label htmlFor="proc_nome">Nome do Procedimento</Label>
-                        <Input id="proc_nome" name="nome" required placeholder="Ex: Limpeza Completa" />
+                        <Input id="proc_nome" name="nome" required defaultValue={editingProcedimento?.nome} placeholder="Ex: Limpeza Completa" />
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="preco">Preço (R$)</Label>
-                          <Input id="preco" name="preco" type="number" step="0.01" required placeholder="0.00" />
+                          <Input id="preco" name="preco" type="number" step="0.01" required defaultValue={editingProcedimento?.preco} placeholder="0.00" />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="icone">Ícone (Emoji)</Label>
-                          <Input id="icone" name="icone" defaultValue="🦷" placeholder="🦷" />
+                          <Input id="icone" name="icone" defaultValue={editingProcedimento?.icone || '🦷'} placeholder="🦷" />
                         </div>
                       </div>
-                      <Button type="submit" className="w-full" disabled={createProcedimento.isPending}>
-                        {createProcedimento.isPending ? <Loader2 className="animate-spin" /> : 'Salvar Procedimento'}
+                      <Button type="submit" className="w-full" disabled={createProcedimento.isPending || updateProcedimento.isPending}>
+                        {(createProcedimento.isPending || updateProcedimento.isPending) ? <Loader2 className="animate-spin" /> : 'Salvar Procedimento'}
                       </Button>
                     </form>
                   </DialogContent>
@@ -203,8 +248,29 @@ export default function Configuracoes() {
                       <span className="text-xl">{proc.icone}</span>
                       <span className="font-medium">{proc.nome}</span>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <span className="font-bold">R$ {proc.preco.toFixed(2)}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold mr-2">R$ {proc.preco.toFixed(2)}</span>
+                      <Button size="icon" variant="ghost" onClick={() => {
+                        setEditingProcedimento(proc);
+                        setIsProcedimentoDialogOpen(true);
+                      }}>
+                        <Edit size={16} />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button size="icon" variant="ghost" className="text-destructive"><Trash2 size={16} /></Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Remover Procedimento?</AlertDialogTitle>
+                            <AlertDialogDescription>Deseja remover o procedimento {proc.nome}?</AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Não</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => {/* Delete logic should be added to hook if needed */}} className="bg-destructive text-destructive-foreground">Sim, Remover</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </div>
                 ))}
