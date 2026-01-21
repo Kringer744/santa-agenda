@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   AlertDialog,
@@ -13,22 +14,60 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Building2, Trash2, CalendarCheck, Save, Loader2, Stethoscope } from 'lucide-react'; 
-import { useClinicas, useDeleteClinica } from '@/hooks/useClinicas'; 
-import { useProcedimentos } from '@/hooks/useProcedimentos'; 
+import { Building2, Trash2, CalendarCheck, Save, Loader2, Stethoscope, Plus } from 'lucide-react'; 
+import { useClinicas, useDeleteClinica, useCreateClinica } from '@/hooks/useClinicas'; 
+import { useProcedimentos, useCreateProcedimento } from '@/hooks/useProcedimentos'; 
 import { useDentistas, useUpdateDentistaGoogleCalendarId } from '@/hooks/useDentistas';
 
 export default function Configuracoes() {
   const [activeTab, setActiveTab] = useState('clinica');
+  const [isClinicaDialogOpen, setIsClinicaDialogOpen] = useState(false);
+  const [isProcedimentoDialogOpen, setIsProcedimentoDialogOpen] = useState(false);
   
   const { data: clinicas = [] } = useClinicas(); 
+  const createClinica = useCreateClinica();
   const deleteClinica = useDeleteClinica(); 
   
   const { data: procedimentos = [] } = useProcedimentos(); 
+  const createProcedimento = useCreateProcedimento();
 
   const { data: dentistas = [] } = useDentistas();
   const updateDentistaGoogleCalendarId = useUpdateDentistaGoogleCalendarId();
+
+  const handleAddClinica = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    createClinica.mutate({
+      nome: formData.get('nome') as string,
+      endereco: formData.get('endereco') as string || null,
+      cidade: formData.get('cidade') as string || null,
+      estado: formData.get('estado') as string || null,
+      capacidade_atendimentos: parseInt(formData.get('capacidade_atendimentos') as string) || 20, 
+    }, {
+      onSuccess: () => setIsClinicaDialogOpen(false)
+    });
+  };
+
+  const handleAddProcedimento = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    createProcedimento.mutate({
+      nome: formData.get('nome') as string,
+      preco: parseFloat(formData.get('preco') as string) || 0,
+      icone: formData.get('icone') as string || '🦷', 
+      ativo: true,
+    }, {
+      onSuccess: () => setIsProcedimentoDialogOpen(false)
+    });
+  };
 
   return (
     <Layout>
@@ -57,6 +96,43 @@ export default function Configuracoes() {
                       Dados da Clínica
                     </CardTitle>
                   </div>
+                  <Dialog open={isClinicaDialogOpen} onOpenChange={setIsClinicaDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button size="sm"><Plus className="w-4 h-4 mr-2" /> Adicionar Clínica</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Nova Clínica</DialogTitle>
+                      </DialogHeader>
+                      <form onSubmit={handleAddClinica} className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="nome">Nome da Clínica</Label>
+                          <Input id="nome" name="nome" required placeholder="Ex: Clínica Central" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="cidade">Cidade</Label>
+                            <Input id="cidade" name="cidade" placeholder="Ex: São Paulo" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="estado">Estado</Label>
+                            <Input id="estado" name="estado" placeholder="Ex: SP" />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="endereco">Endereço</Label>
+                          <Input id="endereco" name="endereco" placeholder="Ex: Av. Paulista, 1000" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="capacidade_atendimentos">Capacidade Diária</Label>
+                          <Input id="capacidade_atendimentos" name="capacidade_atendimentos" type="number" defaultValue="20" />
+                        </div>
+                        <Button type="submit" className="w-full" disabled={createClinica.isPending}>
+                          {createClinica.isPending ? <Loader2 className="animate-spin" /> : 'Salvar Clínica'}
+                        </Button>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -90,6 +166,35 @@ export default function Configuracoes() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Serviços & Preços</CardTitle>
+                <Dialog open={isProcedimentoDialogOpen} onOpenChange={setIsProcedimentoDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm"><Plus className="w-4 h-4 mr-2" /> Novo Procedimento</Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Novo Procedimento</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleAddProcedimento} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="proc_nome">Nome do Procedimento</Label>
+                        <Input id="proc_nome" name="nome" required placeholder="Ex: Limpeza Completa" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="preco">Preço (R$)</Label>
+                          <Input id="preco" name="preco" type="number" step="0.01" required placeholder="0.00" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="icone">Ícone (Emoji)</Label>
+                          <Input id="icone" name="icone" defaultValue="🦷" placeholder="🦷" />
+                        </div>
+                      </div>
+                      <Button type="submit" className="w-full" disabled={createProcedimento.isPending}>
+                        {createProcedimento.isPending ? <Loader2 className="animate-spin" /> : 'Salvar Procedimento'}
+                      </Button>
+                    </form>
+                  </DialogContent>
+                </Dialog>
               </CardHeader>
               <CardContent className="space-y-3">
                 {procedimentos.map((proc) => (
