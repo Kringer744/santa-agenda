@@ -12,52 +12,41 @@ import { Label } from '@/components/ui/label';
 import { MessageSquare, Play, Pause, Plus, Trash2, Save, Wifi, WifiOff, Loader2, Users, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { testConnection, createBulkCampaign, sendTextMessage, sendInteractiveMenu } from '@/lib/uazap';
+import { 
+  testConnection, 
+  createBulkCampaign, 
+  sendTextMessage, 
+  sendWhatsAppMenu, // Renomeado de sendInteractiveMenu
+  getWhatsAppConfig, // Nova função
+  updateWhatsAppConfig, // Nova função
+} from '@/lib/uazap';
 import { getPatientsWithBirthdayThisMonth } from '@/lib/whatsappClinicAutomation';
-import { Paciente } from '@/types';
+import { Paciente, WhatsAppMenuConfig, WhatsAppMenuOption } from '@/types'; // Importar os novos tipos
 import { cn } from '@/lib/utils';
 
-interface Lead {
-  id: string;
-  nome: string;
-  telefone: string;
-  email?: string;
-}
-
-interface MenuOption {
-  id: string;
-  texto: string;
-  resposta: string;
-  ativo: boolean;
-}
-
-interface WhatsAppConfig {
-  id?: string;
-  api_url: string;
-  instance_token: string;
-  menu_ativo: boolean;
-  mensagem_boas_vindas: string;
-  opcoes_menu: MenuOption[];
-}
+// Default menu para inicialização, se não houver nada no banco
+const DEFAULT_MENU_CONFIG: WhatsAppMenuConfig = {
+  api_url: '',
+  instance_token: '',
+  mensagem_boas_vindas: 'Olá! 🦷 Seja bem-vindo à nossa Clínica Odontológica. Como podemos cuidar do seu sorriso hoje?',
+  menu_ativo: false,
+  opcoes_menu: [
+    { id: '1', texto: '🗓️ Agendar uma consulta', resposta: 'Ótimo! Para agendar sua consulta, acesse nosso link: https://dental-clinic.lovable.app/client-appointment', ativo: true },
+    { id: '2', texto: '🦷 Conhecer procedimentos', resposta: 'Temos diversos procedimentos: Limpeza, Clareamento, Ortodontia e mais. Qual você gostaria de saber o preço?', ativo: true },
+    { id: '3', texto: '📞 Falar com atendimento', resposta: 'Vou transferir você para um atendente. Aguarde um momento!', ativo: true },
+  ],
+  footer_text: 'DentalClinic - Atendimento Automático',
+  list_button_text: 'Ver Opções',
+};
 
 export default function WhatsApp() {
-  const [config, setConfig] = useState<WhatsAppConfig>({
-    api_url: '',
-    instance_token: '',
-    menu_ativo: false,
-    mensagem_boas_vindas: 'Olá! 🦷 Seja bem-vindo à nossa Clínica Odontológica. Como podemos cuidar do seu sorriso hoje?',
-    opcoes_menu: [
-      { id: '1', texto: '🗓️ Agendar uma consulta', resposta: 'Ótimo! Para agendar sua consulta, acesse nosso link: https://dental-clinic.lovable.app/client-appointment', ativo: true },
-      { id: '2', texto: '🦷 Conhecer procedimentos', resposta: 'Temos diversos procedimentos: Limpeza, Clareamento, Ortodontia e mais. Qual você gostaria de saber o preço?', ativo: true },
-      { id: '3', texto: '📞 Falar com atendimento', resposta: 'Vou transferir você para um atendente. Aguarde um momento!', ativo: true },
-    ],
-  });
+  const [config, setConfig] = useState<WhatsAppMenuConfig>(DEFAULT_MENU_CONFIG);
 
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
   const [isTesting, setIsTesting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [isSendingTestMenu, setIsSendingTestMenu] = useState(false); // Novo estado para o envio do menu de teste
-  const [testPhoneNumber, setTestPhoneNumber] = useState(''); // Novo estado para o número de teste
+  const [isSendingTestMenu, setIsSendingTestMenu] = useState(false);
+  const [testPhoneNumber, setTestPhoneNumber] = useState('');
   
   const [leads, setLeads] = useState<Lead[]>([]);
   const [manualNumbers, setManualNumbers] = useState('');
@@ -76,40 +65,23 @@ export default function WhatsApp() {
 
   const loadConfig = async () => {
     try {
-      const { data, error } = await supabase.from('whatsapp_config').select('*').limit(1).maybeSingle();
-      if (error) throw error;
+      const data = await getWhatsAppConfig();
       if (data) {
-        const d = data as any;
-        const opcoesMenu = Array.isArray(d.opcoes_menu) ? (d.opcoes_menu as unknown as MenuOption[]) : config.opcoes_menu;
-        setConfig({
-          id: d.id,
-          api_url: d.api_url,
-          instance_token: d.instance_token,
-          menu_ativo: d.menu_ativo || false,
-          mensagem_boas_vindas: d.mensagem_boas_vindas || config.mensagem_boas_vindas,
-          opcoes_menu: opcoesMenu,
-        });
-        if (d.api_url && d.instance_token) setConnectionStatus('connected');
+        setConfig(data);
+        if (data.api_url && data.instance_token) setConnectionStatus('connected');
       }
-    } catch (error) { console.error('Erro ao carregar configuração:', error); }
+    } catch (error) { 
+      console.error('Erro ao carregar configuração:', error);
+      toast.error('Erro ao carregar configuração do WhatsApp.');
+    }
   };
 
   const handleSaveConfig = async () => {
     setIsSaving(true);
     try {
-      const payload = {
-        api_url: config.api_url,
-        instance_token: config.instance_token,
-        menu_ativo: config.menu_ativo,
-        mensagem_boas_vindas: config.mensagem_boas_vindas,
-        opcoes_menu: config.opcoes_menu as any,
-      };
-
-      if (config.id) {
-        await (supabase.from('whatsapp_config') as any).update(payload).eq('id', config.id);
-      } else {
-        const { data } = await (supabase.from('whatsapp_config') as any).insert([payload]).select().single();
-        if (data) setConfig(prev => ({ ...prev, id: (data as any).id }));
+      const updatedConfig = await updateWhatsAppConfig(config);
+      if (updatedConfig.id) {
+        setConfig(prev => ({ ...prev, id: updatedConfig.id }));
       }
       toast.success('Configuração salva com sucesso!');
     } catch (error) { 
@@ -151,11 +123,13 @@ export default function WhatsApp() {
 
     setIsSendingTestMenu(true);
     try {
-      const result = await sendInteractiveMenu(
+      const result = await sendWhatsAppMenu(
         { apiUrl: config.api_url, instanceToken: config.instance_token },
         testPhoneNumber,
         config.mensagem_boas_vindas,
-        config.opcoes_menu
+        config.opcoes_menu,
+        config.list_button_text || 'Ver Opções',
+        config.footer_text || 'DentalClinic'
       );
 
       if (result.success) {
@@ -172,7 +146,7 @@ export default function WhatsApp() {
   };
 
   const handleAddMenuOption = () => {
-    const newOption: MenuOption = {
+    const newOption: WhatsAppMenuOption = {
       id: Math.random().toString(36).substr(2, 9),
       texto: '',
       resposta: '',
@@ -191,7 +165,7 @@ export default function WhatsApp() {
     }));
   };
 
-  const handleUpdateMenuOption = (id: string, fields: Partial<MenuOption>) => {
+  const handleUpdateMenuOption = (id: string, fields: Partial<WhatsAppMenuOption>) => {
     setConfig(prev => ({
       ...prev,
       opcoes_menu: prev.opcoes_menu.map(opt => opt.id === id ? { ...opt, ...fields } : opt)
@@ -385,13 +359,32 @@ export default function WhatsApp() {
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="space-y-2">
-                    <Label>Mensagem de Boas-vindas</Label>
+                    <Label>Mensagem de Boas-vindas (Título do Menu)</Label>
                     <Textarea 
                       className="min-h-[100px] bg-muted/30"
                       placeholder="Olá! Como podemos te ajudar?"
                       value={config.mensagem_boas_vindas}
                       onChange={e => setConfig(prev => ({ ...prev, mensagem_boas_vindas: e.target.value }))}
                     />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Texto do Botão da Lista</Label>
+                      <Input 
+                        placeholder="Ex: Ver Opções" 
+                        value={config.list_button_text || ''} 
+                        onChange={e => setConfig(p => ({ ...p, list_button_text: e.target.value }))} 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Texto do Rodapé</Label>
+                      <Input 
+                        placeholder="Ex: DentalClinic" 
+                        value={config.footer_text || ''} 
+                        onChange={e => setConfig(p => ({ ...p, footer_text: e.target.value }))} 
+                      />
+                    </div>
                   </div>
 
                   <div className="space-y-4 pt-4 border-t">

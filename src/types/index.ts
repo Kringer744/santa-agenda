@@ -84,3 +84,50 @@ export interface MensagemClinicaAgendada { // Changed from MensagemAgendada
   status: 'agendada' | 'enviada' | 'erro';
   mensagem: string;
 }
+
+// NOVO: Tipos para o sistema de WhatsApp
+export interface WhatsAppMenuOption {
+  id: string;
+  texto: string; // Texto visível no WhatsApp
+  resposta: string; // Mensagem que o bot envia ao selecionar
+  ativo: boolean;
+}
+
+export interface WhatsAppMenuConfig {
+  id?: string;
+  api_url: string;
+  instance_token: string;
+  mensagem_boas_vindas: string; // Agora será o 'title'
+  menu_ativo: boolean; // Agora será 'is_active'
+  opcoes_menu: WhatsAppMenuOption[]; // Agora será 'options'
+  footer_text: string | null; // NOVO
+  list_button_text: string | null; // NOVO
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+export interface Conversation {
+  phone_number: string;
+  is_with_attendant: boolean;
+  attendant_assigned_at: string | null;
+  last_attendant_message_at: string | null;
+  last_menu_sent_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InteractionLog {
+  id: string;
+  phone_number: string;
+  option_id: string | null;
+  option_title: string | null;
+  received_text: string | null;
+  created_at: string;
+}
+
+export interface WhatsAppStats {
+  totalMenusSent: number;
+  optionSelections: Record<string, number>;
+  attendedConversations: number;
+  lastMenuSent: Date | null;
+}
