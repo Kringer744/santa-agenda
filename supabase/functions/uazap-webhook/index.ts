@@ -1,7 +1,7 @@
 // @ts-ignore: Deno environment
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts"; // Atualizado para 0.190.0
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 // @ts-ignore: Deno environment
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.87.1/dist/index.mjs"; // Atualizado para caminho ESM
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.87.1"; // Caminho simplificado
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
