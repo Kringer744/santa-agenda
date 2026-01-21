@@ -45,6 +45,7 @@ function replaceTemplateVariables(
 
   if (consulta) {
     const dataObj = new Date(consulta.data_hora_inicio);
+    // Adicionando variáveis de data e hora para confirmação instantânea
     message = message
       .replace(/\{\{data_consulta\}\}/g, format(dataObj, 'dd/MM/yyyy', { locale: ptBR }))
       .replace(/\{\{hora_consulta\}\}/g, format(dataObj, 'HH:mm', { locale: ptBR }));
@@ -53,7 +54,7 @@ function replaceTemplateVariables(
   return message;
 }
 
-// Disparo único ao criar/confirmar consulta manualmente
+// Disparo único ao criar/confirmar consulta (chamado pelo ClientAppointment)
 export async function checkAndSendAutomatedMessages(consulta: Consulta) {
   const config = await loadWhatsAppConfig();
   if (!config?.api_url || !config?.instance_token) return;
@@ -63,6 +64,7 @@ export async function checkAndSendAutomatedMessages(consulta: Consulta) {
 
   if (!paciente) return;
 
+  // Busca template de confirmação instantânea
   const template = await getTemplate('confirmacao_consulta');
   if (template) {
     const message = replaceTemplateVariables(template.mensagem, paciente as any, dentista as any, consulta);
@@ -70,7 +72,6 @@ export async function checkAndSendAutomatedMessages(consulta: Consulta) {
   }
 }
 
-// Busca aniversariantes do mês (necessário para a página WhatsApp)
 export async function getPatientsWithBirthdayThisMonth(): Promise<Paciente[]> {
   const { data: allPacientes } = await supabase.from('pacientes').select('*');
   const month = new Date().getUTCMonth() + 1;

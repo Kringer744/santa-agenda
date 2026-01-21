@@ -5,7 +5,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { CheckCircle, Stethoscope, ChevronLeft } from 'lucide-react';
+import { CheckCircle, Stethoscope, ChevronLeft, Loader2 } from 'lucide-react';
 import { useDentistas } from '@/hooks/useDentistas';
 import { usePacientes, useCreatePaciente } from '@/hooks/usePacientes';
 import { useClinicas } from '@/hooks/useClinicas';
@@ -17,7 +17,7 @@ import { format, addMinutes, parseISO, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { AgendaDentista, Paciente } from '@/types';
+import { AgendaDentista } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 
 export default function ClientAppointment() {
@@ -35,6 +35,7 @@ export default function ClientAppointment() {
   const [cpf, setCpf] = useState('');
   const [dataNascimento, setDataNascimento] = useState('');
   const [currentPacienteId, setCurrentPacienteId] = useState<string | null>(pacienteIdUrl);
+  const [isCheckingPatient, setIsCheckingPatient] = useState(false);
 
   const { data: dentistas = [] } = useDentistas();
   const { data: clinicas = [] } = useClinicas();
@@ -77,42 +78,47 @@ export default function ClientAppointment() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsCheckingPatient(true);
     try {
-      if (!nome || !telefone || !cpf || !dataNascimento) {
-        toast.error("Preencha todos os campos.");
+      if (!nome || !telefone || !cpf) {
+        toast.error("Preencha os campos obrigatórios.");
         return;
       }
       const cleanedCpf = cpf.replace(/\D/g, '');
       const cleanedTelefone = telefone.replace(/\D/g, '');
 
-      const { data: existingPatients } = await supabase
+      // Busca por CPF ou Telefone para evitar duplicidade
+      const { data: existingPatients, error } = await supabase
         .from('pacientes')
         .select('id, nome')
-        .or(`cpf.eq.${cleanedCpf},telefone.eq.${cleanedTelefone}`);
+        .or(`cpf.eq.${cleanedCpf},telefone.eq.${cleanedTelefone}`)
+        .limit(1);
 
-      let pacienteToUse: Paciente | null = null;
+      if (error) throw error;
 
       if (existingPatients && existingPatients.length > 0) {
-        pacienteToUse = existingPatients[0] as Paciente;
+        toast.success(`Bem-vindo de volta, ${existingPatients[0].nome}!`);
+        setCurrentPacienteId(existingPatients[0].id);
+        setStep(2);
       } else {
         const newPaciente = await createPaciente.mutateAsync({ 
           nome, 
           telefone: cleanedTelefone, 
           cpf: cleanedCpf, 
-          data_nascimento: dataNascimento,
+          data_nascimento: dataNascimento || null,
           tags: ['cliente-web'], 
           email: null,
           observacoes: null,
           meses_retorno: 6,
         });
-        pacienteToUse = newPaciente;
-      }
-      
-      if (pacienteToUse) {
-        setCurrentPacienteId(pacienteToUse.id);
+        setCurrentPacienteId(newPaciente.id);
         setStep(2);
       }
-    } catch (err: any) { toast.error(`Erro: ${err.message}`); }
+    } catch (err: any) { 
+      toast.error(`Erro ao validar paciente: ${err.message}`); 
+    } finally {
+      setIsCheckingPatient(false);
+    }
   };
 
   const handleBook = async () => {
@@ -127,7 +133,8 @@ export default function ClientAppointment() {
     const endDateTime = addMinutes(startDateTime, 30);
 
     try {
-      await createConsulta.mutateAsync({
+      // 1. Cria a consulta (Isso já dispara o WhatsApp no hook useCreateConsulta)
+      const consultaResult = await createConsulta.mutateAsync({
         paciente_id: currentPacienteId,
         dentista_id: selectedDentistaId,
         clinica_id: clinicas[0]?.id || '',
@@ -140,19 +147,21 @@ export default function ClientAppointment() {
         pix_copia_e_cola: null,
       });
 
+      // 2. Atualiza a agenda local do dentista
       const agendaDoDia = todasAgendas.find((a: AgendaDentista) => a.dentista_id === selectedDentistaId && a.data === format(selectedDate, 'yyyy-MM-dd'));
       if (agendaDoDia) {
         const newHorariosOcupados = [...agendaDoDia.horarios_ocupados, selectedSlot].sort();
         await updateAgenda.mutateAsync({ id: agendaDoDia.id, horarios_ocupados: newHorariosOcupados });
       }
 
+      // 3. Sincroniza com Google Calendar
       if (selectedDentista.google_calendar_id) {
         await googleCalendarSync.mutateAsync({
           action: 'createEvent',
           calendarId: selectedDentista.google_calendar_id,
           eventData: {
-            summary: `${selectedProcedimento.nome}: ${paciente?.nome}`,
-            description: `Procedimento: ${selectedProcedimento.nome}\nValor: R$ ${selectedProcedimento.preco}`,
+            summary: `${selectedProcedimento.nome}: ${paciente?.nome || 'Paciente'}`,
+            description: `Procedimento: ${selectedProcedimento.nome}\nValor: R$ ${selectedProcedimento.preco}\nCódigo: ${consultaResult.codigo_consulta}`,
             start: { dateTime: startDateTime.toISOString(), timeZone: 'America/Sao_Paulo' },
             end: { dateTime: endDateTime.toISOString(), timeZone: 'America/Sao_Paulo' },
           }
@@ -160,7 +169,9 @@ export default function ClientAppointment() {
       }
 
       setStep(5);
-    } catch (err: any) { toast.error(`Erro: ${err.message}`); }
+    } catch (err: any) { 
+      toast.error(`Erro ao finalizar agendamento: ${err.message}`); 
+    }
   };
 
   return (
@@ -196,10 +207,12 @@ export default function ClientAppointment() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>Data de Nascimento</Label>
-                <Input type="date" value={dataNascimento} onChange={e => setDataNascimento(e.target.value)} required />
+                <Label>Data de Nascimento (Opcional)</Label>
+                <Input type="date" value={dataNascimento} onChange={e => setDataNascimento(e.target.value)} />
               </div>
-              <Button type="submit" className="w-full h-12 bg-primary">Próximo Passo</Button>
+              <Button type="submit" className="w-full h-12 bg-primary" disabled={isCheckingPatient}>
+                {isCheckingPatient ? <Loader2 className="animate-spin" /> : 'Próximo Passo'}
+              </Button>
             </form>
           )}
 
@@ -308,7 +321,7 @@ export default function ClientAppointment() {
                   <span className="text-primary">R$ {selectedProcedimento?.preco.toFixed(2)}</span>
                 </div>
                 <Button className="w-full h-12" disabled={!selectedSlot || createConsulta.isPending} onClick={handleBook}>
-                  Confirmar Agendamento
+                  {createConsulta.isPending ? <Loader2 className="animate-spin" /> : 'Confirmar Agendamento'}
                 </Button>
               </div>
             </div>
@@ -320,7 +333,7 @@ export default function ClientAppointment() {
                 <CheckCircle className="text-emerald-600 w-12 h-12" />
               </div>
               <h3 className="text-2xl font-bold">Agendamento Confirmado!</h3>
-              <p className="text-muted-foreground">Seu horário para {selectedProcedimento?.nome} está garantido.</p>
+              <p className="text-muted-foreground">Você receberá um WhatsApp com os detalhes.</p>
               <div className="bg-muted/50 p-4 rounded-xl border text-sm space-y-2">
                 <p><strong>Dentista:</strong> {selectedDentista?.nome}</p>
                 <p><strong>Data:</strong> {selectedDate && format(selectedDate, "dd/MM/yyyy")} às {selectedSlot}</p>
