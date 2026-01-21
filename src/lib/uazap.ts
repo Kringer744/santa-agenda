@@ -155,13 +155,23 @@ export async function getWhatsAppConfig(): Promise<WhatsAppMenuConfig> {
     if (error) throw error;
 
     if (data) {
+      // Converter o tipo Json para WhatsAppMenuOption[]
+      const opcoesMenu = Array.isArray(data.opcoes_menu)
+        ? data.opcoes_menu.map((item: any) => ({
+            id: item.id || '',
+            texto: item.texto || '',
+            resposta: item.resposta || '',
+            ativo: item.ativo || false,
+          }))
+        : [];
+
       return {
         id: data.id,
         api_url: data.api_url,
         instance_token: data.instance_token,
         mensagem_boas_vindas: data.mensagem_boas_vindas || 'Olá! Como podemos te ajudar?',
         menu_ativo: data.menu_ativo || false,
-        opcoes_menu: Array.isArray(data.opcoes_menu) ? data.opcoes_menu : [],
+        opcoes_menu: opcoesMenu,
         footer_text: data.footer_text || 'DentalClinic',
         list_button_text: data.list_button_text || 'Ver Opções',
         created_at: data.created_at,
@@ -199,7 +209,7 @@ export async function updateWhatsAppConfig(config: WhatsAppMenuConfig): Promise<
       instance_token: config.instance_token,
       mensagem_boas_vindas: config.mensagem_boas_vindas,
       menu_ativo: config.menu_ativo,
-      opcoes_menu: config.opcoes_menu,
+      opcoes_menu: config.opcoes_menu as any, // Converter para o tipo Json
       footer_text: config.footer_text,
       list_button_text: config.list_button_text,
       updated_at: new Date().toISOString(),
