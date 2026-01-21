@@ -1,7 +1,7 @@
 // @ts-ignore: Deno environment
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts"; // Atualizado para 0.190.0
 // @ts-ignore: Deno environment
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.87.1/dist/index.mjs"; // Atualizado para caminho ESM
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -84,7 +84,9 @@ serve(async (req: Request) => {
     console.log(`[WEBHOOK] Received message from ${fromNumber}: "${receivedText}"`);
 
     // Carrega a configuração do WhatsApp
-    const { data: config, error: configError } = await supabase.from('whatsapp_config').select('*').limit(1).maybeSingle();
+    const { data: configData, error: configError } = await supabase.from('whatsapp_config').select('*').limit(1).maybeSingle();
+    const config: WhatsAppMenuConfig | null = configData as WhatsAppMenuConfig | null; // Usando a interface aqui
+    
     if (configError) {
       console.error("[WEBHOOK] Erro ao carregar configuração:", configError.message);
       return jsonResponse({ ok: false, error: "Erro ao carregar configuração" }, 500);
@@ -114,11 +116,13 @@ serve(async (req: Request) => {
     };
 
     // --- Gerenciamento do Estado da Conversa ---
-    let { data: conversation, error: convError } = await supabase
+    let { data: conversationData, error: convError } = await supabase
       .from('conversations')
       .select('*')
       .eq('phone_number', fromNumber)
       .maybeSingle();
+    
+    let conversation: Conversation | null = conversationData as Conversation | null; // Usando a interface aqui
 
     if (convError) {
       console.error("[WEBHOOK] Erro ao buscar conversa:", convError.message);
@@ -136,7 +140,7 @@ serve(async (req: Request) => {
         .select()
         .single();
       if (createConvError) console.error("[WEBHOOK] Erro ao criar conversa:", createConvError.message);
-      conversation = newConv;
+      conversation = newConv as Conversation | null; // Garantindo o tipo na reatribuição
     } else {
       // Verifica timeout do atendente
       if (conversation.is_with_attendant && conversation.last_attendant_message_at) {
