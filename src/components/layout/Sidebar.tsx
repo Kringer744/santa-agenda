@@ -9,15 +9,14 @@ import {
   Settings, 
   ChevronLeft,
   ChevronRight,
-  CalendarDays,
-  Home
+  CalendarDays
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 const menuItems = [
-  { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
+  { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
   { icon: CalendarCheck, label: 'Consultas', path: '/consultas' },
   { icon: CalendarDays, label: 'Agenda', path: '/agenda' },
   { icon: Users, label: 'Pacientes', path: '/pacientes' },
@@ -76,17 +75,7 @@ export function Sidebar() {
         </ul>
       </nav>
 
-      <div className="p-4 border-t border-border bg-muted/30 space-y-2">
-        <NavLink
-          to="/"
-          className={cn(
-            "flex items-center gap-3 px-4 py-2 rounded-lg text-muted-foreground hover:bg-muted transition-all",
-            collapsed && "justify-center px-0"
-          )}
-        >
-          <Home size={18} />
-          {!collapsed && <span className="text-sm">Página Inicial (LP)</span>}
-        </NavLink>
+      <div className="p-4 border-t border-border bg-muted/30">
         <Button
           variant="ghost"
           size="sm"

@@ -8,8 +8,7 @@ import {
   MessageSquare, 
   Settings, 
   Menu,
-  CalendarDays,
-  Home
+  CalendarDays
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -20,7 +19,7 @@ import {
 } from '@/components/ui/drawer';
 
 const menuItems = [
-  { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
+  { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
   { icon: CalendarCheck, label: 'Consultas', path: '/consultas' },
   { icon: CalendarDays, label: 'Agenda', path: '/agenda' },
   { icon: Users, label: 'Pacientes', path: '/pacientes' },
@@ -61,16 +60,6 @@ export function MobileHeader() {
 
             <nav className="flex-1 py-6 px-3">
               <ul className="space-y-2">
-                <li>
-                  <NavLink
-                    to="/"
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-muted-foreground hover:bg-muted"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    <Home className="w-5 h-5" />
-                    <span>Página Inicial</span>
-                  </NavLink>
-                </li>
                 {menuItems.map((item) => {
                   const isActive = location.pathname === item.path;
                   return (
