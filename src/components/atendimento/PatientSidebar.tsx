@@ -1,7 +1,7 @@
 import { CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { User, Phone, Calendar, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
+import { Phone, Calendar, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useState } from 'react';
 import { toast } from 'sonner';

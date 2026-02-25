@@ -20,7 +20,8 @@ export interface Database {
           created_at: string
           updated_at: string
           tags: string[]
-          observacoes: string | null // NOVO: Campo para observações
+          observacoes: string | null
+          meses_retorno: number | null
         }
         Insert: {
           id?: string
@@ -32,7 +33,8 @@ export interface Database {
           created_at?: string
           updated_at?: string
           tags?: string[]
-          observacoes?: string | null // NOVO: Campo para observações
+          observacoes?: string | null
+          meses_retorno?: number | null
         }
         Update: {
           id?: string
@@ -44,7 +46,8 @@ export interface Database {
           created_at?: string
           updated_at?: string
           tags?: string[]
-          observacoes?: string | null // NOVO: Campo para observações
+          observacoes?: string | null
+          meses_retorno?: number | null
         }
         Relationships: []
       }
@@ -59,6 +62,7 @@ export interface Database {
           created_at: string
           updated_at: string
           google_calendar_id: string | null
+          procedimentos: string[]
         }
         Insert: {
           id?: string
@@ -70,6 +74,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
           google_calendar_id?: string | null
+          procedimentos?: string[]
         }
         Update: {
           id?: string
@@ -81,6 +86,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
           google_calendar_id?: string | null
+          procedimentos?: string[]
         }
         Relationships: []
       }
@@ -117,6 +123,144 @@ export interface Database {
         }
         Relationships: []
       }
+      clinics: {
+        Row: {
+          id: string
+          name: string
+          chatwoot_base_url: string | null
+          chatwoot_account_id: number | null
+          chatwoot_api_token: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          chatwoot_base_url?: string | null
+          chatwoot_account_id?: number | null
+          chatwoot_api_token?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          chatwoot_base_url?: string | null
+          chatwoot_account_id?: number | null
+          chatwoot_api_token?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      conversations: {
+        Row: {
+          id: string
+          clinic_id: string
+          chatwoot_conversation_id: number | null
+          patient_id: string | null
+          status: string | null
+          priority: string | null
+          assigned_user_id: string | null
+          last_message: string | null
+          last_message_at: string | null
+          channel: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          clinic_id: string
+          chatwoot_conversation_id?: number | null
+          patient_id?: string | null
+          status?: string | null
+          priority?: string | null
+          assigned_user_id?: string | null
+          last_message?: string | null
+          last_message_at?: string | null
+          channel?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          clinic_id?: string
+          chatwoot_conversation_id?: number | null
+          patient_id?: string | null
+          status?: string | null
+          priority?: string | null
+          assigned_user_id?: string | null
+          last_message?: string | null
+          last_message_at?: string | null
+          channel?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "pacientes"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      messages: {
+        Row: {
+          id: string
+          clinic_id: string
+          conversation_id: string
+          chatwoot_message_id: number | null
+          direction: string
+          content: string | null
+          status: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          clinic_id: string
+          conversation_id: string
+          chatwoot_message_id?: number | null
+          direction: string
+          content?: string | null
+          status?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          clinic_id?: string
+          conversation_id?: string
+          chatwoot_message_id?: number | null
+          direction?: string
+          content?: string | null
+          status?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       consultas: {
         Row: {
           id: string
@@ -135,6 +279,7 @@ export interface Database {
           pix_txid: string | null
           pix_qr_code_base64: string | null
           pix_copia_e_cola: string | null
+          urgencia: boolean
         }
         Insert: {
           id?: string
@@ -153,6 +298,7 @@ export interface Database {
           pix_txid?: string | null
           pix_qr_code_base64?: string | null
           pix_copia_e_cola?: string | null
+          urgencia?: boolean
         }
         Update: {
           id?: string
@@ -171,6 +317,7 @@ export interface Database {
           pix_txid?: string | null
           pix_qr_code_base64?: string | null
           pix_copia_e_cola?: string | null
+          urgencia?: boolean
         }
         Relationships: []
       }
@@ -247,6 +394,9 @@ export interface Database {
           opcoes_menu: Json | null
           created_at: string | null
           updated_at: string | null
+          footer_text: string | null
+          list_button_text: string | null
+          parabens_automatico: boolean | null
         }
         Insert: {
           id?: string
@@ -257,6 +407,9 @@ export interface Database {
           opcoes_menu?: Json | null
           created_at?: string | null
           updated_at?: string | null
+          footer_text?: string | null
+          list_button_text?: string | null
+          parabens_automatico?: boolean | null
         }
         Update: {
           id?: string
@@ -267,6 +420,9 @@ export interface Database {
           opcoes_menu?: Json | null
           created_at?: string | null
           updated_at?: string | null
+          footer_text?: string | null
+          list_button_text?: string | null
+          parabens_automatico?: boolean | null
         }
         Relationships: []
       }
