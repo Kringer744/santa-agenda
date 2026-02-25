@@ -5,7 +5,9 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { CheckCircle, Stethoscope, ChevronLeft, Loader2 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { CheckCircle, Stethoscope, ChevronLeft, Loader2, AlertCircle } from 'lucide-react';
 import { useDentistas } from '@/hooks/useDentistas';
 import { usePacientes, useCreatePaciente } from '@/hooks/usePacientes';
 import { useClinicas } from '@/hooks/useClinicas';
@@ -29,6 +31,7 @@ export default function ClientAppointment() {
   const [selectedProcedimentoId, setSelectedProcedimentoId] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedSlot, setSelectedSlot] = useState<string>('');
+  const [isUrgency, setIsUrgency] = useState(false);
   
   const [nome, setNome] = useState('');
   const [telefone, setTelefone] = useState('');
@@ -142,6 +145,7 @@ export default function ClientAppointment() {
         data_hora_fim: endDateTime.toISOString(),
         procedimentos: [selectedProcedimentoId],
         valor_total: selectedProcedimento.preco,
+        urgencia: isUrgency,
         pix_txid: null,
         pix_qr_code_base64: null,
         pix_copia_e_cola: null,
@@ -288,6 +292,21 @@ export default function ClientAppointment() {
                 <ChevronLeft size={16} className="mr-1" /> Mudar serviço
               </Button>
               <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-red-50 border border-red-100 rounded-xl mb-4">
+                  <div className="space-y-0.5">
+                    <Label className="text-red-900 font-bold flex items-center gap-2">
+                      <AlertCircle size={18} />
+                      É uma Urgência?
+                    </Label>
+                    <p className="text-xs text-red-700">A secretária entrará em contato para um encaixe prioritário.</p>
+                  </div>
+                  <Switch
+                    checked={isUrgency}
+                    onCheckedChange={setIsUrgency}
+                    className="data-[state=checked]:bg-red-600"
+                  />
+                </div>
+
                 <Label className="text-base font-bold">3. Escolha o Melhor Horário</Label>
                 <Calendar
                   mode="single"
