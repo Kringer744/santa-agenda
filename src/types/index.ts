@@ -37,6 +37,7 @@ export interface Consulta {
   valor_total: number;
   codigo_consulta: string | null;
   pagamento_status: 'pendente' | 'aprovado' | 'recusado';
+  urgencia: boolean;
   created_at: string;
   updated_at: string;
   pix_txid: string | null;
