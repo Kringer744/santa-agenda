@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { MessageSquare, Trash2, Save, Wifi, WifiOff, Loader2, Plus, Sparkles } from 'lucide-react';
+import { MessageSquare, Trash2, Save, Wifi, WifiOff, Loader2, Plus, Sparkles, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { 
   testConnection, 
@@ -20,6 +20,7 @@ import {
 import { WhatsAppMenuConfig, WhatsAppMenuOption } from '@/types';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import Atendimento from './Atendimento'; // Importando a nova página
 
 const DEFAULT_MENU_CONFIG: WhatsAppMenuConfig = {
   api_url: '',
@@ -77,11 +78,8 @@ export default function WhatsApp() {
   const handleSaveConfig = async () => {
     setIsSaving(true);
     try {
-      // Salva a configuração geral
       const updatedConfig = await updateWhatsAppConfig(config);
       setConfig(prev => ({ ...prev, id: updatedConfig.id }));
-
-      // Salva o template de aniversário
       await supabase
         .from('whatsapp_templates')
         .upsert({ 
@@ -90,7 +88,6 @@ export default function WhatsApp() {
           mensagem: birthdayMessage,
           ativo: true 
         }, { onConflict: 'tipo' });
-
       toast.success('Configurações salvas com sucesso!');
     } catch (error) { 
       toast.error('Erro ao salvar configuração'); 
@@ -136,7 +133,7 @@ export default function WhatsApp() {
 
   return (
     <Layout>
-      <div className="space-y-6 max-w-5xl mx-auto">
+      <div className="space-y-6 max-w-7xl mx-auto">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 gradient-dental rounded-xl flex items-center justify-center text-white shadow-soft">
@@ -147,7 +144,6 @@ export default function WhatsApp() {
               <p className="text-muted-foreground text-sm">Configure automações e atendimento</p>
             </div>
           </div>
-
           <div className={cn(
             "px-4 py-2 rounded-full flex items-center gap-2 text-sm font-medium",
             connectionStatus === 'connected' ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
@@ -157,138 +153,109 @@ export default function WhatsApp() {
           </div>
         </div>
 
-        <Tabs defaultValue="conexao" className="space-y-6">
+        <Tabs defaultValue="atendimento" className="space-y-6">
           <TabsList className="bg-muted p-1 rounded-xl">
-            <TabsTrigger value="conexao">Conexão</TabsTrigger>
-            <TabsTrigger value="automacao">Automações</TabsTrigger>
-            <TabsTrigger value="menu">Menu Interativo</TabsTrigger>
+            <TabsTrigger value="atendimento"><MessageCircle className="w-4 h-4 mr-2" />Atendimento (Chat)</TabsTrigger>
+            <TabsTrigger value="configuracao">Configuração</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="conexao">
-            <Card>
-              <CardHeader>
-                <CardTitle>Configuração UAZAP</CardTitle>
-                <CardDescription>Conecte sua instância para enviar mensagens.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>URL da API</Label>
-                    <Input value={config.api_url} onChange={e => setConfig(p => ({ ...p, api_url: e.target.value }))} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Token da Instância</Label>
-                    <Input type="password" value={config.instance_token} onChange={e => setConfig(p => ({ ...p, instance_token: e.target.value }))} />
-                  </div>
-                </div>
-                <div className="flex gap-3">
-                  <Button onClick={handleTestConnection} disabled={isTesting} className="flex-1">
-                    {isTesting ? <Loader2 className="animate-spin mr-2" /> : <Wifi className="mr-2" />}
-                    Testar Conexão
-                  </Button>
-                  <Button variant="outline" onClick={handleSaveConfig} disabled={isSaving}>
-                    <Save className="mr-2 h-4 w-4" />
-                    Salvar Configurações
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+          <TabsContent value="atendimento">
+            <Atendimento />
           </TabsContent>
 
-          <TabsContent value="automacao">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Sparkles className="text-primary" />
-                  Disparos Automáticos
-                </CardTitle>
-                <CardDescription>O sistema enviará mensagens ao abrir o Dashboard.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="p-4 border rounded-xl space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-bold">Lembretes de Consulta</p>
-                      <p className="text-sm text-muted-foreground">Envia lembretes para Hoje e Amanhã automaticamente.</p>
+          <TabsContent value="configuracao">
+            <div className="max-w-5xl mx-auto space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Configuração UAZAP</CardTitle>
+                  <CardDescription>Conecte sua instância para enviar mensagens.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>URL da API</Label>
+                      <Input value={config.api_url} onChange={e => setConfig(p => ({ ...p, api_url: e.target.value }))} />
                     </div>
-                    <Badge variant="outline" className="text-emerald-600 bg-emerald-50">Sempre Ativo</Badge>
+                    <div className="space-y-2">
+                      <Label>Token da Instância</Label>
+                      <Input type="password" value={config.instance_token} onChange={e => setConfig(p => ({ ...p, instance_token: e.target.value }))} />
+                    </div>
                   </div>
-                  
-                  <div className="pt-4 border-t space-y-4">
+                  <div className="flex gap-3">
+                    <Button onClick={handleTestConnection} disabled={isTesting} className="flex-1">
+                      {isTesting ? <Loader2 className="animate-spin mr-2" /> : <Wifi className="mr-2" />}
+                      Testar Conexão
+                    </Button>
+                    <Button variant="outline" onClick={handleSaveConfig} disabled={isSaving}>
+                      <Save className="mr-2 h-4 w-4" />
+                      Salvar Configurações
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2"><Sparkles className="text-primary" />Disparos Automáticos</CardTitle>
+                  <CardDescription>O sistema enviará mensagens ao abrir o Dashboard.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="p-4 border rounded-xl space-y-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-bold">Parabéns Automático</p>
-                        <p className="text-sm text-muted-foreground">Envia mensagem no dia do aniversário do paciente.</p>
+                        <p className="font-bold">Lembretes de Consulta</p>
+                        <p className="text-sm text-muted-foreground">Envia lembretes para Hoje e Amanhã automaticamente.</p>
                       </div>
-                      <Switch 
-                        checked={config.parabens_automatico} 
-                        onCheckedChange={(val) => setConfig(p => ({ ...p, parabens_automatico: val }))}
-                      />
+                      <Badge variant="outline" className="text-emerald-600 bg-emerald-50">Sempre Ativo</Badge>
                     </div>
-                    
-                    {config.parabens_automatico && (
-                      <div className="space-y-2 animate-fade-in">
-                        <Label htmlFor="birthday_msg">Mensagem de Parabéns</Label>
-                        <Textarea 
-                          id="birthday_msg"
-                          value={birthdayMessage}
-                          onChange={(e) => setBirthdayMessage(e.target.value)}
-                          placeholder="Use {{nome}} para o nome do paciente..."
-                          className="min-h-[100px]"
-                        />
-                        <p className="text-[10px] text-muted-foreground">
-                          Sugestão: Olá {"{{nome}}"}! 🎂 A equipe da DentalClinic passa para desejar um feliz aniversário!
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                <Button onClick={handleSaveConfig} disabled={isSaving} className="w-full">
-                  Salvar Preferências de Automação
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="menu">
-             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Menu Interativo</CardTitle>
-                </div>
-                <Switch 
-                  checked={config.menu_ativo} 
-                  onCheckedChange={(val) => setConfig(p => ({ ...p, menu_ativo: val }))} 
-                />
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Título do Menu</Label>
-                  <Input value={config.mensagem_boas_vindas} onChange={e => setConfig(p => ({ ...p, mensagem_boas_vindas: e.target.value }))} />
-                </div>
-                
-                <div className="space-y-3 pt-4">
-                  {config.opcoes_menu.map((option, idx) => (
-                    <div key={option.id} className="p-4 border rounded-xl space-y-2">
+                    <div className="pt-4 border-t space-y-4">
                       <div className="flex items-center justify-between">
-                        <Label className="font-bold">Opção {idx + 1}</Label>
-                        <Button variant="ghost" size="icon" onClick={() => setConfig(p => ({ ...p, opcoes_menu: p.opcoes_menu.filter(o => o.id !== option.id) }))}>
-                          <Trash2 size={14} className="text-destructive" />
-                        </Button>
+                        <div>
+                          <p className="font-bold">Parabéns Automático</p>
+                          <p className="text-sm text-muted-foreground">Envia mensagem no dia do aniversário do paciente.</p>
+                        </div>
+                        <Switch checked={config.parabens_automatico} onCheckedChange={(val) => setConfig(p => ({ ...p, parabens_automatico: val }))} />
                       </div>
-                      <Input value={option.texto} onChange={e => handleUpdateMenuOption(option.id, { texto: e.target.value })} placeholder="Texto do botão" />
-                      <Textarea value={option.resposta} onChange={e => handleUpdateMenuOption(option.id, { resposta: e.target.value })} placeholder="Resposta automática" />
+                      {config.parabens_automatico && (
+                        <div className="space-y-2 animate-fade-in">
+                          <Label htmlFor="birthday_msg">Mensagem de Parabéns</Label>
+                          <Textarea id="birthday_msg" value={birthdayMessage} onChange={(e) => setBirthdayMessage(e.target.value)} placeholder="Use {{nome}} para o nome do paciente..." className="min-h-[100px]" />
+                          <p className="text-[10px] text-muted-foreground">Sugestão: Olá {"{{nome}}"}! 🎂 A equipe da DentalClinic passa para desejar um feliz aniversário!</p>
+                        </div>
+                      )}
                     </div>
-                  ))}
-                  <Button variant="outline" className="w-full" onClick={handleAddMenuOption}>
-                    <Plus size={16} className="mr-2" /> Adicionar Opção
-                  </Button>
-                </div>
-                
-                <Button onClick={handleSaveConfig} className="w-full">Salvar Menu</Button>
-              </CardContent>
-            </Card>
+                  </div>
+                  <Button onClick={handleSaveConfig} disabled={isSaving} className="w-full">Salvar Preferências de Automação</Button>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div><CardTitle>Menu Interativo</CardTitle></div>
+                  <Switch checked={config.menu_ativo} onCheckedChange={(val) => setConfig(p => ({ ...p, menu_ativo: val }))} />
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Título do Menu</Label>
+                    <Input value={config.mensagem_boas_vindas} onChange={e => setConfig(p => ({ ...p, mensagem_boas_vindas: e.target.value }))} />
+                  </div>
+                  <div className="space-y-3 pt-4">
+                    {config.opcoes_menu.map((option, idx) => (
+                      <div key={option.id} className="p-4 border rounded-xl space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label className="font-bold">Opção {idx + 1}</Label>
+                          <Button variant="ghost" size="icon" onClick={() => setConfig(p => ({ ...p, opcoes_menu: p.opcoes_menu.filter(o => o.id !== option.id) }))}>
+                            <Trash2 size={14} className="text-destructive" />
+                          </Button>
+                        </div>
+                        <Input value={option.texto} onChange={e => handleUpdateMenuOption(option.id, { texto: e.target.value })} placeholder="Texto do botão" />
+                        <Textarea value={option.resposta} onChange={e => handleUpdateMenuOption(option.id, { resposta: e.target.value })} placeholder="Resposta automática" />
+                      </div>
+                    ))}
+                    <Button variant="outline" className="w-full" onClick={handleAddMenuOption}><Plus size={16} className="mr-2" /> Adicionar Opção</Button>
+                  </div>
+                  <Button onClick={handleSaveConfig} className="w-full">Salvar Menu</Button>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </div>
