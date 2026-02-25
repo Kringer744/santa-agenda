@@ -206,7 +206,7 @@ serve(async (req: Request) => {
           .eq('telefone', fromNumber)
           .maybeSingle();
 
-        let link = `${APP_URL}/client-appointment`;
+        let link = `${APP_URL}/agendamento`;
         if (paciente) {
           link += `?paciente_id=${paciente.id}`;
           responseText = `Olá ${paciente.nome}! Para agendar sua consulta, use este link:\n\n${link}`;

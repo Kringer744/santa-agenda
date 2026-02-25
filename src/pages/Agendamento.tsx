@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { CheckCircle, Stethoscope, ChevronLeft, Loader2, AlertCircle } from 'lucide-react';
 import { useDentistas } from '@/hooks/useDentistas';
 import { usePacientes, useCreatePaciente } from '@/hooks/usePacientes';
@@ -22,7 +21,7 @@ import { cn } from '@/lib/utils';
 import { AgendaDentista } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 
-export default function ClientAppointment() {
+export default function Agendamento() {
   const [searchParams] = useSearchParams();
   const pacienteIdUrl = searchParams.get('paciente_id');
   

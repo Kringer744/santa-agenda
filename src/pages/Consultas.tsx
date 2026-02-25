@@ -18,8 +18,7 @@ import {
   DialogFooter
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Calendar, Plus, Search, ChevronRight, Loader2, Stethoscope, Trash2, Edit, AlertCircle } from 'lucide-react';
+import { Calendar, Plus, Search, ChevronRight, Loader2, Stethoscope, Trash2, Edit } from 'lucide-react';
 import { useConsultas, useCreateConsulta, useUpdateConsultaStatus, useDeleteConsulta, useUpdateConsultaValue } from '@/hooks/useConsultas';
 import { useDentistas } from '@/hooks/useDentistas';
 import { usePacientes, useCreatePaciente } from '@/hooks/usePacientes';
