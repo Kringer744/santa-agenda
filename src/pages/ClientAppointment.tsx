@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'; 
+import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -39,6 +39,10 @@ export default function ClientAppointment() {
   const [dataNascimento, setDataNascimento] = useState('');
   const [currentPacienteId, setCurrentPacienteId] = useState<string | null>(pacienteIdUrl);
   const [isCheckingPatient, setIsCheckingPatient] = useState(false);
+
+  useEffect(() => {
+    document.title = "Agendamento - DentalClinic";
+  }, []);
 
   const { data: dentistas = [] } = useDentistas();
   const { data: clinicas = [] } = useClinicas();
