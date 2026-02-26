@@ -75,7 +75,10 @@ function NewConsultaForm({
 
   const handleAddConsulta = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (clinicas.length === 0) return;
+    if (clinicas.length === 0) {
+      toast.error("Nenhuma clínica cadastrada. Por favor, adicione uma em Configurações.");
+      return;
+    }
 
     let pacienteId = selectedPacienteId;
 
@@ -90,8 +93,8 @@ function NewConsultaForm({
     }
 
     const formData = new FormData(e.currentTarget);
-    const valorTotalString = (formData.get('valor_total') as string).replace(',', '.');
-    const valorTotal = parseFloat(valorTotalString);
+    const valorTotalString = (formData.get('valor_total') as string) || '0';
+    const valorTotal = parseFloat(valorTotalString.replace(',', '.'));
 
     if (isNaN(valorTotal)) {
       toast.error('O valor total inserido é inválido.');
