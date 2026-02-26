@@ -12,16 +12,24 @@ export default function Atendimento() {
   const [loading, setLoading] = useState(true);
 
   const fetchConversations = async () => {
+    // Buscamos as conversas e tentamos trazer os dados do paciente vinculado
     const { data, error } = await supabase
       .from('conversations')
-      .select('*, pacientes(nome, telefone)')
+      .select(`
+        *,
+        pacientes:patient_id (
+          nome,
+          telefone
+        )
+      `)
       .order('last_message_at', { ascending: false });
     
     if (error) {
       console.error("Erro ao buscar conversas:", error);
-      toast.error("Falha ao carregar conversas.", {
-        description: `Detalhes: ${error.message}`
-      });
+      // Não mostramos o toast de erro toda hora no polling para não irritar o usuário
+      if (loading) {
+        toast.error("Falha ao carregar conversas. Verifique se as tabelas estão configuradas no SQL Editor.");
+      }
     } else if (data) {
       setConversations(data);
     }
@@ -30,7 +38,7 @@ export default function Atendimento() {
 
   useEffect(() => {
     fetchConversations();
-    const interval = setInterval(fetchConversations, 5000); // Polling 5s
+    const interval = setInterval(fetchConversations, 5000); // Atualiza a cada 5 segundos
     return () => clearInterval(interval);
   }, []);
 
