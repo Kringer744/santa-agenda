@@ -7,12 +7,29 @@ import { Send, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { chatwootService } from '@/services/chatwoot.service';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 export default function ChatWindow({ conversation, onMessageSent }: any) {
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const fetchMessages = async () => {
+    if (!conversation) return;
+    const { data, error } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('conversation_id', conversation.id)
+      .order('created_at', { ascending: true });
+    
+    if (error) {
+      console.error("Error fetching messages:", error);
+      toast.error("Falha ao carregar mensagens.");
+    } else if (data) {
+      setMessages(data);
+    }
+  };
 
   useEffect(() => {
     if (conversation) {
@@ -27,15 +44,6 @@ export default function ChatWindow({ conversation, onMessageSent }: any) {
       scrollRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
-
-  const fetchMessages = async () => {
-    const { data } = await supabase
-      .from('messages')
-      .select('*')
-      .eq('conversation_id', conversation.id)
-      .order('created_at', { ascending: true });
-    if (data) setMessages(data);
-  };
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,6 +75,7 @@ export default function ChatWindow({ conversation, onMessageSent }: any) {
       onMessageSent();
     } catch (error) {
       console.error(error);
+      toast.error("Erro ao enviar mensagem.");
     } finally {
       setSending(false);
     }

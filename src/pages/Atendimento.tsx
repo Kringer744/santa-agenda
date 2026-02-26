@@ -4,6 +4,7 @@ import ConversationList from '../components/atendimento/ConversationList';
 import ChatWindow from '../components/atendimento/ChatWindow';
 import PatientSidebar from '../components/atendimento/PatientSidebar';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export default function Atendimento() {
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
@@ -11,12 +12,19 @@ export default function Atendimento() {
   const [loading, setLoading] = useState(true);
 
   const fetchConversations = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('conversations')
       .select('*, pacientes(nome, telefone)')
       .order('last_message_at', { ascending: false });
     
-    if (data) setConversations(data);
+    if (error) {
+      console.error("Erro ao buscar conversas:", error);
+      toast.error("Falha ao carregar conversas.", {
+        description: `Detalhes: ${error.message}`
+      });
+    } else if (data) {
+      setConversations(data);
+    }
     setLoading(false);
   };
 
