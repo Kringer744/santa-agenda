@@ -26,6 +26,7 @@ import { useClinicas } from '@/hooks/useClinicas';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Consulta } from '@/types';
+import { toast } from 'sonner';
 
 const statusColors: Record<string, string> = {
   agendada: 'bg-honey-light text-accent-foreground border-honey',
@@ -50,7 +51,7 @@ function NewConsultaForm({
 
   const handleCreateNewPatient = async () => {
     if (!newPacienteData.nome || !newPacienteData.cpf || !newPacienteData.telefone) {
-      alert('Preencha nome, CPF e telefone para cadastrar o paciente.');
+      toast.error('Preencha nome, CPF e telefone para cadastrar o paciente.');
       return null;
     }
     try {
@@ -67,7 +68,7 @@ function NewConsultaForm({
       setIsNewPatient(false);
       return newPaciente.id;
     } catch (error: any) {
-      alert(`Erro ao cadastrar paciente: ${error.message}`);
+      toast.error(`Erro ao cadastrar paciente: ${error.message}`);
       return null;
     }
   };
@@ -84,11 +85,19 @@ function NewConsultaForm({
     }
 
     if (!pacienteId) {
-      alert('Selecione ou cadastre um paciente.');
+      toast.error('Selecione ou cadastre um paciente.');
       return;
     }
 
     const formData = new FormData(e.currentTarget);
+    const valorTotalString = (formData.get('valor_total') as string).replace(',', '.');
+    const valorTotal = parseFloat(valorTotalString);
+
+    if (isNaN(valorTotal)) {
+      toast.error('O valor total inserido é inválido.');
+      return;
+    }
+
     createConsulta.mutate({
       paciente_id: pacienteId,
       dentista_id: formData.get('dentista_id') as string,
@@ -96,8 +105,8 @@ function NewConsultaForm({
       data_hora_inicio: formData.get('data_hora_inicio') as string,
       data_hora_fim: formData.get('data_hora_fim') as string,
       procedimentos: [],
-      valor_total: parseFloat(formData.get('valor_total') as string) || 0,
-      urgencia: false, // Adicionado para corrigir o bug
+      valor_total: valorTotal,
+      urgencia: false,
       pix_txid: null,
       pix_qr_code_base64: null,
       pix_copia_e_cola: null,
@@ -194,7 +203,7 @@ function NewConsultaForm({
       </div>
       <div className="space-y-2">
         <Label htmlFor="valor_total">Valor total (R$)</Label>
-        <Input id="valor_total" name="valor_total" type="number" step="0.01" placeholder="100.00" />
+        <Input id="valor_total" name="valor_total" type="text" inputMode="decimal" placeholder="100,00" />
       </div>
       <div className="flex flex-col sm:flex-row gap-3 pt-4">
         <Button type="button" variant="outline" className="flex-1" onClick={onSuccess}>
@@ -210,13 +219,21 @@ function NewConsultaForm({
 
 // Componente auxiliar para edição de preço
 function EditValueDialog({ consulta, updateConsultaValue, isOpen, setIsOpen }: { consulta: Consulta, updateConsultaValue: any, isOpen: boolean, setIsOpen: (open: boolean) => void }) {
-  const [newValue, setNewValue] = useState(consulta.valor_total.toFixed(2));
+  const [newValue, setNewValue] = useState(consulta.valor_total.toFixed(2).replace('.', ','));
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+    const sanitizedValue = newValue.replace(',', '.');
+    const parsedValue = parseFloat(sanitizedValue);
+
+    if (isNaN(parsedValue)) {
+      toast.error('Valor inválido.');
+      return;
+    }
+
     updateConsultaValue.mutate({
       id: consulta.id,
-      valor_total: parseFloat(newValue)
+      valor_total: parsedValue
     }, {
       onSuccess: () => setIsOpen(false)
     });
@@ -233,8 +250,8 @@ function EditValueDialog({ consulta, updateConsultaValue, isOpen, setIsOpen }: {
             <Label htmlFor="edit_valor">Novo Valor (R$)</Label>
             <Input 
               id="edit_valor" 
-              type="number" 
-              step="0.01" 
+              type="text"
+              inputMode="decimal"
               value={newValue} 
               onChange={e => setNewValue(e.target.value)} 
               required 
