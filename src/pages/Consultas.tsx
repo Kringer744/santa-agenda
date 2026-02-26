@@ -75,6 +75,12 @@ function NewConsultaForm({
 
   const handleAddConsulta = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    
+    const formData = new FormData(e.currentTarget);
+    const dentistaId = formData.get('dentista_id') as string;
+    const dataHoraInicio = formData.get('data_hora_inicio') as string;
+    const dataHoraFim = formData.get('data_hora_fim') as string;
+
     if (clinicas.length === 0) {
       toast.error("Nenhuma clínica cadastrada. Por favor, adicione uma em Configurações.");
       return;
@@ -88,11 +94,20 @@ function NewConsultaForm({
     }
 
     if (!pacienteId) {
-      toast.error('Selecione ou cadastre um paciente.');
+      toast.error('Por favor, selecione ou cadastre um paciente.');
       return;
     }
 
-    const formData = new FormData(e.currentTarget);
+    if (!dentistaId) {
+      toast.error('Por favor, selecione um dentista.');
+      return;
+    }
+
+    if (!dataHoraInicio || !dataHoraFim) {
+      toast.error('Por favor, preencha as datas de início e fim da consulta.');
+      return;
+    }
+
     const valorTotalString = (formData.get('valor_total') as string) || '0';
     const valorTotal = parseFloat(valorTotalString.replace(',', '.'));
 
@@ -103,10 +118,10 @@ function NewConsultaForm({
 
     createConsulta.mutate({
       paciente_id: pacienteId,
-      dentista_id: formData.get('dentista_id') as string,
+      dentista_id: dentistaId,
       clinica_id: clinicas[0].id, 
-      data_hora_inicio: formData.get('data_hora_inicio') as string,
-      data_hora_fim: formData.get('data_hora_fim') as string,
+      data_hora_inicio: dataHoraInicio,
+      data_hora_fim: dataHoraFim,
       procedimentos: [],
       valor_total: valorTotal,
       urgencia: false,
@@ -125,7 +140,6 @@ function NewConsultaForm({
         <div className="flex items-center gap-2">
           <Select 
             name="paciente_id" 
-            required 
             value={selectedPacienteId}
             onValueChange={setSelectedPacienteId}
             disabled={isNewPatient}
@@ -181,7 +195,7 @@ function NewConsultaForm({
 
       <div className="space-y-2">
         <Label htmlFor="dentista_id">Dentista</Label>
-        <Select name="dentista_id" required disabled={!selectedPacienteId && !isNewPatient}>
+        <Select name="dentista_id" disabled={!selectedPacienteId && !isNewPatient}>
           <SelectTrigger>
             <SelectValue placeholder="Selecione o dentista" />
           </SelectTrigger>
