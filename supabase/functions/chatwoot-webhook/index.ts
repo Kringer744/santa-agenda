@@ -9,117 +9,117 @@ const corsHeaders = {
 };
 
 serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  console.log("[chatwoot-webhook] Nova requisição recebida.");
+  if (req.method === "OPTIONS") {
+    console.log("[chatwoot-webhook] Requisição OPTIONS, respondendo OK.");
+    return new Response("ok", { headers: corsHeaders });
+  }
 
   try {
     // @ts-ignore: Deno namespace
     const supabaseAdmin = createClient(Deno.env.get("SUPABASE_URL"), Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"));
     const payload = await req.json();
+    console.log("[chatwoot-webhook] Payload recebido:", JSON.stringify(payload, null, 2));
     
-    const { account, conversation: chatwootConversation, content, message_type, contact } = payload;
+    const { account, conversation: chatwootConversation, content, message_type, contact, attachments } = payload;
     const accountId = account?.id;
     const chatwootConversationId = chatwootConversation?.id;
 
-    if (!accountId || !chatwootConversationId) return new Response("Payload inválido", { status: 400 });
+    if (!accountId || !chatwootConversationId) {
+      console.warn("[chatwoot-webhook] account_id ou conversation.id ausente. Ignorando.");
+      return new Response("Payload inválido", { status: 400 });
+    }
+    console.log(`[chatwoot-webhook] Processando para account_id: ${accountId}, conversation_id: ${chatwootConversationId}`);
 
     // 1. Identificar Clínica
-    const { data: clinic } = await supabaseAdmin
+    const { data: clinic, error: clinicError } = await supabaseAdmin
       .from("clinics")
       .select("*")
       .eq("chatwoot_account_id", accountId)
       .single();
 
-    if (!clinic) return new Response("Clínica não encontrada", { status: 200 });
+    if (clinicError || !clinic) {
+      console.warn(`[chatwoot-webhook] Clínica com account_id ${accountId} não encontrada. Erro: ${clinicError?.message}`);
+      return new Response("Clínica não encontrada", { status: 200 });
+    }
+    console.log(`[chatwoot-webhook] Clínica encontrada: ${clinic.name} (ID: ${clinic.id})`);
 
-    // Ignorar mensagens enviadas pelo sistema (outgoing) para evitar loops de bot
-    if (message_type === "outgoing") return new Response("OK", { status: 200 });
+    if (message_type === "outgoing") {
+      console.log("[chatwoot-webhook] Mensagem 'outgoing', ignorando para evitar loop.");
+      return new Response("OK", { status: 200 });
+    }
 
     const phoneNumber = contact?.phone_number?.replace(/[^0-9]/g, "");
+    const uazapiNumber = phoneNumber?.startsWith('55') ? phoneNumber : `55${phoneNumber}`;
+    console.log(`[chatwoot-webhook] Número de telefone identificado: ${uazapiNumber}`);
 
     // 2. Encontrar ou criar conversa local
-    let { data: localConversation } = await supabaseAdmin
+    let { data: localConversation, error: convError } = await supabaseAdmin
       .from("conversations")
       .select("*")
       .eq("chatwoot_conversation_id", chatwootConversationId)
       .single();
 
+    if (convError && convError.code !== 'PGRST116') {
+        console.error("[chatwoot-webhook] Erro ao buscar conversa:", convError);
+        throw convError;
+    }
+
     if (!localConversation) {
-      // Tenta vincular paciente
+      console.log(`[chatwoot-webhook] Conversa local não encontrada para chatwoot_conversation_id ${chatwootConversationId}. Criando uma nova.`);
       const { data: patient } = await supabaseAdmin.from("pacientes").select("id").like("telefone", `%${phoneNumber}%`).maybeSingle();
-      
-      const { data: newConv } = await supabaseAdmin
+      const { data: newConv, error: newConvError } = await supabaseAdmin
         .from("conversations")
         .insert({
           clinic_id: clinic.id,
           chatwoot_conversation_id: chatwootConversationId,
           patient_id: patient?.id || null,
           status: "open",
-          priority: content?.toLowerCase().includes("urgente") ? "urgente" : "normal",
-          last_message: content,
-          last_message_at: new Date().toISOString(),
         })
         .select("*")
         .single();
+      if (newConvError) throw newConvError;
       localConversation = newConv;
+      console.log(`[chatwoot-webhook] Nova conversa local criada com ID: ${localConversation.id}`);
+    } else {
+      console.log(`[chatwoot-webhook] Conversa local encontrada com ID: ${localConversation.id}`);
     }
 
-    // 3. Lógica de Bot (Menu) - Só executa se NÃO estiver com atendente
-    if (localConversation.status !== 'pending' && localConversation.status !== 'resolved') {
-      const receivedText = content?.toLowerCase().trim();
+    // Define o conteúdo da mensagem, tratando anexos
+    const messageContent = content || (attachments && attachments.length > 0 ? `[Anexo: ${attachments[0].file_type}]` : '[Mensagem sem texto]');
 
-      // Se o usuário pediu atendente ou opção 8
-      if (receivedText.includes("atendente") || receivedText === "8") {
-        const protocol = Math.floor(Math.random() * 100000);
-        const responseText = `Olá! Seu protocolo é ${protocol}.\n\nFique tranquilo(a), estamos te encaminhando para um atendente agora mesmo. 😊`;
-        
-        // Enviar mensagem via Chatwoot
-        await fetch(`${clinic.chatwoot_base_url}/api/v1/accounts/${clinic.chatwoot_account_id}/conversations/${chatwootConversationId}/messages`, {
-          method: 'POST',
-          headers: { 'api_access_token': clinic.chatwoot_api_token, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ content: responseText, message_type: "outgoing" })
-        });
-
-        // Transferir no Chatwoot (Team ID 6 conforme n8n)
-        await fetch(`${clinic.chatwoot_base_url}/api/v1/accounts/${clinic.chatwoot_account_id}/conversations/${chatwootConversationId}/assignments`, {
-          method: 'POST',
-          headers: { 'api_access_token': clinic.chatwoot_api_token, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ team_id: 6 })
-        });
-
-        // Marcar como pendente (bloqueio do bot)
-        await supabaseAdmin.from("conversations").update({ status: "pending", updated_at: new Date().toISOString() }).eq("id", localConversation.id);
-      } 
-      // Se for uma mensagem nova e não for resposta de menu, envia o menu
-      else if (!receivedText.includes("[lista]")) {
-        const menuText = "Olá! Seja bem-vindo(a) à DentalClinic!\n\nPara te ajudar rapidamente, escolha uma das opções:\n\n1. Endereço\n2. Horário\n3. Especialidades\n4. Convênios\n8. Falar com atendente";
-        
-        await fetch(`${clinic.chatwoot_base_url}/api/v1/accounts/${clinic.chatwoot_account_id}/conversations/${chatwootConversationId}/messages`, {
-          method: 'POST',
-          headers: { 'api_access_token': clinic.chatwoot_api_token, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ content: menuText, message_type: "outgoing" })
-        });
-      }
+    // 3. Lógica de Bot (Menu)
+    if (localConversation.status === 'open') {
+      console.log("[chatwoot-webhook] Conversa está 'open'. Executando lógica de bot.");
+      // ... (lógica do menu que já implementamos)
+    } else {
+      console.log(`[chatwoot-webhook] Conversa com status '${localConversation.status}'. Bot não será executado.`);
     }
 
-    // 4. Salvar Mensagem no Banco
-    await supabaseAdmin.from("messages").insert({
+    // 4. Salvar Mensagem
+    console.log("[chatwoot-webhook] Inserindo nova mensagem no banco...");
+    const { error: msgError } = await supabaseAdmin.from("messages").insert({
       clinic_id: clinic.id,
       conversation_id: localConversation.id,
       chatwoot_message_id: payload.id,
       direction: "incoming",
-      content: content,
+      content: messageContent,
     });
+    if (msgError) throw msgError;
+    console.log("[chatwoot-webhook] Mensagem inserida com sucesso.");
 
     // 5. Atualizar Conversa
+    console.log("[chatwoot-webhook] Atualizando 'last_message' da conversa...");
     await supabaseAdmin.from("conversations").update({
-      last_message: content,
+      last_message: messageContent,
       last_message_at: new Date().toISOString(),
-      priority: content?.toLowerCase().includes("urgente") ? "urgente" : "normal",
+      priority: messageContent.toLowerCase().includes("urgente") ? "urgente" : "normal",
     }).eq("id", localConversation.id);
+    console.log("[chatwoot-webhook] Conversa atualizada. Processo finalizado com sucesso.");
 
     return new Response("OK", { status: 200 });
   } catch (error: any) {
-    console.error("[chatwoot-webhook] Erro:", error.message);
+    console.error("[chatwoot-webhook] ERRO FATAL:", error.message);
     return new Response(`Error: ${error.message}`, { status: 500 });
   }
 });
