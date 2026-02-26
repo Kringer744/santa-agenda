@@ -64,6 +64,7 @@ function NewConsultaForm({
         data_nascimento: null,
         tags: ['novo'],
         observacoes: null,
+        meses_retorno: 6,
       });
       setSelectedPacienteId(newPaciente.id);
       setIsNewPatient(false);
@@ -77,12 +78,8 @@ function NewConsultaForm({
   const handleAddConsulta = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
-    const formData = new FormData(e.currentTarget);
-    const dataHoraInicio = formData.get('data_hora_inicio') as string;
-    const dataHoraFim = formData.get('data_hora_fim') as string;
-
     if (clinicas.length === 0) {
-      toast.error("Nenhuma clínica cadastrada. Por favor, adicione uma em Configurações.");
+      toast.error("Nenhuma clínica cadastrada! Vá em 'Configurações' e adicione sua clínica primeiro.");
       return;
     }
 
@@ -102,6 +99,10 @@ function NewConsultaForm({
       toast.error('Por favor, selecione um dentista.');
       return;
     }
+
+    const formData = new FormData(e.currentTarget);
+    const dataHoraInicio = formData.get('data_hora_inicio') as string;
+    const dataHoraFim = formData.get('data_hora_fim') as string;
 
     if (!dataHoraInicio || !dataHoraFim) {
       toast.error('Por favor, preencha as datas de início e fim da consulta.');
@@ -231,7 +232,7 @@ function NewConsultaForm({
         <Button type="button" variant="outline" className="flex-1" onClick={onSuccess}>
           Cancelar
         </Button>
-        <Button type="submit" className="flex-1" disabled={createConsulta.isPending || clinicas.length === 0 || (isNewPatient && createPaciente.isPending)}>
+        <Button type="submit" className="flex-1" disabled={createConsulta.isPending || (isNewPatient && createPaciente.isPending)}>
           {createConsulta.isPending || createPaciente.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Criar Consulta'}
         </Button>
       </div>
@@ -303,10 +304,10 @@ export default function Consultas() {
   const { data: pacientes = [] } = usePacientes();
   const { data: clinicas = [] } = useClinicas();
   const createConsulta = useCreateConsulta();
-  const createPaciente = useCreatePaciente(); // Novo hook
+  const createPaciente = useCreatePaciente();
   const updateStatus = useUpdateConsultaStatus();
-  const deleteConsulta = useDeleteConsulta(); // Novo hook
-  const updateConsultaValue = useUpdateConsultaValue(); // Novo hook
+  const deleteConsulta = useDeleteConsulta();
+  const updateConsultaValue = useUpdateConsultaValue();
 
   const getDentista = (dentistaId: string) => dentistas.find(d => d.id === dentistaId);
   const getPaciente = (pacienteId: string) => pacientes.find(p => p.id === pacienteId);
