@@ -47,6 +47,7 @@ function NewConsultaForm({
 }: any) {
   const [isNewPatient, setIsNewPatient] = useState(false);
   const [selectedPacienteId, setSelectedPacienteId] = useState('');
+  const [selectedDentistaId, setSelectedDentistaId] = useState('');
   const [newPacienteData, setNewPacienteData] = useState({ nome: '', cpf: '', telefone: '' });
 
   const handleCreateNewPatient = async () => {
@@ -77,7 +78,6 @@ function NewConsultaForm({
     e.preventDefault();
     
     const formData = new FormData(e.currentTarget);
-    const dentistaId = formData.get('dentista_id') as string;
     const dataHoraInicio = formData.get('data_hora_inicio') as string;
     const dataHoraFim = formData.get('data_hora_fim') as string;
 
@@ -98,7 +98,7 @@ function NewConsultaForm({
       return;
     }
 
-    if (!dentistaId) {
+    if (!selectedDentistaId) {
       toast.error('Por favor, selecione um dentista.');
       return;
     }
@@ -118,7 +118,7 @@ function NewConsultaForm({
 
     createConsulta.mutate({
       paciente_id: pacienteId,
-      dentista_id: dentistaId,
+      dentista_id: selectedDentistaId,
       clinica_id: clinicas[0].id, 
       data_hora_inicio: dataHoraInicio,
       data_hora_fim: dataHoraFim,
@@ -195,7 +195,12 @@ function NewConsultaForm({
 
       <div className="space-y-2">
         <Label htmlFor="dentista_id">Dentista</Label>
-        <Select name="dentista_id" disabled={!selectedPacienteId && !isNewPatient}>
+        <Select 
+          name="dentista_id" 
+          value={selectedDentistaId}
+          onValueChange={setSelectedDentistaId}
+          disabled={!selectedPacienteId && !isNewPatient}
+        >
           <SelectTrigger>
             <SelectValue placeholder="Selecione o dentista" />
           </SelectTrigger>
