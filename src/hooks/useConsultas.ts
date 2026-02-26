@@ -42,6 +42,13 @@ export function useCreateConsulta() {
       queryClient.invalidateQueries({ queryKey: ['consultas'] });
       toast({ title: 'Consulta confirmada com sucesso!' });
     },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erro ao criar consulta',
+        description: error.message,
+        variant: 'destructive'
+      });
+    },
   });
 }
 

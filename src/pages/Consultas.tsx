@@ -97,6 +97,7 @@ function NewConsultaForm({
       data_hora_fim: formData.get('data_hora_fim') as string,
       procedimentos: [],
       valor_total: parseFloat(formData.get('valor_total') as string) || 0,
+      urgencia: false, // Adicionado para corrigir o bug
       pix_txid: null,
       pix_qr_code_base64: null,
       pix_copia_e_cola: null,
