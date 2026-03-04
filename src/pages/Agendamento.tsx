@@ -116,6 +116,9 @@ export default function Agendamento() {
           email: null,
           observacoes: null,
           meses_retorno: 6,
+          is_menor_idade: false,
+          responsavel_nome: null,
+          responsavel_telefone: null
         });
         setCurrentPacienteId(newPaciente.id);
         setStep(2);

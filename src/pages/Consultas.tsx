@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,7 +17,8 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Calendar, Plus, Search, ChevronRight, Loader2, Stethoscope, Trash2, Edit } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Calendar, Plus, Search, ChevronRight, Loader2, Stethoscope, Trash2, Edit, User } from 'lucide-react';
 import { useConsultas, useCreateConsulta, useUpdateConsultaStatus, useDeleteConsulta, useUpdateConsulta } from '@/hooks/useConsultas';
 import { useDentistas } from '@/hooks/useDentistas';
 import { usePacientes } from '@/hooks/usePacientes';
@@ -36,7 +37,6 @@ const statusColors: Record<string, string> = {
   reagendada: 'bg-blush-light text-blush border-blush',
 };
 
-// Função para formatar data ignorando fuso horário para exibição correta
 const formatLocalTime = (dateString: string) => {
   try {
     const date = new Date(dateString);
@@ -46,7 +46,6 @@ const formatLocalTime = (dateString: string) => {
   }
 };
 
-// Componente para o formulário de edição/criação
 function ConsultaForm({ 
   consulta,
   dentistas, 
@@ -57,8 +56,15 @@ function ConsultaForm({
 }: any) {
   const [selectedPacienteId, setSelectedPacienteId] = useState(consulta?.paciente_id || '');
   const [selectedDentistaId, setSelectedDentistaId] = useState(consulta?.dentista_id || '');
+  const [patientSearch, setPatientSearch] = useState('');
 
-  // Formata a data para o input datetime-local (YYYY-MM-DDTHH:mm)
+  const filteredPacientes = useMemo(() => {
+    return pacientes.filter((p: any) => 
+      p.nome.toLowerCase().includes(patientSearch.toLowerCase()) ||
+      p.cpf.includes(patientSearch)
+    );
+  }, [pacientes, patientSearch]);
+
   const formatForInput = (dateStr: string | undefined) => {
     if (!dateStr) return '';
     const d = new Date(dateStr);
@@ -81,18 +87,38 @@ function ConsultaForm({
     }} className="space-y-4 mt-4">
       <div className="space-y-2">
         <Label>Paciente</Label>
+        {!consulta && (
+          <div className="relative mb-2">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input 
+              placeholder="Pesquisar paciente por nome ou CPF..." 
+              className="pl-9 h-9 text-sm"
+              value={patientSearch}
+              onChange={e => setPatientSearch(e.target.value)}
+            />
+          </div>
+        )}
         <Select 
           value={selectedPacienteId}
           onValueChange={setSelectedPacienteId}
-          disabled={!!consulta} // Não permite trocar paciente na edição para evitar erros de histórico
+          disabled={!!consulta}
         >
           <SelectTrigger>
-            <SelectValue placeholder="Selecione o paciente" />
+            <SelectValue placeholder={patientSearch ? `Resultados (${filteredPacientes.length})` : "Selecione o paciente"} />
           </SelectTrigger>
           <SelectContent>
-            {pacientes.map((p: any) => (
-              <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+            {filteredPacientes.map((p: any) => (
+              <SelectItem key={p.id} value={p.id}>
+                <div className="flex items-center gap-2">
+                  <User size={14} className="text-muted-foreground" />
+                  <span>{p.nome}</span>
+                  {p.is_menor_idade && <Badge variant="outline" className="text-[8px] h-3 px-1">MENOR</Badge>}
+                </div>
+              </SelectItem>
             ))}
+            {filteredPacientes.length === 0 && (
+              <div className="p-2 text-xs text-center text-muted-foreground">Nenhum paciente encontrado</div>
+            )}
           </SelectContent>
         </Select>
       </div>

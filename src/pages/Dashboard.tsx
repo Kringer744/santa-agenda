@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { StatsCard } from '@/components/dashboard/StatsCard';
-import { CalendarCheck, Users, TrendingUp, Loader2, Stethoscope, Clock, MessageSquare, Send, Sparkles } from 'lucide-react'; 
+import { CalendarCheck, Users, TrendingUp, Loader2, Clock, MessageSquare, Send, Sparkles, CalendarDays } from 'lucide-react'; 
 import { useConsultas } from '@/hooks/useConsultas';
 import { useDentistas } from '@/hooks/useDentistas';
 import { usePacientes } from '@/hooks/usePacientes';
@@ -11,6 +11,7 @@ import { AgendaChart } from '@/components/dashboard/AgendaChart';
 import { useTodasAgendas } from '@/hooks/useAgendaDentista';
 import { runDailyAutomations } from '@/lib/whatsappClinicAutomation';
 import { toast } from 'sonner';
+import { addDays } from 'date-fns';
 
 export default function Dashboard() {
   const [isProcessingAutomations, setIsProcessingAutomations] = useState(false);
@@ -25,12 +26,13 @@ export default function Dashboard() {
   const isLoading = loadingConsultas || loadingDentistas || loadingPacientes || loadingClinicas || loadingAgenda;
 
   const consultasHoje = consultas.filter(c => c.data_hora_inicio.startsWith(hoje));
-  const consultasPendentes = consultas.filter(c => c.status === 'agendada' || c.status === 'confirmada').length;
+  const amanha = addDays(new Date(), 1).toISOString().split('T')[0];
+  const consultasAmanha = consultas.filter(c => c.data_hora_inicio.startsWith(amanha));
+  const consultasConfirmadas = consultas.filter(c => c.status === 'confirmada').length;
 
   // Automação ao carregar
   useEffect(() => {
     const triggerAutomations = async () => {
-      // Verifica se já processou hoje na sessão local para evitar spam no refresh
       const lastRun = localStorage.getItem('last_automation_run');
       if (lastRun === hoje) return;
 
@@ -63,7 +65,11 @@ export default function Dashboard() {
     );
   }
 
-  const agendaParaChart = todasAgendas.slice(0, 5);
+  // Filtra agendas de hoje em diante para o gráfico
+  const agendaParaChart = todasAgendas
+    .filter(a => a.data >= hoje)
+    .sort((a, b) => a.data.localeCompare(b.data))
+    .slice(0, 6);
 
   return (
     <Layout>
@@ -86,28 +92,27 @@ export default function Dashboard() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatsCard
-            title="Pacientes Ativos"
-            value={pacientes.length}
-            icon={<Users size={24} />}
+            title="Consultas Hoje"
+            value={consultasHoje.length}
+            icon={<CalendarCheck size={24} />}
             variant="dental"
           />
           <StatsCard
-            title="Dentistas"
-            value={dentistas.length}
-            icon={<Stethoscope size={24} />}
+            title="Consultas Amanhã"
+            value={consultasAmanha.length}
+            icon={<CalendarDays size={24} />}
             variant="soft"
           />
           <StatsCard
-            title="Consultas Hoje"
-            value={consultasHoje.length}
-            subtitle="Atendimentos previstos"
-            icon={<CalendarCheck size={24} />}
+            title="Confirmadas"
+            value={consultasConfirmadas}
+            subtitle="Total no sistema"
+            icon={<TrendingUp size={24} />}
           />
           <StatsCard
-            title="Agendamentos"
-            value={consultasPendentes}
-            subtitle="Pendentes/Confirmados"
-            icon={<TrendingUp size={24} />}
+            title="Total Pacientes"
+            value={pacientes.length}
+            icon={<Users size={24} />}
             variant="muted"
           />
         </div>

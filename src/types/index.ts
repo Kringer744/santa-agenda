@@ -10,6 +10,9 @@ export interface Paciente {
   tags: string[];
   observacoes: string | null;
   meses_retorno: number | null;
+  responsavel_nome: string | null;
+  responsavel_telefone: string | null;
+  is_menor_idade: boolean;
 }
 
 export interface Dentista {
@@ -72,7 +75,7 @@ export interface AgendaDentista {
   clinica_id: string;
   horarios_disponiveis: string[];
   horarios_ocupados: string[];
-  google_event_id: string | null | undefined; // Alterado para incluir 'undefined'
+  google_event_id: string | null | undefined;
   created_at: string;
   updated_at: string;
 }

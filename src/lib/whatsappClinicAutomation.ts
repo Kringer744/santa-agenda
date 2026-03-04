@@ -39,13 +39,17 @@ function replaceTemplateVariables(
   let message = template.replace(/\{\{nome_paciente\}\}/g, paciente.nome);
   message = message.replace(/\{\{nome\}\}/g, paciente.nome);
 
+  // Se for menor de idade, ajusta a mensagem para o responsável
+  if (paciente.is_menor_idade && paciente.responsavel_nome) {
+    message = `Olá ${paciente.responsavel_nome}! ` + message.replace(/confirmar a consulta/g, `confirmar a consulta do(a) ${paciente.nome}`);
+  }
+
   if (dentista) {
     message = message.replace(/\{\{nome_dentista\}\}/g, dentista.nome);
   }
 
   if (consulta) {
     const dataObj = new Date(consulta.data_hora_inicio);
-    // Adicionando variáveis de data e hora para confirmação instantânea
     message = message
       .replace(/\{\{data_consulta\}\}/g, format(dataObj, 'dd/MM/yyyy', { locale: ptBR }))
       .replace(/\{\{hora_consulta\}\}/g, format(dataObj, 'HH:mm', { locale: ptBR }));
@@ -54,33 +58,27 @@ function replaceTemplateVariables(
   return message;
 }
 
-// Disparo único ao criar/confirmar consulta (chamado pelo ClientAppointment)
 export async function checkAndSendAutomatedMessages(consulta: Consulta) {
   const config = await loadWhatsAppConfig();
   if (!config?.api_url || !config?.instance_token) return;
 
-  const { data: paciente } = await supabase.from('pacientes').select('*').eq('id', consulta.paciente_id).single();
-  const { data: dentista } = await supabase.from('dentistas').select('*').eq('id', consulta.dentista_id).single();
+  const { data: pacienteData } = await supabase.from('pacientes').select('*').eq('id', consulta.paciente_id).single();
+  const { data: dentistaData } = await supabase.from('dentistas').select('*').eq('id', consulta.dentista_id).single();
 
-  if (!paciente) return;
+  if (!pacienteData) return;
+  const paciente = pacienteData as unknown as Paciente;
+  const dentista = dentistaData as unknown as Dentista;
 
-  // Busca template de confirmação instantânea
   const template = await getTemplate('confirmacao_consulta');
   if (template) {
-    const message = replaceTemplateVariables(template.mensagem, paciente as any, dentista as any, consulta);
-    await sendTextMessage({ apiUrl: config.api_url, instanceToken: config.instance_token }, paciente.telefone, message);
+    const message = replaceTemplateVariables(template.mensagem, paciente, dentista, consulta);
+    // Se for menor, envia para o telefone do responsável
+    const targetPhone = (paciente.is_menor_idade && paciente.responsavel_telefone) 
+      ? paciente.responsavel_telefone 
+      : paciente.telefone;
+      
+    await sendTextMessage({ apiUrl: config.api_url, instanceToken: config.instance_token }, targetPhone, message);
   }
-}
-
-export async function getPatientsWithBirthdayThisMonth(): Promise<Paciente[]> {
-  const { data: allPacientes } = await supabase.from('pacientes').select('*');
-  const month = new Date().getUTCMonth() + 1;
-  
-  return (allPacientes || []).filter(p => {
-    if (!p.data_nascimento) return false;
-    const d = new Date(p.data_nascimento);
-    return (d.getUTCMonth() + 1) === month;
-  }) as Paciente[];
 }
 
 export async function sendRemindersForDate(date: Date): Promise<{ success: number; total: number }> {
@@ -119,13 +117,19 @@ export async function sendRemindersForDate(date: Date): Promise<{ success: numbe
       if (alreadySent && alreadySent.length > 0) continue;
 
       const message = replaceTemplateVariables(template.mensagem, paciente, item.dentistas as any, consulta);
-      const res = await sendTextMessage({ apiUrl: config.api_url, instanceToken: config.instance_token }, paciente.telefone, message);
+      
+      // Se for menor, envia para o telefone do responsável
+      const targetPhone = (paciente.is_menor_idade && paciente.responsavel_telefone) 
+        ? paciente.responsavel_telefone 
+        : paciente.telefone;
+
+      const res = await sendTextMessage({ apiUrl: config.api_url, instanceToken: config.instance_token }, targetPhone, message);
 
       if (res.success) {
         successCount++;
         await supabase.from('whatsapp_messages').insert({
           tipo: 'lembrete_consulta',
-          destinatario: paciente.telefone,
+          destinatario: targetPhone,
           mensagem: message,
           status: 'enviada',
           consulta_id: consulta.id,
@@ -165,7 +169,8 @@ export async function processDailyBirthdays(): Promise<number> {
     let sentCount = 0;
     const todayStart = startOfDay(new Date()).toISOString();
 
-    for (const paciente of birthdayLeads) {
+    for (const pacienteData of birthdayLeads) {
+      const paciente = pacienteData as unknown as Paciente;
       const { data: alreadySent } = await supabase
         .from('whatsapp_messages')
         .select('id')
@@ -176,14 +181,20 @@ export async function processDailyBirthdays(): Promise<number> {
 
       if (alreadySent && alreadySent.length > 0) continue;
 
-      const message = replaceTemplateVariables(template.mensagem, paciente as any);
-      const res = await sendTextMessage({ apiUrl: config.api_url, instanceToken: config.instance_token }, paciente.telefone, message);
+      const message = replaceTemplateVariables(template.mensagem, paciente);
+      
+      // Aniversário sempre vai para o telefone do paciente (ou responsável se for menor)
+      const targetPhone = (paciente.is_menor_idade && paciente.responsavel_telefone) 
+        ? paciente.responsavel_telefone 
+        : paciente.telefone;
+
+      const res = await sendTextMessage({ apiUrl: config.api_url, instanceToken: config.instance_token }, targetPhone, message);
 
       if (res.success) {
         sentCount++;
         await supabase.from('whatsapp_messages').insert({
           tipo: 'aniversario_paciente',
-          destinatario: paciente.telefone,
+          destinatario: targetPhone,
           mensagem: message,
           status: 'enviada',
           paciente_id: paciente.id

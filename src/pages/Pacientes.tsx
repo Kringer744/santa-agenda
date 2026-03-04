@@ -3,6 +3,7 @@ import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { 
   Dialog, 
   DialogContent, 
@@ -24,7 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Search, Phone, Trash2, Loader2, Smile, Edit, Clock } from 'lucide-react'; 
+import { Plus, Search, Phone, Trash2, Loader2, Smile, Edit, Clock, UserRound } from 'lucide-react'; 
 import { usePacientes, useCreatePaciente, useDeletePaciente, useUpdatePaciente } from '@/hooks/usePacientes';
 import { useConsultas } from '@/hooks/useConsultas';
 import { Paciente } from '@/types';
@@ -35,6 +36,7 @@ export default function Pacientes() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingPaciente, setEditingPaciente] = useState<Paciente | null>(null);
+  const [isMenor, setIsMenor] = useState(false);
   
   const { data: pacientes = [], isLoading } = usePacientes();
   const { data: consultas = [] } = useConsultas();
@@ -60,11 +62,17 @@ export default function Pacientes() {
       telefone: formData.get('telefone') as string,
       email: formData.get('email') as string || null,
       data_nascimento: formData.get('data_nascimento') as string || null,
-      tags: ['novo'],
+      tags: isMenor ? ['menor-idade'] : ['adulto'],
       observacoes: null,
       meses_retorno: 6,
+      is_menor_idade: isMenor,
+      responsavel_nome: formData.get('responsavel_nome') as string || null,
+      responsavel_telefone: formData.get('responsavel_telefone') as string || null,
     }, {
-      onSuccess: () => setIsCreateDialogOpen(false)
+      onSuccess: () => {
+        setIsCreateDialogOpen(false);
+        setIsMenor(false);
+      }
     });
   };
 
@@ -82,6 +90,9 @@ export default function Pacientes() {
       data_nascimento: formData.get('data_nascimento') as string || null,
       observacoes: formData.get('observacoes') as string || null,
       meses_retorno: parseInt(formData.get('meses_retorno') as string) || 6,
+      is_menor_idade: isMenor,
+      responsavel_nome: formData.get('responsavel_nome') as string || null,
+      responsavel_telefone: formData.get('responsavel_telefone') as string || null,
     }, {
       onSuccess: () => setIsEditDialogOpen(false)
     });
@@ -98,7 +109,10 @@ export default function Pacientes() {
             </p>
           </div>
           
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <Dialog open={isCreateDialogOpen} onOpenChange={(open) => {
+            setIsCreateDialogOpen(open);
+            if (!open) setIsMenor(false);
+          }}>
             <DialogTrigger asChild>
               <Button className="w-full md:w-auto">
                 <Plus className="w-4 h-4 mr-2" />
@@ -110,17 +124,42 @@ export default function Pacientes() {
                 <DialogTitle>Cadastrar Paciente</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleAddPaciente} className="space-y-4 mt-4">
+                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border">
+                  <div className="space-y-0.5">
+                    <Label className="text-sm font-bold">Paciente Menor de Idade?</Label>
+                    <p className="text-xs text-muted-foreground">Ativa campos de responsável</p>
+                  </div>
+                  <Switch checked={isMenor} onCheckedChange={setIsMenor} />
+                </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="nome">Nome completo</Label>
+                  <Label htmlFor="nome">Nome completo do paciente</Label>
                   <Input id="nome" name="nome" required placeholder="Maria Silva" />
                 </div>
+
+                {isMenor && (
+                  <div className="space-y-4 p-4 border border-primary/20 bg-primary/5 rounded-xl animate-fade-in">
+                    <h4 className="text-xs font-bold uppercase text-primary flex items-center gap-2">
+                      <UserRound size={14} /> Dados do Responsável
+                    </h4>
+                    <div className="space-y-2">
+                      <Label htmlFor="responsavel_nome">Nome do Responsável</Label>
+                      <Input id="responsavel_nome" name="responsavel_nome" required={isMenor} placeholder="Nome do pai/mãe" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="responsavel_telefone">WhatsApp do Responsável</Label>
+                      <Input id="responsavel_telefone" name="responsavel_telefone" required={isMenor} placeholder="11999999999" />
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="cpf">CPF</Label>
                     <Input id="cpf" name="cpf" required placeholder="000.000.000-00" />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="telefone">WhatsApp</Label>
+                    <Label htmlFor="telefone">WhatsApp do Paciente</Label>
                     <Input id="telefone" name="telefone" required placeholder="11999999999" />
                   </div>
                 </div>
@@ -183,7 +222,11 @@ export default function Pacientes() {
                         size="icon" 
                         variant="ghost" 
                         className="h-8 w-8 text-primary hover:bg-primary/10"
-                        onClick={() => { setEditingPaciente(paciente); setIsEditDialogOpen(true); }}
+                        onClick={() => { 
+                          setEditingPaciente(paciente); 
+                          setIsMenor(paciente.is_menor_idade);
+                          setIsEditDialogOpen(true); 
+                        }}
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
@@ -212,7 +255,10 @@ export default function Pacientes() {
                     </div>
                   </div>
                   
-                  <h3 className="text-lg font-semibold text-foreground">{paciente.nome}</h3>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="text-lg font-semibold text-foreground">{paciente.nome}</h3>
+                    {paciente.is_menor_idade && <Badge variant="secondary" className="text-[10px] bg-amber-100 text-amber-700">MENOR</Badge>}
+                  </div>
                   <p className="text-sm text-muted-foreground">CPF: {paciente.cpf}</p>
                   
                   <div className="mt-4 space-y-2">
@@ -220,6 +266,12 @@ export default function Pacientes() {
                       <Phone className="w-4 h-4" />
                       <span>{paciente.telefone}</span>
                     </div>
+                    {paciente.is_menor_idade && paciente.responsavel_nome && (
+                      <div className="flex items-center gap-2 text-sm text-amber-700 bg-amber-50 p-2 rounded-lg border border-amber-100">
+                        <UserRound className="w-4 h-4" />
+                        <span className="text-xs">Resp: <strong>{paciente.responsavel_nome}</strong></span>
+                      </div>
+                    )}
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Clock className="w-4 h-4" />
                       <span>Retorno a cada {paciente.meses_retorno || 6} meses</span>
@@ -251,16 +303,43 @@ export default function Pacientes() {
         )}
 
         {editingPaciente && (
-          <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
+            setIsEditDialogOpen(open);
+            if (!open) setEditingPaciente(null);
+          }}>
             <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Perfil do Paciente</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleEditPaciente} className="space-y-4 mt-4">
+                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border">
+                  <div className="space-y-0.5">
+                    <Label className="text-sm font-bold">Paciente Menor de Idade?</Label>
+                  </div>
+                  <Switch checked={isMenor} onCheckedChange={setIsMenor} />
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="edit_nome">Nome completo</Label>
                   <Input id="edit_nome" name="nome" required defaultValue={editingPaciente.nome} />
                 </div>
+
+                {isMenor && (
+                  <div className="space-y-4 p-4 border border-primary/20 bg-primary/5 rounded-xl animate-fade-in">
+                    <h4 className="text-xs font-bold uppercase text-primary flex items-center gap-2">
+                      <UserRound size={14} /> Dados do Responsável
+                    </h4>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit_responsavel_nome">Nome do Responsável</Label>
+                      <Input id="edit_responsavel_nome" name="responsavel_nome" required={isMenor} defaultValue={editingPaciente.responsavel_nome || ''} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit_responsavel_telefone">WhatsApp do Responsável</Label>
+                      <Input id="edit_responsavel_telefone" name="responsavel_telefone" required={isMenor} defaultValue={editingPaciente.responsavel_telefone || ''} />
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="edit_cpf">CPF</Label>
@@ -284,12 +363,12 @@ export default function Pacientes() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="edit_observacoes">Observações (O que foi feito? Última consulta?)</Label>
+                  <Label htmlFor="edit_observacoes">Observações</Label>
                   <Textarea 
                     id="edit_observacoes" 
                     name="observacoes" 
                     defaultValue={editingPaciente.observacoes || ''} 
-                    placeholder="Ex: Realizada limpeza em 10/10. Paciente tem sensibilidade no dente 22." 
+                    placeholder="Ex: Realizada limpeza em 10/10." 
                     className="min-h-[120px]"
                   />
                 </div>
