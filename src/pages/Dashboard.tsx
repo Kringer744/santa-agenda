@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { StatsCard } from '@/components/dashboard/StatsCard';
-import { CalendarCheck, Users, TrendingUp, Loader2, Clock, MessageSquare, Send, Sparkles, CalendarDays } from 'lucide-react'; 
+import { CalendarCheck, Users, DollarSign, Loader2, Clock, MessageSquare, Send, Sparkles, CalendarDays, CheckCircle2 } from 'lucide-react';
 import { useConsultas } from '@/hooks/useConsultas';
 import { useDentistas } from '@/hooks/useDentistas';
 import { usePacientes } from '@/hooks/usePacientes';
@@ -13,10 +13,24 @@ import { runDailyAutomations } from '@/lib/whatsappClinicAutomation';
 import { toast } from 'sonner';
 import { addDays } from 'date-fns';
 
+// Converte Date para string de data local (YYYY-MM-DD) sem usar UTC
+const toLocalDateStr = (date: Date): string => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
+// Obtém a data local de uma string ISO
+const getLocalDate = (isoString: string): string => {
+  return toLocalDateStr(new Date(isoString));
+};
+
 export default function Dashboard() {
   const [isProcessingAutomations, setIsProcessingAutomations] = useState(false);
-  const hoje = new Date().toISOString().split('T')[0];
-  
+  const hoje = toLocalDateStr(new Date());
+  const amanha = toLocalDateStr(addDays(new Date(), 1));
+
   const { data: consultas = [], isLoading: loadingConsultas } = useConsultas();
   const { data: dentistas = [], isLoading: loadingDentistas } = useDentistas();
   const { data: pacientes = [], isLoading: loadingPacientes } = usePacientes();
@@ -25,10 +39,18 @@ export default function Dashboard() {
 
   const isLoading = loadingConsultas || loadingDentistas || loadingPacientes || loadingClinicas || loadingAgenda;
 
-  const consultasHoje = consultas.filter(c => c.data_hora_inicio.startsWith(hoje));
-  const amanha = addDays(new Date(), 1).toISOString().split('T')[0];
-  const consultasAmanha = consultas.filter(c => c.data_hora_inicio.startsWith(amanha));
-  const consultasConfirmadas = consultas.filter(c => c.status === 'confirmada').length;
+  // Filtros usando data LOCAL (corrige bug de timezone)
+  const consultasHoje = consultas.filter(c => getLocalDate(c.data_hora_inicio) === hoje);
+  const consultasAmanha = consultas.filter(c => getLocalDate(c.data_hora_inicio) === amanha);
+
+  // Separar hoje: agendadas vs confirmadas
+  const consultasHojeAgendadas = consultasHoje.filter(c => c.status === 'agendada');
+  const consultasHojeConfirmadas = consultasHoje.filter(c => c.status === 'confirmada');
+  const consultasHojeOutras = consultasHoje.filter(c => !['agendada', 'confirmada'].includes(c.status));
+
+  const faturamentoHoje = consultasHoje
+    .filter(c => c.status !== 'cancelada')
+    .reduce((sum, c) => sum + (c.valor_total || 0), 0);
 
   // Automação ao carregar
   useEffect(() => {
@@ -90,24 +112,27 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Cards de Estatísticas */}
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
           <StatsCard
             title="Consultas Hoje"
             value={consultasHoje.length}
+            subtitle={`${consultasHojeConfirmadas.length} confirmadas`}
             icon={<CalendarCheck size={24} />}
             variant="dental"
           />
           <StatsCard
             title="Consultas Amanhã"
             value={consultasAmanha.length}
+            subtitle={`${consultasAmanha.filter(c => c.status === 'confirmada').length} confirmadas`}
             icon={<CalendarDays size={24} />}
             variant="soft"
           />
           <StatsCard
-            title="Confirmadas"
-            value={consultasConfirmadas}
-            subtitle="Total no sistema"
-            icon={<TrendingUp size={24} />}
+            title="Faturamento Hoje"
+            value={`R$ ${faturamentoHoje.toFixed(2)}`}
+            subtitle="Consultas não canceladas"
+            icon={<DollarSign size={24} />}
           />
           <StatsCard
             title="Total Pacientes"
@@ -117,16 +142,39 @@ export default function Dashboard() {
           />
         </div>
 
+        {/* Listas de Consultas + Sidebar */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <ConsultasList 
-              title="Atendimentos de Hoje" 
-              type="agendada" 
-              consultas={consultasHoje} 
-              dentistas={dentistas} 
-              pacientes={pacientes} 
+          {/* Coluna principal: Hoje + Amanhã */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* HOJE */}
+            {consultasHojeConfirmadas.length > 0 && (
+              <ConsultasList
+                title="Confirmadas Hoje"
+                type="confirmada"
+                consultas={consultasHojeConfirmadas}
+                dentistas={dentistas}
+                pacientes={pacientes}
+              />
+            )}
+            <ConsultasList
+              title="Agendamentos de Hoje"
+              type="agendada"
+              consultas={[...consultasHojeAgendadas, ...consultasHojeOutras]}
+              dentistas={dentistas}
+              pacientes={pacientes}
+            />
+
+            {/* AMANHÃ */}
+            <ConsultasList
+              title="Agendamentos de Amanhã"
+              type="proximas"
+              consultas={consultasAmanha}
+              dentistas={dentistas}
+              pacientes={pacientes}
             />
           </div>
+
+          {/* Sidebar */}
           <div className="space-y-6">
             <AgendaChart agenda={agendaParaChart} dentistas={dentistas} clinicas={clinicas} />
             <div className="bg-primary/5 border border-primary/20 rounded-xl p-6">
@@ -136,12 +184,18 @@ export default function Dashboard() {
               <p className="text-xs text-muted-foreground mb-4">
                 Lembretes e parabéns são enviados automaticamente quando você abre o painel.
               </p>
-              <button 
+              <button
                 onClick={async () => {
                   setIsProcessingAutomations(true);
-                  const result = await runDailyAutomations();
-                  toast.success(`Forçado: ${result.reminders} lembretes e ${result.birthdays} parabéns.`);
-                  setIsProcessingAutomations(false);
+                  try {
+                    const result = await runDailyAutomations();
+                    toast.success(`Forçado: ${result.reminders} lembretes e ${result.birthdays} parabéns.`);
+                  } catch (err) {
+                    toast.error('Erro ao disparar automações.');
+                    console.error(err);
+                  } finally {
+                    setIsProcessingAutomations(false);
+                  }
                 }}
                 disabled={isProcessingAutomations}
                 className="w-full bg-primary text-white py-2 rounded-lg text-sm font-bold hover:bg-primary/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50"

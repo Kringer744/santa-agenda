@@ -7,6 +7,7 @@ import { checkAndSendAutomatedMessages } from '@/lib/whatsappClinicAutomation';
 export function useConsultas() {
   return useQuery<Consulta[]>({
     queryKey: ['consultas'],
+    staleTime: 1000 * 60, // 1 minuto de cache
     queryFn: async () => {
       const { data, error } = await supabase.from('consultas').select('*').order('data_hora_inicio', { ascending: false });
       if (error) throw error;
@@ -28,7 +29,7 @@ export function useCreateConsulta() {
         .insert({
           ...consulta,
           codigo_consulta: codigoConsulta,
-          status: 'confirmada',
+          status: 'agendada',
           pagamento_status: 'pendente',
         })
         .select()
@@ -40,7 +41,7 @@ export function useCreateConsulta() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['consultas'] });
-      toast({ title: 'Consulta confirmada com sucesso!' });
+      toast({ title: 'Consulta agendada com sucesso!' });
     },
     onError: (error: Error) => {
       toast({
