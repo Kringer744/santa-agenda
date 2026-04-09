@@ -434,6 +434,7 @@ export interface Database {
           tipo: string
           mensagem: string
           ativo: boolean | null
+          delay_horas: number | null
           created_at: string | null
           updated_at: string | null
         }
@@ -444,6 +445,7 @@ export interface Database {
           tipo: string
           mensagem: string
           ativo?: boolean | null
+          delay_horas?: number | null
           created_at?: string | null
           updated_at?: string | null
         }
@@ -454,6 +456,7 @@ export interface Database {
           tipo?: string
           mensagem?: string
           ativo?: boolean | null
+          delay_horas?: number | null
           created_at?: string | null
           updated_at?: string | null
         }
@@ -492,6 +495,183 @@ export interface Database {
           paciente_id?: string | null
           dentista_id?: string | null
           created_at?: string | null
+        }
+        Relationships: []
+      }
+      ia_config: {
+        Row: {
+          id: string
+          ativo: boolean
+          provider: string
+          api_key: string
+          modelo_principal: string
+          modelo_lite: string
+          nome_clinica: string
+          personalidade: string
+          instrucoes_adicionais: string
+          horario_funcionamento: Json
+          endereco: string
+          max_tokens_resposta: number
+          temperatura: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          ativo?: boolean
+          provider?: string
+          api_key?: string
+          modelo_principal?: string
+          modelo_lite?: string
+          nome_clinica?: string
+          personalidade?: string
+          instrucoes_adicionais?: string
+          horario_funcionamento?: Json
+          endereco?: string
+          max_tokens_resposta?: number
+          temperatura?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          ativo?: boolean
+          provider?: string
+          api_key?: string
+          modelo_principal?: string
+          modelo_lite?: string
+          nome_clinica?: string
+          personalidade?: string
+          instrucoes_adicionais?: string
+          horario_funcionamento?: Json
+          endereco?: string
+          max_tokens_resposta?: number
+          temperatura?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ia_conversas: {
+        Row: {
+          id: string
+          telefone: string
+          paciente_id: string | null
+          contexto: Json
+          intencao_detectada: string | null
+          atendente_assumiu: boolean
+          ia_ativa: boolean
+          ultima_mensagem_at: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          telefone: string
+          paciente_id?: string | null
+          contexto?: Json
+          intencao_detectada?: string | null
+          atendente_assumiu?: boolean
+          ia_ativa?: boolean
+          ultima_mensagem_at?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          telefone?: string
+          paciente_id?: string | null
+          contexto?: Json
+          intencao_detectada?: string | null
+          atendente_assumiu?: boolean
+          ia_ativa?: boolean
+          ultima_mensagem_at?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ia_logs: {
+        Row: {
+          id: string
+          telefone: string
+          mensagem_recebida: string | null
+          resposta_ia: string | null
+          intencao: string | null
+          modelo_usado: string | null
+          tokens_entrada: number
+          tokens_saida: number
+          tempo_resposta_ms: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          telefone: string
+          mensagem_recebida?: string | null
+          resposta_ia?: string | null
+          intencao?: string | null
+          modelo_usado?: string | null
+          tokens_entrada?: number
+          tokens_saida?: number
+          tempo_resposta_ms?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          telefone?: string
+          mensagem_recebida?: string | null
+          resposta_ia?: string | null
+          intencao?: string | null
+          modelo_usado?: string | null
+          tokens_entrada?: number
+          tokens_saida?: number
+          tempo_resposta_ms?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
+      lembretes_agendados: {
+        Row: {
+          id: string
+          consulta_id: string | null
+          paciente_id: string | null
+          template_id: string | null
+          telefone: string
+          mensagem: string
+          agendado_para: string
+          status: string
+          tentativas: number
+          erro_msg: string | null
+          created_at: string
+          enviado_at: string | null
+        }
+        Insert: {
+          id?: string
+          consulta_id?: string | null
+          paciente_id?: string | null
+          template_id?: string | null
+          telefone: string
+          mensagem: string
+          agendado_para: string
+          status?: string
+          tentativas?: number
+          erro_msg?: string | null
+          created_at?: string
+          enviado_at?: string | null
+        }
+        Update: {
+          id?: string
+          consulta_id?: string | null
+          paciente_id?: string | null
+          template_id?: string | null
+          telefone?: string
+          mensagem?: string
+          agendado_para?: string
+          status?: string
+          tentativas?: number
+          erro_msg?: string | null
+          created_at?: string
+          enviado_at?: string | null
         }
         Relationships: []
       }

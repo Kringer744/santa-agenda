@@ -23,11 +23,12 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Building2, Trash2, CalendarCheck, Save, Loader2, Stethoscope, Plus, Edit } from 'lucide-react'; 
+import { Building2, Trash2, CalendarCheck, Save, Loader2, Stethoscope, Plus, Edit, MessageSquare } from 'lucide-react';
 import { useClinicas, useDeleteClinica, useCreateClinica, useUpdateClinica } from '@/hooks/useClinicas'; 
 import { useProcedimentos, useCreateProcedimento, useUpdateProcedimento, useDeleteProcedimento } from '@/hooks/useProcedimentos'; 
 import { useDentistas, useUpdateDentistaGoogleCalendarId } from '@/hooks/useDentistas';
 import { Clinica, Procedimento } from '@/types';
+import { useChatwootConfig, useUpdateChatwootConfig } from '@/hooks/useChatwootConfig';
 
 export default function Configuracoes() {
   const [activeTab, setActiveTab] = useState('clinica');
@@ -48,6 +49,9 @@ export default function Configuracoes() {
 
   const { data: dentistas = [] } = useDentistas();
   const updateDentistaGoogleCalendarId = useUpdateDentistaGoogleCalendarId();
+
+  const { data: chatwootConfig } = useChatwootConfig();
+  const updateChatwootConfig = useUpdateChatwootConfig();
 
   const handleSaveClinica = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -112,6 +116,7 @@ export default function Configuracoes() {
           <TabsList className="bg-muted p-1 rounded-xl">
             <TabsTrigger value="clinica">Clínica</TabsTrigger>
             <TabsTrigger value="procedimentos">Procedimentos</TabsTrigger>
+            <TabsTrigger value="chatwoot">Chatwoot</TabsTrigger>
             <TabsTrigger value="google-calendar">Google Calendar</TabsTrigger>
           </TabsList>
 
@@ -276,6 +281,88 @@ export default function Configuracoes() {
                   </div>
                 ))}
                 {procedimentos.length === 0 && <p className="text-center text-muted-foreground py-8">Nenhum procedimento cadastrado.</p>}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="chatwoot">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquare className="w-5 h-5 text-primary" />
+                  Integração Chatwoot
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="p-4 bg-muted/30 rounded-xl border text-sm text-muted-foreground mb-6">
+                  Configure a integração com o <strong>Chatwoot</strong> para gerenciar conversas do WhatsApp diretamente pelo sistema.
+                  O painel do Chatwoot será embutido na página de <strong>Atendimento</strong>.
+                </div>
+
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (!chatwootConfig?.id) return;
+                    const formData = new FormData(e.currentTarget);
+                    updateChatwootConfig.mutate({
+                      id: chatwootConfig.id,
+                      chatwoot_base_url: formData.get('chatwoot_base_url') as string,
+                      chatwoot_account_id: parseInt(formData.get('chatwoot_account_id') as string) || 0,
+                      chatwoot_api_token: formData.get('chatwoot_api_token') as string,
+                    });
+                  }}
+                  className="space-y-4 max-w-lg"
+                >
+                  <div className="space-y-2">
+                    <Label htmlFor="chatwoot_base_url">URL do Chatwoot</Label>
+                    <Input
+                      id="chatwoot_base_url"
+                      name="chatwoot_base_url"
+                      placeholder="https://app.chatwoot.com"
+                      defaultValue={chatwootConfig?.chatwoot_base_url || ''}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Se usa Chatwoot hospedado, coloque a URL do seu servidor (ex: https://chat.suaempresa.com)
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="chatwoot_account_id">ID da Conta</Label>
+                    <Input
+                      id="chatwoot_account_id"
+                      name="chatwoot_account_id"
+                      type="number"
+                      placeholder="1"
+                      defaultValue={chatwootConfig?.chatwoot_account_id || ''}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Encontre em Chatwoot &rarr; Settings &rarr; Account (o número na URL)
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="chatwoot_api_token">Token de Acesso (API)</Label>
+                    <Input
+                      id="chatwoot_api_token"
+                      name="chatwoot_api_token"
+                      type="password"
+                      placeholder="seu-token-aqui"
+                      defaultValue={chatwootConfig?.chatwoot_api_token || ''}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Gere em Chatwoot &rarr; Settings &rarr; Account &rarr; Access Token
+                    </p>
+                  </div>
+
+                  <Button type="submit" disabled={updateChatwootConfig.isPending} className="w-full">
+                    {updateChatwootConfig.isPending ? (
+                      <Loader2 className="animate-spin mr-2" size={16} />
+                    ) : (
+                      <Save className="mr-2" size={16} />
+                    )}
+                    Salvar Configuração
+                  </Button>
+                </form>
               </CardContent>
             </Card>
           </TabsContent>
