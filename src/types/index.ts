@@ -100,3 +100,60 @@ export interface WhatsAppMenuConfig {
   created_at?: string | null;
   updated_at?: string | null;
 }
+
+export interface IAConfig {
+  id?: string;
+  ativo: boolean;
+  provider: string;
+  api_key: string;
+  modelo_principal: string;
+  modelo_lite: string;
+  nome_clinica: string;
+  personalidade: string;
+  instrucoes_adicionais: string;
+  horario_funcionamento: Record<string, { inicio: string; fim: string } | null>;
+  endereco: string;
+  max_tokens_resposta: number;
+  temperatura: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface WhatsAppTemplate {
+  id: string;
+  tipo: string;
+  nome: string;
+  mensagem: string;
+  ativo: boolean;
+  delay_horas: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface IALog {
+  id: string;
+  telefone: string;
+  mensagem_recebida: string;
+  resposta_ia: string;
+  intencao: string;
+  modelo_usado: string;
+  tokens_entrada: number;
+  tokens_saida: number;
+  tempo_resposta_ms: number;
+  created_at: string;
+}
+
+export interface LembreteAgendado {
+  id: string;
+  consulta_id: string | null;
+  paciente_id: string | null;
+  template_id: string | null;
+  telefone: string;
+  mensagem: string;
+  agendado_para: string;
+  status: 'pendente' | 'enviado' | 'erro' | 'cancelado';
+  tentativas: number;
+  erro_msg: string | null;
+  created_at: string;
+  enviado_at: string | null;
+}

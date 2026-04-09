@@ -1,0 +1,18 @@
+-- =============================================
+-- KEEP-ALIVE: Manter Supabase Free Tier ativo
+-- =============================================
+-- O Supabase pausa projetos Free Tier após 7 dias de inatividade.
+--
+-- SOLUÇÃO ATIVA: Dois scheduled tasks configurados no Claude Code:
+--   1. "supabase-keep-alive" → Pinga a cada 5 dias às 8h
+--   2. "worker-lembretes" → Roda a cada 30 minutos (também mantém ativo)
+--
+-- ALTERNATIVA: Se preferir usar um serviço externo:
+--   - cron-job.org (grátis) ou UptimeRobot
+--   - URL: https://singgihkafgprwyitvba.supabase.co/functions/v1/keep-alive
+--   - Método: GET
+--   - Header: Authorization: Bearer <SUPABASE_ANON_KEY>
+--   - Intervalo: A cada 5 dias
+--
+-- Se pg_cron estiver disponível (plano Pro), descomente abaixo:
+-- SELECT cron.schedule('keep-alive-ping', '0 8 */5 * *', $$SELECT id FROM clinicas LIMIT 1$$);

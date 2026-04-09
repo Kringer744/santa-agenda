@@ -15,6 +15,8 @@ const WhatsApp = lazy(() => import("./pages/WhatsApp"));
 const Configuracoes = lazy(() => import("./pages/Configuracoes"));
 const Agendamento = lazy(() => import("./pages/Agendamento"));
 const Agenda = lazy(() => import("./pages/Agenda"));
+const Atendimento = lazy(() => import("./pages/Atendimento"));
+const IAConfigPage = lazy(() => import("./pages/IAConfig"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 // QueryClient com cache de 1 minuto (reduz requests desnecessários ao trocar de aba)
@@ -51,6 +53,8 @@ const App = () => (
             <Route path="/whatsapp" element={<WhatsApp />} />
             <Route path="/configuracoes" element={<Configuracoes />} />
             <Route path="/agenda" element={<Agenda />} />
+            <Route path="/atendimento" element={<Atendimento />} />
+            <Route path="/ia" element={<IAConfigPage />} />
 
             <Route path="/client-appointment" element={<Navigate to="/agendamento" replace />} />
             <Route path="*" element={<NotFound />} />

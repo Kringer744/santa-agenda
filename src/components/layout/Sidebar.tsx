@@ -1,15 +1,17 @@
 import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  CalendarCheck, 
-  Users, 
-  Stethoscope, 
-  MessageSquare, 
-  Settings, 
+import {
+  LayoutDashboard,
+  CalendarCheck,
+  Users,
+  Stethoscope,
+  MessageSquare,
+  Settings,
   ChevronLeft,
   ChevronRight,
-  CalendarDays
+  CalendarDays,
+  Headset,
+  Bot
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -21,6 +23,8 @@ const menuItems = [
   { icon: CalendarDays, label: 'Agenda', path: '/agenda' },
   { icon: Users, label: 'Pacientes', path: '/pacientes' },
   { icon: Stethoscope, label: 'Dentistas', path: '/dentistas' },
+  { icon: Headset, label: 'Atendimento', path: '/atendimento' },
+  { icon: Bot, label: 'IA Config', path: '/ia' },
   { icon: MessageSquare, label: 'WhatsApp', path: '/whatsapp' },
   { icon: Settings, label: 'Configurações', path: '/configuracoes' },
 ];

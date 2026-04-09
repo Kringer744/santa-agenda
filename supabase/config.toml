@@ -5,3 +5,12 @@ verify_jwt = false
 
 [functions.uazap-webhook]
 verify_jwt = false
+
+[functions.keep-alive]
+verify_jwt = false
+
+[functions.ia-responder]
+verify_jwt = false
+
+[functions.worker-lembretes]
+verify_jwt = false

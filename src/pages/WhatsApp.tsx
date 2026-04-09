@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
@@ -20,7 +18,7 @@ import {
 import { WhatsAppMenuConfig, WhatsAppMenuOption } from '@/types';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
-import Atendimento from './Atendimento'; // Importando a nova página
+import AtendimentoChat from '@/components/atendimento/AtendimentoChat';
 
 const DEFAULT_MENU_CONFIG: WhatsAppMenuConfig = {
   api_url: '',
@@ -160,7 +158,7 @@ export default function WhatsApp() {
           </TabsList>
 
           <TabsContent value="atendimento">
-            <Atendimento />
+            <AtendimentoChat />
           </TabsContent>
 
           <TabsContent value="configuracao">
